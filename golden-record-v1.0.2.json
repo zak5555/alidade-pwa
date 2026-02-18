@@ -1,0 +1,1310 @@
+{
+  "metadata": {
+    "dataset_version": "1.0.2",
+    "generated_at": "2026-02-17T04:25:19.836Z",
+    "coverage_area": "Marrakech Medina + Gueliz",
+    "source_files": [
+      "deep-research-report.md"
+    ],
+    "transformation_pipeline_version": "1.0.0",
+    "validation_status": "PASSED_PATCHED",
+    "patched_at": "2026-02-17T05:01:15.411Z",
+    "patch_notes": [
+      "FIX-1: checksum recomputed after all patches",
+      "FIX-2: retry_strategy split by event priority (SOS=100 retries)",
+      "FIX-3: aggregate_trust_score rounded to 3 decimal places",
+      "FIX-4: expires_at aligned to exactly 90 days from validated_at",
+      "FIX-5: low_confidence_warning flag added to zones below threshold",
+      "FIX-6: travel.gc.ca and chumarrakech.ma promoted to tier_1",
+      "FIX-7: phone_e164=null entries annotated with ingestion_note",
+      "FIX-A: checksum_how_to_verify documented explicitly",
+      "FIX-B: trust_thresholds split into 3 scopes (crowd/baseline/engine)"
+    ],
+    "checksum_algorithm": "SHA-256",
+    "checksum_covers": "full JSON excluding checksum_sha256 field itself",
+    "checksum_how_to_verify": [
+      "1. Parse the JSON file",
+      "2. Delete the checksum_sha256 field from metadata",
+      "3. Re-serialize with JSON.stringify(doc)",
+      "4. SHA-256 hash the UTF-8 string",
+      "5. Compare with checksum_sha256"
+    ],
+    "checksum_sha256": "63913e902f788aa09a23f93a891bcf79d0f559a9bdf99d216bde48b40ac5a0ba"
+  },
+  "policy_config": {
+    "risk_scoring": {
+      "baseline_weight": 0.4,
+      "realtime_event_weight": 0.6,
+      "confidence_threshold": 0.5,
+      "decay_function": "exponential",
+      "decay_half_life_hours": 72,
+      "min_events_for_confidence": 3
+    },
+    "data_freshness": {
+      "baseline_max_age_days": 90,
+      "pharmacy_roster_max_age_days": 7,
+      "emergency_contact_max_age_days": 365,
+      "threat_taxonomy_max_age_days": 180
+    },
+    "ingestion_queue": {
+      "priority_tiers": {
+        "sos_event": 1,
+        "hazard_alert": 2,
+        "price_anomaly": 3,
+        "context_update": 4,
+        "legacy_activity": 5
+      },
+      "batch_size": 50,
+      "flush_interval_ms": 30000,
+      "retry_strategy": {
+        "default": {
+          "max_retry_attempts": 3,
+          "retry_backoff_ms": 1000,
+          "backoff_type": "exponential"
+        },
+        "sos_event": {
+          "max_retry_attempts": 100,
+          "retry_backoff_ms": 500,
+          "backoff_type": "linear",
+          "persist_to_local_storage": true,
+          "notify_user_on_failure": true
+        },
+        "hazard_alert": {
+          "max_retry_attempts": 20,
+          "retry_backoff_ms": 1000,
+          "backoff_type": "exponential"
+        }
+      }
+    },
+    "geospatial": {
+      "geohash_precision": 7,
+      "risk_aggregation_radius_m": 500,
+      "safe_zone_radius_m": 100,
+      "grid_cell_size_m": 153
+    },
+    "trust_thresholds": {
+      "incoming_crowd_events": {
+        "reject_below": 0.3,
+        "require_human_review_below": 0.4,
+        "min_to_auto_accept": 0.5
+      },
+      "baseline_static_records": {
+        "min_to_include": 0.3,
+        "flag_for_review_below": 0.4,
+        "note": "baseline records با aggregate_trust < 0.5 مقبولة إذا verified_phone صحيح وpoint_id موجود. trust score ديالهم كيعكس جودة المصادر الوثائقية مش خطورة البيانات."
+      },
+      "risk_engine": {
+        "min_confidence_to_display": 0.4,
+        "min_confidence_to_alert": 0.6,
+        "min_trust_for_risk_update": 0.5
+      }
+    }
+  },
+  "sos_contacts_official": [
+    {
+      "service_name": "Tourist police / Brigade Touristique (Marrakech) – direct line",
+      "phone_e164": "+212524384601",
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "0524384601",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524384601",
+      "sources": [
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://visitmarrakech.com/en/planification/infos-numeros-utiles/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1
+    },
+    {
+      "service_name": "Tourist police hotline (Morocco green line; referenced for Marrakech) – 24/7",
+      "phone_e164": "+212524888680",
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "0524888680",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524888680",
+      "sources": [
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://visitmarrakech.com/en/planification/infos-numeros-utiles/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1
+    },
+    {
+      "service_name": "Police Secours (city emergency shortcode; Morocco) – dial 19 locally",
+      "phone_e164": null,
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "19",
+      "dial_type": "shortcode",
+      "dialing_note": "In Morocco, dial 19 directly from any phone",
+      "dial_display": "19",
+      "sources": [
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://visitmarrakech.com/en/planification/infos-numeros-utiles/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1,
+      "ingestion_note": "phone_e164 is null by design (shortcode). Ingestion layer must allow NULL in phone_e164 column and use dial_local instead."
+    },
+    {
+      "service_name": "Police emergency (alternative numbering used in some foreign travel advisories) – dial 190 locally",
+      "phone_e164": null,
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "190",
+      "dial_type": "shortcode",
+      "dialing_note": "In Morocco, dial 190 directly from any phone",
+      "dial_display": "190",
+      "sources": [
+        {
+          "url": "https://travel.gc.ca/destinations/morocco",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/getting-help",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1,
+      "ingestion_note": "phone_e164 is null by design (shortcode). Ingestion layer must allow NULL in phone_e164 column and use dial_local instead."
+    },
+    {
+      "service_name": "Medical emergencies (shortcode; Morocco) – dial 141 locally",
+      "phone_e164": null,
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "141",
+      "dial_type": "shortcode",
+      "dialing_note": "In Morocco, dial 141 directly from any phone",
+      "dial_display": "141",
+      "sources": [
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1,
+      "ingestion_note": "phone_e164 is null by design (shortcode). Ingestion layer must allow NULL in phone_e164 column and use dial_local instead."
+    },
+    {
+      "service_name": "Ambulance / SAMU Marrakech (direct line 1)",
+      "phone_e164": "+212524422446",
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "0524422446",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524422446",
+      "sources": [
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1
+    },
+    {
+      "service_name": "Ambulance / SAMU Marrakech (direct line 2)",
+      "phone_e164": "+212524422451",
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "0524422451",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524422451",
+      "sources": [
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1
+    },
+    {
+      "service_name": "Firefighters / Protection Civile (shortcode; Morocco) – dial 15 locally",
+      "phone_e164": null,
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "15",
+      "dial_type": "shortcode",
+      "dialing_note": "In Morocco, dial 15 directly from any phone",
+      "dial_display": "15",
+      "sources": [
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://visitmarrakech.com/en/planification/infos-numeros-utiles/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1,
+      "ingestion_note": "phone_e164 is null by design (shortcode). Ingestion layer must allow NULL in phone_e164 column and use dial_local instead."
+    },
+    {
+      "service_name": "Firefighters / medical assistance (alternative numbering used in some foreign travel advisories) – dial 150 locally",
+      "phone_e164": null,
+      "channel": "call",
+      "languages": [
+        "ar",
+        "fr",
+        "en"
+      ],
+      "area_scope": "citywide",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "dial_local": "150",
+      "dial_type": "shortcode",
+      "dialing_note": "In Morocco, dial 150 directly from any phone",
+      "dial_display": "150",
+      "sources": [
+        {
+          "url": "https://travel.gc.ca/destinations/morocco",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/getting-help",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1,
+      "ingestion_note": "phone_e164 is null by design (shortcode). Ingestion layer must allow NULL in phone_e164 column and use dial_local instead."
+    }
+  ],
+  "critical_points": [
+    {
+      "point_id": "ma-rak-medina-police-brigade-touristique-jemaa",
+      "type": "police",
+      "name": "Police: Brigade Touristique (near Jemaa el-Fna)",
+      "lat": 31.62603,
+      "lng": -7.98993,
+      "open_hours": "Phone line referenced as 24/7; physical service hours not published (treat as always-reachable via phone).",
+      "verified_phone": "+212524384601",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "phone_e164": "+212524384601",
+      "dial_local": "0524384601",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524384601",
+      "sources": [
+        {
+          "url": "https://mapcarta.com/N3733264424",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.diplomatie.gouv.fr/fr/conseils-aux-voyageurs/conseils-par-pays-destination/maroc/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.85,
+      "trust_scope": "baseline_static_record"
+    },
+    {
+      "point_id": "ma-rak-gueliz-police-prefecture",
+      "type": "police",
+      "name": "Préfecture de Police (Marrakech)",
+      "lat": 31.64701,
+      "lng": -7.98759,
+      "open_hours": "Assumed 24/7 public police facility (confirm on arrival).",
+      "verified_phone": "+212524430570",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "phone_e164": "+212524430570",
+      "dial_local": "0524430570",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524430570",
+      "sources": [
+        {
+          "url": "https://mapcarta.com/W315069032",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://visitmarrakech.com/en/planification/infos-numeros-utiles/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.85,
+      "trust_scope": "baseline_static_record"
+    },
+    {
+      "point_id": "ma-rak-semlalia-hospital-chu-mohammed-vi",
+      "type": "hospital",
+      "name": "Centre Hospitalier Universitaire Mohammed VI (CHU Marrakech)",
+      "lat": 31.66475,
+      "lng": -7.99584,
+      "open_hours": "Hospital campus; emergency services expected 24/7 (confirm by phone).",
+      "verified_phone": "+212524300700",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "phone_e164": "+212524300700",
+      "dial_local": "0524300700",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524300700",
+      "sources": [
+        {
+          "url": "https://mapcarta.com/W589942599",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.chumarrakech.ma/index.php/mentions-legales",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.85,
+      "trust_scope": "baseline_static_record"
+    },
+    {
+      "point_id": "ma-rak-semlalia-hospital-ibn-tofail",
+      "type": "hospital",
+      "name": "Hôpital Ibn Tofail (CHU Marrakech)",
+      "lat": 31.6416,
+      "lng": -8.01562,
+      "open_hours": "Hospital site; emergency services available (confirm by phone).",
+      "verified_phone": "+212524439274",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "phone_e164": "+212524439274",
+      "dial_local": "0524439274",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524439274",
+      "sources": [
+        {
+          "url": "https://mapcarta.com/W328555734",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.chumarrakech.ma/index.php/le-chu/etablissements-de-sante",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.85,
+      "trust_scope": "baseline_static_record"
+    },
+    {
+      "point_id": "ma-rak-gueliz-hospital-polyclinique-du-sud",
+      "type": "hospital",
+      "name": "Polyclinique du Sud (Guéliz)",
+      "lat": 31.63782,
+      "lng": -8.01471,
+      "open_hours": "Private polyclinic; emergency/urgent care availability varies (confirm by phone).",
+      "verified_phone": "+212524447999",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "phone_e164": "+212524447999",
+      "dial_local": "0524447999",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524447999",
+      "sources": [
+        {
+          "url": "https://mapcarta.com/fr/W328555735",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.telecontact.ma/annonceur/polyclinique-du-sud-s-c-p/1142900/marrakech.php",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.4,
+      "trust_scope": "baseline_static_record",
+      "low_confidence_warning": true,
+      "trust_note": "Score < 0.5 بسبب مصدر واحد tier_2 + مصدر tier_4. verified_phone مؤكد. مقبول كـ baseline."
+    },
+    {
+      "point_id": "ma-rak-medina-hospital-el-antaki",
+      "type": "hospital",
+      "name": "Hôpital El Antaki (near Bab El Khémis)",
+      "lat": 31.63666,
+      "lng": -7.98475,
+      "open_hours": "Specialized hospital; opening hours vary (confirm by phone).",
+      "verified_phone": "+212524380682",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "phone_e164": "+212524380682",
+      "dial_local": "0524380682",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524380682",
+      "sources": [
+        {
+          "url": "https://mapcarta.com/W789242646",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.telecontact.ma/annonceur/hopital-el-antaki/0146400/marrakech.php",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.4,
+      "trust_scope": "baseline_static_record",
+      "low_confidence_warning": true,
+      "trust_note": "Score < 0.5 بسبب مصدر واحد tier_2 + مصدر tier_4. verified_phone مؤكد. مقبول كـ baseline."
+    },
+    {
+      "point_id": "ma-rak-medina-pharmacy-arset-lamaach-garde-jour",
+      "type": "pharmacy",
+      "name": "Pharmacie Arset Lamaâche (Medina) – on-call pharmacy (garde)",
+      "lat": 31.6189421,
+      "lng": -7.9883875,
+      "open_hours": "On-call roster (MEDINA): 09:00–22:00 daily, 2026-02-14 to 2026-02-20 (garde du jour).",
+      "verified_phone": "+212524378021",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "service_tier": "on_call_daytime",
+      "phone_e164": "+212524378021",
+      "dial_local": "0524378021",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524378021",
+      "sources": [
+        {
+          "url": "https://www.syndicat-pharmaciens-marrakech.com/pharmacies-de-garde-marrakech/pharmacie/ph-arset-lamaach",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.google.com/maps?daddr=31.6189421,-7.9883875",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.4,
+      "trust_scope": "baseline_static_record",
+      "low_confidence_warning": true,
+      "trust_note": "Score < 0.5 بسبب مصدر واحد tier_2 + مصدر tier_4. verified_phone مؤكد. مقبول كـ baseline."
+    },
+    {
+      "point_id": "ma-rak-medina-pharmacy-morakab-souk-lkhmiss-garde-jour",
+      "type": "pharmacy",
+      "name": "Pharmacie Morakab Souk Lkhmiss (Medina) – on-call pharmacy (garde)",
+      "lat": 31.6419167,
+      "lng": -7.9884875,
+      "open_hours": "On-call roster (MEDINA): 09:00–22:00 daily, 2026-02-14 to 2026-02-20 (garde du jour).",
+      "verified_phone": "+212524390738",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "service_tier": "on_call_daytime",
+      "phone_e164": "+212524390738",
+      "dial_local": "0524390738",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524390738",
+      "sources": [
+        {
+          "url": "https://www.syndicat-pharmaciens-marrakech.com/pharmacies-de-garde-marrakech/pharmacie/ph-morakab-souk-lkhmiss",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.google.com/maps?daddr=31.6419167,-7.9884875",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.4,
+      "trust_scope": "baseline_static_record",
+      "low_confidence_warning": true,
+      "trust_note": "Score < 0.5 بسبب مصدر واحد tier_2 + مصدر tier_4. verified_phone مؤكد. مقبول كـ baseline."
+    },
+    {
+      "point_id": "ma-rak-medina-pharmacy-bab-aghmat-garde-nuit",
+      "type": "pharmacy",
+      "name": "Pharmacie Bab Aghmat (Medina) – on-call pharmacy (garde)",
+      "lat": 31.625249,
+      "lng": -7.976822,
+      "open_hours": "On-call roster (MEDINA): 23:00–09:00 daily, 2026-02-14 to 2026-02-20 (garde de nuit).",
+      "verified_phone": "+212524387922",
+      "validated_at": "2026-02-17T00:00:00Z",
+      "service_tier": "on_call_overnight",
+      "phone_e164": "+212524387922",
+      "dial_local": "0524387922",
+      "dial_type": "full_number",
+      "dialing_note": null,
+      "dial_display": "+212524387922",
+      "sources": [
+        {
+          "url": "https://www.syndicat-pharmaciens-marrakech.com/pharmacies-de-garde-marrakech/pharmacie/ph-bab-aghmat",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.google.com/maps?daddr=31.625249,-7.976822",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.4,
+      "trust_scope": "baseline_static_record",
+      "low_confidence_warning": true,
+      "trust_note": "Score < 0.5 بسبب مصدر واحد tier_2 + مصدر tier_4. verified_phone مؤكد. مقبول كـ baseline."
+    }
+  ],
+  "baseline_risk_zones": [
+    {
+      "area_name": "Jemaa el-Fna square & immediate perimeter",
+      "baseline_score": 0.85,
+      "confidence": 0.85,
+      "threat_types": [
+        "pickpocket",
+        "scam_guide",
+        "aggressive_touts"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fjq",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.62585,
+          "lng": -7.9888
+        },
+        "radius_m": 300
+      },
+      "grid_coverage": [
+        "evd7fjj",
+        "evd7fjm",
+        "evd7fjt",
+        "evd7fjn",
+        "evd7fjq",
+        "evd7fjw",
+        "evd7fjp",
+        "evd7fjr",
+        "evd7fjx"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://visitmarrakech.com/en/planification/infos-numeros-utiles/",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 1,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Souks de Marrakech (incl. Souk Semmarine main corridor)",
+      "baseline_score": 0.78,
+      "confidence": 0.72,
+      "threat_types": [
+        "pickpocket",
+        "scam_guide",
+        "aggressive_touts"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fjw",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.62773,
+          "lng": -7.98867
+        },
+        "radius_m": 300
+      },
+      "grid_coverage": [
+        "evd7fjm",
+        "evd7fjt",
+        "evd7fjv",
+        "evd7fjq",
+        "evd7fjw",
+        "evd7fjy",
+        "evd7fm2",
+        "evd7fm8",
+        "evd7fmb"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.intrepidtravel.com/au/morocco/is-it-safe-to-travel-to-morocco",
+          "tier": "tier_3_osint",
+          "weight": 0.3,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.65,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Rahba Kedima (Spice Square) & surrounding alleys",
+      "baseline_score": 0.7,
+      "confidence": 0.65,
+      "threat_types": [
+        "pickpocket",
+        "scam_guide",
+        "aggressive_touts"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fmb",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.62888,
+          "lng": -7.98705
+        },
+        "radius_m": 300
+      },
+      "grid_coverage": [
+        "evd7fjw",
+        "evd7fjy",
+        "evd7fnn",
+        "evd7fm8",
+        "evd7fmb",
+        "evd7fq0",
+        "evd7fm9",
+        "evd7fmc",
+        "evd7fq1"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://mapcarta.com/W15164098",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.85,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Ben Youssef / medina north core (madrasa approaches & adjacent lanes)",
+      "baseline_score": 0.82,
+      "confidence": 0.8,
+      "threat_types": [
+        "road_closed_scam",
+        "scam_guide",
+        "pickpocket"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fnr",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.63188,
+          "lng": -7.98711
+        },
+        "radius_m": 250
+      },
+      "grid_coverage": [
+        "evd7fnn",
+        "evd7fnq",
+        "evd7fnw",
+        "evd7fnp",
+        "evd7fnr",
+        "evd7fnx",
+        "evd7fq1",
+        "evd7fq3",
+        "evd7fq9"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.moroccoworldnews.com/2014/11/123294/navigating-the-maze-of-the-marrakech-medina/",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://www.reddit.com/r/solotravel/comments/1arjx0f/my_experience_of_visiting_marrakech/",
+          "tier": "tier_3_osint",
+          "weight": 0.3,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.467,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Derb Dabachi / Kennaria lanes (micro-alleys in the souks)",
+      "baseline_score": 0.7,
+      "confidence": 0.6,
+      "threat_types": [
+        "pickpocket",
+        "scam_guide",
+        "road_closed_scam"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fm8",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.6271,
+          "lng": -7.9867
+        },
+        "radius_m": 250
+      },
+      "grid_coverage": [
+        "evd7fjr",
+        "evd7fjx",
+        "evd7fjz",
+        "evd7fm2",
+        "evd7fm8",
+        "evd7fmb",
+        "evd7fm3",
+        "evd7fm9",
+        "evd7fmc"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://geocode.xyz/3173249520462",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.55,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Bab Doukkala gate & nearby transport nodes",
+      "baseline_score": 0.68,
+      "confidence": 0.6,
+      "threat_types": [
+        "pickpocket",
+        "motorbike_snatch",
+        "aggressive_touts"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fn2",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.63223,
+          "lng": -7.99703
+        },
+        "radius_m": 300
+      },
+      "grid_coverage": [
+        "evd7cyp",
+        "evd7cyr",
+        "evd7cyx",
+        "evd7fn0",
+        "evd7fn2",
+        "evd7fn8",
+        "evd7fn1",
+        "evd7fn3",
+        "evd7fn9"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://mapcarta.com/N595960402",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.85,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Kasbah corridor (Bab Agnaou ↔ Place des Ferblantiers)",
+      "baseline_score": 0.7,
+      "confidence": 0.58,
+      "threat_types": [
+        "scam_guide",
+        "road_closed_scam",
+        "pickpocket"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7f5z",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.6186,
+          "lng": -7.98773
+        },
+        "radius_m": 250
+      },
+      "grid_coverage": [
+        "evd7f5w",
+        "evd7f5y",
+        "evd7fhn",
+        "evd7f5x",
+        "evd7f5z",
+        "evd7fhp",
+        "evd7f78",
+        "evd7f7b",
+        "evd7fk0"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://mapcarta.com/N374299688",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://mapcarta.com/W28250828",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.8,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Bab Aghmat gate & approach streets (SE medina edge)",
+      "baseline_score": 0.65,
+      "confidence": 0.55,
+      "threat_types": [
+        "road_closed_scam",
+        "scam_guide",
+        "pickpocket"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fmp",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.62529,
+          "lng": -7.97667
+        },
+        "radius_m": 250
+      },
+      "grid_coverage": [
+        "evd7fky",
+        "evd7fmn",
+        "evd7fmq",
+        "evd7fkz",
+        "evd7fmp",
+        "evd7fmr",
+        "evd7fsb",
+        "evd7ft0",
+        "evd7ft2"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://mapcarta.com/N8483343567",
+          "tier": "tier_2_verified_local",
+          "weight": 0.7,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.85,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Rue Riad Zitoun el Jdid approaches (Bahia Palace / Mellah edge)",
+      "baseline_score": 0.66,
+      "confidence": 0.58,
+      "threat_types": [
+        "scam_guide",
+        "road_closed_scam",
+        "pickpocket"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7fkc",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.6230716,
+          "lng": -7.9847673
+        },
+        "radius_m": 250
+      },
+      "grid_coverage": [
+        "evd7fk8",
+        "evd7fkb",
+        "evd7fm0",
+        "evd7fk9",
+        "evd7fkc",
+        "evd7fm1",
+        "evd7fkd",
+        "evd7fkf",
+        "evd7fm4"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://maps.apple.com/place?_provider=9902&address=Rue+Riad+Zitoun+el+Jedid+42%2C+40008+Marrakesh%2C+Morocco&coordinate=31.6230716%2C-7.9847673",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.55,
+      "low_confidence_warning": false
+    },
+    {
+      "area_name": "Place du 16 Novembre & central Guéliz corridor",
+      "baseline_score": 0.48,
+      "confidence": 0.45,
+      "threat_types": [
+        "pickpocket",
+        "motorbike_snatch"
+      ],
+      "validated_at": "2026-02-17T00:00:00Z",
+      "geohash7": "evd7cy8",
+      "geometry": {
+        "type": "circle",
+        "center": {
+          "lat": 31.63278,
+          "lng": -8.00806
+        },
+        "radius_m": 200
+      },
+      "grid_coverage": [
+        "evd7cwx",
+        "evd7cy2",
+        "evd7cy8",
+        "evd7cyb",
+        "evd7cy9"
+      ],
+      "expires_at": "2026-05-18T00:00:00.000Z",
+      "sources": [
+        {
+          "url": "https://www.gov.uk/foreign-travel-advice/morocco/safety-and-security",
+          "tier": "tier_1_institutional",
+          "weight": 1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        },
+        {
+          "url": "https://ma.geoview.info/place_du_16_novembre%2C17968853r",
+          "tier": "tier_4_unverified",
+          "weight": 0.1,
+          "accessed_at": "2026-02-17T00:00:00Z"
+        }
+      ],
+      "aggregate_trust_score": 0.55,
+      "low_confidence_warning": true,
+      "display_note": "⚠️ Low confidence (0.45). UI should show reduced certainty indicator, not treat as high-risk confirmed zone."
+    }
+  ],
+  "threat_taxonomy": [
+    {
+      "threat_code": "pickpocket",
+      "severity_default": 2,
+      "ui_label_ar": "نشّالون / سرقة بالنشل",
+      "ui_label_fr": "Pickpocket",
+      "ui_label_en": "Pickpocketing",
+      "recommended_action": "In crowds and markets, keep phone/wallet in a zipped internal pocket; carry bags cross-body in front; avoid displaying cash; if targeted, move into a shop/cafe and call police.",
+      "category": "property_crime",
+      "response_urgency": "low",
+      "police_required": false,
+      "evidence_collection": [
+        "location",
+        "description",
+        "photo_optional"
+      ],
+      "escalation_triggers": [
+        "physical_contact",
+        "weapon_visible",
+        "injury"
+      ],
+      "icon": "👜"
+    },
+    {
+      "threat_code": "scam_guide",
+      "severity_default": 2,
+      "ui_label_ar": "مرشد سياحي مزيف",
+      "ui_label_fr": "Faux guide",
+      "ui_label_en": "Fake / bogus guide",
+      "recommended_action": "Decline unsolicited help; only use licensed guides (ask for official badge/ID); keep walking to a main street; if harassment escalates, go to the nearest police point.",
+      "category": "fraud",
+      "response_urgency": "low",
+      "police_required": false,
+      "evidence_collection": [
+        "location",
+        "description",
+        "photo"
+      ],
+      "escalation_triggers": [
+        "physical_restraint",
+        "threats",
+        "demand_payment"
+      ],
+      "icon": "🗺️"
+    },
+    {
+      "threat_code": "road_closed_scam",
+      "severity_default": 2,
+      "ui_label_ar": "احتيال «الطريق مغلق»",
+      "ui_label_fr": "Arnaque « route fermée »",
+      "ui_label_en": "\"Road closed\" scam",
+      "recommended_action": "Do not follow strangers into side alleys; verify using your map and visible foot traffic; if unsure, enter a shop/cafe to re-orient; prefer well-lit main routes.",
+      "category": "fraud",
+      "response_urgency": "low",
+      "police_required": false,
+      "evidence_collection": [
+        "location",
+        "description"
+      ],
+      "escalation_triggers": [
+        "physical_restraint",
+        "threats"
+      ],
+      "icon": "🚧"
+    },
+    {
+      "threat_code": "aggressive_touts",
+      "severity_default": 1,
+      "ui_label_ar": "مضايقة الباعة / إلحاح",
+      "ui_label_fr": "Racoleurs insistants",
+      "ui_label_en": "Aggressive touting",
+      "recommended_action": "Use a short refusal ('No, thank you') and keep moving; do not engage in negotiation if you do not intend to buy; move toward busier areas and avoid showing frustration.",
+      "category": "harassment",
+      "response_urgency": "medium",
+      "police_required": true,
+      "evidence_collection": [
+        "location",
+        "description",
+        "photo",
+        "video"
+      ],
+      "escalation_triggers": [
+        "following",
+        "physical_contact",
+        "threats"
+      ],
+      "icon": "📣"
+    },
+    {
+      "threat_code": "motorbike_snatch",
+      "severity_default": 3,
+      "ui_label_ar": "خطف من دراجة نارية",
+      "ui_label_fr": "Vol à l'arraché en scooter",
+      "ui_label_en": "Drive-by snatch theft (moped)",
+      "recommended_action": "Keep jewellery/phones out of reach; walk away from the curb; use a cross-body bag with the strap under your outer layer; if an incident occurs, seek medical help if injured and report to police.",
+      "category": "property_crime",
+      "response_urgency": "high",
+      "police_required": true,
+      "evidence_collection": [
+        "location",
+        "description",
+        "photo",
+        "witness_info"
+      ],
+      "escalation_triggers": [
+        "injury",
+        "weapon_visible"
+      ],
+      "icon": "🏍️"
+    },
+    {
+      "threat_code": "henna_scam",
+      "severity_default": 1,
+      "ui_label_ar": "احتيال الحناء",
+      "ui_label_fr": "Arnaque au henné",
+      "ui_label_en": "Henna scam",
+      "recommended_action": "Avoid unsolicited 'free' services; agree price upfront; keep hands to yourself and move away; if pressured, step into a nearby shop/cafe.",
+      "category": "fraud",
+      "response_urgency": "low",
+      "police_required": false,
+      "evidence_collection": [
+        "location",
+        "photo",
+        "description"
+      ],
+      "escalation_triggers": [
+        "physical_restraint",
+        "demand_payment",
+        "intimidation"
+      ],
+      "icon": "🤲"
+    },
+    {
+      "threat_code": "credit_card_fraud",
+      "severity_default": 2,
+      "ui_label_ar": "احتيال بطاقات الدفع",
+      "ui_label_fr": "Fraude à la carte bancaire",
+      "ui_label_en": "Card fraud / swapping goods",
+      "recommended_action": "Use reputable ATMs; do not let your card out of sight; keep receipts; check items before leaving shops; set transaction alerts; report suspicious transactions to your bank immediately.",
+      "category": "fraud",
+      "response_urgency": "medium",
+      "police_required": true,
+      "evidence_collection": [
+        "location",
+        "business_name",
+        "receipt",
+        "card_statement"
+      ],
+      "escalation_triggers": [
+        "unauthorized_charge",
+        "card_swapped"
+      ],
+      "icon": "💳"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+name: Smoke Defense
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: smoke-defense-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke-defense:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate golden record dataset (strict)
+        run: npm run test:dataset:golden
+
+      - name: Run defense smoke test
+        run: npm run test:smoke:defense
+
+  intel-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: smoke-defense
+    if: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' && secrets.INTEL_INGEST_API_KEY != '' && secrets.INTEL_INGEST_SIGNING_SECRET != '' }}
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      INTEL_INGEST_API_KEY: ${{ secrets.INTEL_INGEST_API_KEY }}
+      INTEL_INGEST_SIGNING_SECRET: ${{ secrets.INTEL_INGEST_SIGNING_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify intel ingest pipeline
+        run: npm run ops:intel:verify -- --count 5 --window-minutes 60 --min-events 5 --max-delayed 25

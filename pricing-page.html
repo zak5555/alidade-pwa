@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALIDADE™ | خطط الاشتراك</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .tier-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tier-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .popular-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .feature-check {
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .feature-cross {
+            color: #ef4444;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-5xl font-black text-white mb-4">ALIDADE™</h1>
+        <p class="text-xl text-white/90">اختر الخطة المناسبة لك</p>
+    </div>
+
+    <!-- Pricing Cards -->
+    <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
+        
+        <!-- FREE TIER -->
+        <div class="tier-card bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gray-500 text-white p-6 text-center">
+                <h2 class="text-3xl font-bold mb-2">FREE</h2>
+                <p class="text-lg opacity-90">للتجربة والاستكشاف</p>
+                <div class="mt-4">
+                    <span class="text-5xl font-black">$0</span>
+                    <span class="text-lg">/شهرياً</span>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span><strong>3</strong> مسحات AI يومياً</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>جودة قياسية (Standard)</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>تصدير PNG فقط</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>سجل 7 أيام</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>ملف واحد في المرة</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-cross">✗</span>
+                        <span class="opacity-50">المعالجة الدفعية</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-cross">✗</span>
+                        <span class="opacity-50">الفلاتر المتقدمة</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-cross">✗</span>
+                        <span class="opacity-50">API Access</span>
+                    </li>
+                </ul>
+
+                <button class="w-full mt-6 bg-gray-500 text-white py-3 rounded-lg font-bold hover:bg-gray-600 transition">
+                    ابدأ مجاناً
+                </button>
+            </div>
+        </div>
+
+        <!-- LITE TIER (POPULAR) -->
+        <div class="tier-card bg-white rounded-2xl shadow-2xl overflow-hidden relative border-4 border-blue-500">
+            <!-- Popular Badge -->
+            <div class="popular-badge absolute top-4 right-4 px-4 py-1 rounded-full text-white text-sm font-bold">
+                الأكثر شيوعاً ⭐
+            </div>
+
+            <div class="bg-blue-500 text-white p-6 text-center">
+                <h2 class="text-3xl font-bold mb-2">LITE</h2>
+                <p class="text-lg opacity-90">للاستخدام اليومي الفعّال</p>
+                <div class="mt-4">
+                    <span class="text-5xl font-black">$9</span>
+                    <span class="text-lg">/شهرياً</span>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span><strong>50</strong> مسح AI يومياً</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>جودة عالية (High Quality)</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>تصدير PNG, JPG, PDF</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>سجل 30 يوم</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>معالجة دفعية (5 ملفات)</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>فلاتر متقدمة</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>5 قوالب مخصصة</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-cross">✗</span>
+                        <span class="opacity-50">API Access</span>
+                    </li>
+                </ul>
+
+                <button class="w-full mt-6 bg-blue-500 text-white py-3 rounded-lg font-bold hover:bg-blue-600 transition shadow-lg">
+                    اشتر الآن
+                </button>
+            </div>
+        </div>
+
+        <!-- ULTIMATE TIER -->
+        <div class="tier-card bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="bg-gradient-to-br from-amber-500 to-orange-600 text-white p-6 text-center">
+                <h2 class="text-3xl font-bold mb-2">ULTIMATE</h2>
+                <p class="text-lg opacity-90">للمحترفين والشركات</p>
+                <div class="mt-4">
+                    <span class="text-5xl font-black">$29</span>
+                    <span class="text-lg">/شهرياً</span>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span><strong>∞ غير محدود</strong></span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>جودة فائقة (Ultra) + أولوية</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>جميع صيغ التصدير</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>سجل غير محدود</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>معالجة دفعية غير محدودة</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>جميع الفلاتر + AI مخصص</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span>قوالب غير محدودة</span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span><strong>API Access</strong></span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span><strong>مشاركة الفريق</strong></span>
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <span class="feature-check">✓</span>
+                        <span><strong>دعم مباشر</strong></span>
+                    </li>
+                </ul>
+
+                <button class="w-full mt-6 bg-gradient-to-r from-amber-500 to-orange-600 text-white py-3 rounded-lg font-bold hover:shadow-xl transition">
+                    اشتر الآن 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="max-w-7xl mx-auto mt-16 bg-white rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-6">
+            <h2 class="text-3xl font-bold text-center">مقارنة شاملة</h2>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="p-4 text-right font-bold">الميزة</th>
+                        <th class="p-4 text-center font-bold">FREE</th>
+                        <th class="p-4 text-center font-bold bg-blue-50">LITE</th>
+                        <th class="p-4 text-center font-bold bg-amber-50">ULTIMATE</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y">
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">مسحات AI يومية</td>
+                        <td class="p-4 text-center">3</td>
+                        <td class="p-4 text-center bg-blue-50">50</td>
+                        <td class="p-4 text-center bg-amber-50">∞ غير محدود</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">جودة المعالجة</td>
+                        <td class="p-4 text-center">Standard</td>
+                        <td class="p-4 text-center bg-blue-50">High (300 DPI)</td>
+                        <td class="p-4 text-center bg-amber-50">Ultra (600 DPI)</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">أولوية المعالجة</td>
+                        <td class="p-4 text-center">🐌 انتظار</td>
+                        <td class="p-4 text-center bg-blue-50">⚡ عادي</td>
+                        <td class="p-4 text-center bg-amber-50">🚀 فوري</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">صيغ التصدير</td>
+                        <td class="p-4 text-center">PNG</td>
+                        <td class="p-4 text-center bg-blue-50">PNG, JPG, PDF</td>
+                        <td class="p-4 text-center bg-amber-50">All formats + RAW</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">سجل الملفات</td>
+                        <td class="p-4 text-center">7 أيام</td>
+                        <td class="p-4 text-center bg-blue-50">30 يوم</td>
+                        <td class="p-4 text-center bg-amber-50">∞ دائم</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">المعالجة الدفعية</td>
+                        <td class="p-4 text-center">❌</td>
+                        <td class="p-4 text-center bg-blue-50">✓ (5 ملفات)</td>
+                        <td class="p-4 text-center bg-amber-50">✓ غير محدود</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">الفلاتر المتقدمة</td>
+                        <td class="p-4 text-center">❌</td>
+                        <td class="p-4 text-center bg-blue-50">✓</td>
+                        <td class="p-4 text-center bg-amber-50">✓ + AI Custom</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">القوالب المخصصة</td>
+                        <td class="p-4 text-center">1</td>
+                        <td class="p-4 text-center bg-blue-50">5</td>
+                        <td class="p-4 text-center bg-amber-50">∞ غير محدود</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">API Access</td>
+                        <td class="p-4 text-center">❌</td>
+                        <td class="p-4 text-center bg-blue-50">❌</td>
+                        <td class="p-4 text-center bg-amber-50">✓</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">مشاركة الفريق</td>
+                        <td class="p-4 text-center">❌</td>
+                        <td class="p-4 text-center bg-blue-50">❌</td>
+                        <td class="p-4 text-center bg-amber-50">✓</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">الدعم الفني</td>
+                        <td class="p-4 text-center">مجتمعي</td>
+                        <td class="p-4 text-center bg-blue-50">بريد (48 ساعة)</td>
+                        <td class="p-4 text-center bg-amber-50">دردشة مباشرة (2 ساعة)</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="p-4 font-semibold">التحديثات المبكرة</td>
+                        <td class="p-4 text-center">❌</td>
+                        <td class="p-4 text-center bg-blue-50">❌</td>
+                        <td class="p-4 text-center bg-amber-50">✓ Beta Access</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
+    <div class="max-w-4xl mx-auto mt-16 bg-white rounded-2xl shadow-xl p-8">
+        <h2 class="text-3xl font-bold text-center mb-8">الأسئلة الشائعة</h2>
+        
+        <div class="space-y-6">
+            <details class="border-b pb-4">
+                <summary class="font-bold cursor-pointer text-lg">ماذا يحدث إذا انتهت مسحاتي اليومية؟</summary>
+                <p class="mt-2 text-gray-600">
+                    يتم إعادة تعيين الحد اليومي في منتصف الليل (UTC). إذا كنت بحاجة لمزيد من المسحات، يمكنك الترقية لـ LITE (50 مسح) أو ULTIMATE (غير محدود).
+                </p>
+            </details>
+
+            <details class="border-b pb-4">
+                <summary class="font-bold cursor-pointer text-lg">هل يمكنني التبديل بين الخطط؟</summary>
+                <p class="mt-2 text-gray-600">
+                    نعم! يمكنك الترقية أو التخفيض في أي وقت. سيتم احتساب الفرق في الخطة الجديدة بشكل تناسبي.
+                </p>
+            </details>
+
+            <details class="border-b pb-4">
+                <summary class="font-bold cursor-pointer text-lg">ما الفرق بين جودة Standard و High و Ultra؟</summary>
+                <p class="mt-2 text-gray-600">
+                    - <strong>Standard (FREE):</strong> 72 DPI، مناسب للمعاينة والاستخدام العادي<br>
+                    - <strong>High (LITE):</strong> 300 DPI، مناسب للطباعة والعروض التقديمية<br>
+                    - <strong>Ultra (ULTIMATE):</strong> 600 DPI، احترافي، مع معالجة فورية ذات أولوية
+                </p>
+            </details>
+
+            <details class="border-b pb-4">
+                <summary class="font-bold cursor-pointer text-lg">هل يمكنني تجربة ULTIMATE قبل الشراء؟</summary>
+                <p class="mt-2 text-gray-600">
+                    نعم! نقدم فترة تجريبية مجانية لمدة 7 أيام لخطة ULTIMATE. لن يتم محاسبتك إلا بعد انتهاء الفترة التجريبية.
+                </p>
+            </details>
+
+            <details class="border-b pb-4">
+                <summary class="font-bold cursor-pointer text-lg">ماذا يعني "API Access"؟</summary>
+                <p class="mt-2 text-gray-600">
+                    يتيح لك API Access دمج ALIDADE مع أدواتك وسير العمل الخاص بك. يمكنك إرسال الملفات برمجياً واستقبال النتائج تلقائياً. متاح فقط في خطة ULTIMATE.
+                </p>
+            </details>
+        </div>
+    </div>
+
+    <!-- Footer CTA -->
+    <div class="max-w-4xl mx-auto mt-16 text-center">
+        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-12 text-white">
+            <h2 class="text-4xl font-black mb-4">جاهز للبدء؟</h2>
+            <p class="text-xl mb-8">ابدأ مجاناً اليوم، بدون بطاقة ائتمان</p>
+            <button class="bg-white text-purple-600 px-8 py-4 rounded-lg font-bold text-lg hover:shadow-2xl transition transform hover:scale-105">
+                إنشاء حساب مجاني
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Optional: Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

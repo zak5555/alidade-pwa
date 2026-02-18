@@ -1,0 +1,240 @@
+<!--
+    COMPONENT: UPGRADE MODAL (PROTOCOL-7)
+    USAGE: Include this file in index.html, then call window.openUpgradeModal()
+-->
+
+<div id="upgrade-modal" class="fixed inset-0 z-[100] hidden opacity-0 transition-opacity duration-300" role="dialog" aria-modal="true">
+    <div class="absolute inset-0 bg-void-950/90 backdrop-blur-sm" onclick="window.closeUpgradeModal()"></div>
+
+    <div class="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div id="upgrade-modal-content" class="relative w-full max-w-3xl bg-void-900 border border-void-700 rounded-machined shadow-2xl pointer-events-auto transform scale-95 transition-transform duration-300">
+            <div class="tactical-corners absolute inset-0 pointer-events-none"></div>
+
+            <div class="relative p-6 border-b border-void-800 flex justify-between items-start">
+                <div>
+                    <h2 class="text-2xl font-mono font-bold text-white tracking-tight">
+                        <span class="text-signal-emerald">///</span> UPGRADE AUTHORIZATION
+                    </h2>
+                    <p class="text-zinc-400 text-sm mt-1 font-sans">Unlock the full tactical stack with ULTIMATE.</p>
+                </div>
+                <button onclick="window.closeUpgradeModal()" class="text-zinc-500 hover:text-white transition-colors p-2 -mr-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="upgrade-context" class="mx-6 mt-4 p-3 rounded-sm border border-signal-amber/30 bg-signal-amber/5">
+                <p id="upgrade-context-label" class="text-[10px] font-mono uppercase tracking-widest text-signal-amber">CLASSIFIED MODULE</p>
+                <p id="upgrade-context-copy" class="text-xs text-zinc-300 mt-1">Unlock Ultimate for full tactical capabilities.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-void-800">
+                <div class="p-6 flex flex-col relative group">
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">BASIC</span>
+                        </div>
+                        <div class="text-3xl font-mono font-bold text-white">0</div>
+                        <div class="text-xs text-zinc-500 uppercase tracking-widest mt-1">Useful Core Access</div>
+                    </div>
+
+                    <ul class="space-y-3 text-sm text-zinc-400 flex-1 mb-6 font-mono">
+                        <li class="flex items-center gap-2"><span class="text-zinc-600">+</span> 1 Daily Scan</li>
+                        <li class="flex items-center gap-2"><span class="text-zinc-600">+</span> Critical Phrase Subset</li>
+                        <li class="flex items-center gap-2"><span class="text-zinc-600">+</span> Lite Offline Pack</li>
+                        <li class="flex items-center gap-2"><span class="text-zinc-600">+</span> Core SOS and Emergency Contacts</li>
+                    </ul>
+
+                    <button id="btn-current-basic" class="w-full py-2 border border-void-700 text-zinc-500 font-mono text-sm bg-void-800/50 cursor-default">
+                        CURRENT PLAN
+                    </button>
+                </div>
+
+                <div class="p-6 flex flex-col relative group bg-void-800/40">
+                    <div class="absolute top-0 right-0 bg-signal-amber text-void-950 text-[10px] font-bold px-2 py-1 font-mono">BEST VALUE</div>
+                    <div class="absolute top-0 left-0 w-full h-1 bg-signal-amber"></div>
+
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-2xl">ULTIMATE</span>
+                        </div>
+                        <div class="text-3xl font-mono font-bold text-white">9.99</div>
+                        <div class="text-xs text-signal-amber/70 uppercase tracking-widest mt-1">Lifetime Access</div>
+                    </div>
+
+                    <ul class="space-y-3 text-sm text-white flex-1 mb-6 font-mono">
+                        <li class="flex items-center gap-2"><span class="text-signal-amber">+</span> Unlimited scans plus full history</li>
+                        <li class="flex items-center gap-2"><span class="text-signal-amber">+</span> INTEL, FORTRESS, PROTOCOLS, VECTOR unlocked</li>
+                        <li class="flex items-center gap-2"><span class="text-signal-amber">+</span> Full PHRASES archive</li>
+                        <li class="flex items-center gap-2"><span class="text-signal-amber">+</span> Offline full archive plus live tactical map</li>
+                        <li class="flex items-center gap-2"><span class="text-signal-amber">+</span> Batch tools, advanced filters, premium datasets</li>
+                    </ul>
+
+                    <a href="https://gumroad.com/l/alidade-ultimate" target="_blank" id="btn-upgrade-ultimate" class="block w-full text-center py-2 bg-signal-amber text-void-950 hover:bg-amber-400 font-mono text-sm font-bold shadow-lg shadow-amber-900/20 transition-all">
+                        GET ULTIMATE
+                    </a>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-void-800 bg-void-950/50 text-center">
+                <p class="text-xs text-zinc-600 font-mono">SECURE PAYMENT VIA GUMROAD • INSTANT ACTIVATION • MONEY BACK GUARANTEE</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const modal = document.getElementById('upgrade-modal');
+        const content = document.getElementById('upgrade-modal-content');
+        const btnBasic = document.getElementById('btn-current-basic');
+        const btnUltimate = document.getElementById('btn-upgrade-ultimate');
+        const contextLabel = document.getElementById('upgrade-context-label');
+        const contextCopy = document.getElementById('upgrade-context-copy');
+
+        const CONTEXT = {
+            DEFENSE: {
+                label: 'THREAT MATRIX PRO',
+                copy: 'Unlock advanced threat archetypes and rapid-response safety workflows.',
+                feature: 'DEFENSE'
+            },
+            ORGANIC_LAB: {
+                label: 'ORGANIC LAB FULL',
+                copy: 'Unlock premium food-safety datasets and advanced tactical filters.',
+                feature: 'ORGANIC_LAB'
+            },
+            PROTOCOLS: {
+                label: 'CLASSIFIED BRIEFING',
+                copy: 'Unlock full 5-day tactical archive, advanced waypoints, and planner handoff.',
+                feature: 'PROTOCOLS'
+            },
+            INTEL: {
+                label: 'INTEL ARCHIVE',
+                copy: 'Unlock hidden-gem intelligence, deep notes, and high-value route logic.',
+                feature: 'INTEL'
+            },
+            FORTRESS: {
+                label: 'FORTRESS PROTOCOLS',
+                copy: 'Unlock advanced personal safety routines and rapid extraction playbooks.',
+                feature: 'FORTRESS'
+            },
+            VECTOR: {
+                label: 'VECTOR HUD ADVANCED',
+                copy: 'Unlock live tactical overlays and enhanced orientation tooling.',
+                feature: 'VECTOR'
+            },
+            MARKET: {
+                label: 'MARKET INTELLIGENCE PRO',
+                copy: 'Unlock premium datasets, batch operations, and advanced filters.',
+                feature: 'MARKET'
+            },
+            PHRASES_FULL_ARCHIVE: {
+                label: 'LANGUAGE BRIDGE FULL',
+                copy: 'Unlock all phrase categories and full practice coverage.',
+                feature: 'PHRASES_FULL_ARCHIVE'
+            },
+            LIVE_TACTICAL_MAP: {
+                label: 'LIVE TACTICAL MAP',
+                copy: 'Unlock dynamic live map workflows beyond offline Lite usage.',
+                feature: 'LIVE_TACTICAL_MAP'
+            },
+            OFFLINE_ARCHIVE: {
+                label: 'OFFLINE FULL ARCHIVE',
+                copy: 'Upgrade from Lite packet to full offline tactical archive.',
+                feature: 'OFFLINE_ARCHIVE'
+            },
+            GENERAL: {
+                label: 'CLASSIFIED MODULE',
+                copy: 'Unlock Ultimate to access full tactical capability.',
+                feature: 'GENERAL'
+            }
+        };
+
+        let lastFeature = 'GENERAL';
+
+        function normalizeTier(rawTier) {
+            const tier = String(rawTier || '').trim().toUpperCase();
+            return tier === 'ULTIMATE' ? 'ULTIMATE' : 'BASIC';
+        }
+
+        function normalizeKey(value) {
+            return String(value || '').trim().toUpperCase().replace(/\s+/g, '_');
+        }
+
+        function resolveContext(arg1, arg2) {
+            const raw1 = String(arg1 || '').trim();
+            const raw2 = String(arg2 || '').trim();
+
+            const candidate = normalizeKey(raw2 || raw1);
+            const fallbackFromArg1 = normalizeKey(raw1);
+
+            let resolved = CONTEXT[candidate] || CONTEXT[fallbackFromArg1] || null;
+            return resolved || CONTEXT.GENERAL;
+        }
+
+        function track(eventName, payload) {
+            if (typeof window.trackTierFunnelEvent === 'function') {
+                window.trackTierFunnelEvent(eventName, payload || {});
+            }
+        }
+
+        function updateButtons(tier) {
+            const normalized = normalizeTier(tier);
+
+            btnBasic.textContent = 'CURRENT PLAN';
+            btnBasic.classList.add('bg-void-800/50', 'text-zinc-500');
+
+            btnUltimate.style.display = 'block';
+            btnUltimate.textContent = 'GET ULTIMATE';
+            btnUltimate.classList.remove('opacity-50', 'pointer-events-none', 'bg-void-700', 'text-zinc-400');
+            btnUltimate.classList.add('bg-signal-amber', 'text-void-950');
+
+            if (normalized === 'ULTIMATE') {
+                btnUltimate.textContent = 'PLAN ACTIVE';
+                btnUltimate.classList.add('opacity-50', 'pointer-events-none', 'bg-void-700', 'text-zinc-400');
+                btnUltimate.classList.remove('bg-signal-amber', 'text-void-950', 'hover:bg-amber-400');
+            }
+        }
+
+        window.openUpgradeModal = function (arg1 = '', arg2 = '') {
+            const currentTier = normalizeTier(window.USER_TIER || 'BASIC');
+            const context = resolveContext(arg1, arg2);
+            lastFeature = context.feature || 'GENERAL';
+
+            contextLabel.textContent = context.label;
+            contextCopy.textContent = context.copy;
+
+            updateButtons(currentTier);
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+            }, 10);
+
+            console.log('[UI] Upgrade modal opened.', { currentTier, context });
+        };
+
+        window.closeUpgradeModal = function () {
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        };
+
+        btnUltimate.addEventListener('click', () => {
+            track('checkout_open', {
+                source: 'upgrade_modal_cta',
+                feature: lastFeature
+            });
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+                window.closeUpgradeModal();
+            }
+        });
+    })();
+</script>

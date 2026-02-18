@@ -1,0 +1,2073 @@
+/* ================================================
+   ALIDADEâ„¢ // PROTOCOL-7 DLS
+   Military-Grade OLED Interface Stylesheet
+   ================================================ */
+
+/* -------------------- CSS Variables -------------------- */
+:root {
+  /* The Void - Background Hierarchy */
+  --void-950: #050505;
+  --void-900: #0A0A0A;
+  --void-800: #121212;
+  --void-700: #18181b;
+  --void-600: #27272a;
+  --void-500: #3f3f46;
+
+  /* The Signal - Data States */
+  --signal-emerald: #10b981;
+  --signal-emerald-dim: #059669;
+  --signal-emerald-glow: rgba(16, 185, 129, 0.15);
+
+  --signal-amber: #f59e0b;
+  --signal-amber-dim: #d97706;
+  --signal-amber-glow: rgba(245, 158, 11, 0.15);
+
+  --signal-crimson: #ef4444;
+  --signal-crimson-dim: #dc2626;
+  --signal-crimson-glow: rgba(239, 68, 68, 0.15);
+
+  --signal-cyan: #06b6d4;
+  --signal-cyan-dim: #0891b2;
+  --signal-cyan-glow: rgba(6, 182, 212, 0.15);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --tracking-tight: -0.025em;
+  --tracking-tighter: -0.035em;
+
+  /* Spacing */
+  --machined-radius: 2px;
+}
+
+/* -------------------- Base Reset -------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+  background-color: var(--void-950);
+  color: #e5e5e5;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* -------------------- Micro-Grid Background -------------------- */
+/* 20px x 20px grid of 1px dots at 3% opacity */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* -------------------- Vignette Mask -------------------- */
+/* Fades grid at edges to keep focus center */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center,
+      transparent 0%,
+      transparent 40%,
+      rgba(5, 5, 5, 0.4) 70%,
+      rgba(5, 5, 5, 0.9) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* -------------------- Scanline Heartbeat -------------------- */
+/* Subtle 1px line scanning down every 10 seconds at 5% opacity */
+.scanline-heartbeat {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(16, 185, 129, 0.05) 20%,
+      rgba(16, 185, 129, 0.08) 50%,
+      rgba(16, 185, 129, 0.05) 80%,
+      transparent 100%);
+  pointer-events: none;
+  z-index: 9998;
+  animation: scanline-heartbeat 10s linear infinite;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+@media (max-width: 768px) {
+  .scanline-heartbeat {
+    display: none;
+  }
+}
+
+@keyframes scanline-heartbeat {
+  0% {
+    transform: translateY(-1px);
+    opacity: 0;
+  }
+
+  5% {
+    opacity: 0.05;
+  }
+
+  95% {
+    opacity: 0.05;
+  }
+
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+/* -------------------- Typography System -------------------- */
+/* Primary: UI/Labels - Inter with tight tracking */
+.font-label {
+  font-family: var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+}
+
+/* Secondary: Data/Values - JetBrains Mono */
+.font-data {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+/* Rule enforcement helpers */
+.text-number,
+.text-coordinate,
+.text-price {
+  font-family: var(--font-mono) !important;
+  letter-spacing: 0.02em;
+}
+
+.text-instruction,
+.text-ui-label {
+  font-family: var(--font-sans) !important;
+  letter-spacing: var(--tracking-tight);
+}
+
+/* -------------------- Component Primitives -------------------- */
+
+/* Card Surface - Carbon Plate */
+.card-carbon {
+  background-color: var(--void-900);
+  border: 1px solid var(--void-800);
+  border-radius: var(--machined-radius);
+}
+
+/* Elevated Surface - Armor */
+.panel-armor {
+  background-color: var(--void-800);
+  border: 1px solid var(--void-700);
+  border-radius: var(--machined-radius);
+}
+
+/* Input Fields - Recess */
+.input-recess {
+  background-color: var(--void-700);
+  border: 1px solid var(--void-600);
+  border-radius: 1px;
+  color: #e5e5e5;
+  font-family: var(--font-mono);
+  transition: all 0.15s ease-out;
+}
+
+.input-recess:focus {
+  outline: none;
+  border-color: var(--signal-emerald);
+  box-shadow: 0 0 10px var(--signal-emerald-glow);
+}
+
+/* -------------------- Glow Effects (No Heavy Shadows) -------------------- */
+
+/* Signal Emerald Glows */
+.glow-emerald {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15),
+    0 0 40px rgba(16, 185, 129, 0.05);
+}
+
+.glow-emerald-sm {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+}
+
+.glow-emerald-lg {
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.2),
+    0 0 60px rgba(16, 185, 129, 0.1);
+}
+
+/* Signal Amber Glows */
+.glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.15),
+    0 0 40px rgba(245, 158, 11, 0.05);
+}
+
+.glow-amber-sm {
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+}
+
+/* Signal Crimson Glows */
+.glow-crimson {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15),
+    0 0 40px rgba(239, 68, 68, 0.05);
+}
+
+.glow-crimson-sm {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+}
+
+/* Signal Cyan Glows */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15),
+    0 0 40px rgba(6, 182, 212, 0.05);
+}
+
+.glow-cyan-sm {
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.1);
+}
+
+/* -------------------- Machined Radius -------------------- */
+.machined-radius {
+  border-radius: 2px;
+}
+
+.machined-radius-sm {
+  border-radius: 1px;
+}
+
+.machined-radius-lg {
+  border-radius: 4px;
+}
+
+/* -------------------- Legacy Scanlines (Preserved) -------------------- */
+.global-scanlines {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(16, 185, 129, 0.02) 2px,
+      rgba(16, 185, 129, 0.02) 4px);
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000;
+}
+
+@media (max-width: 768px) {
+  .global-scanlines {
+    display: none;
+  }
+}
+
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(16, 185, 129, 0.03) 2px,
+      rgba(16, 185, 129, 0.03) 4px);
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.bg-grid-pattern {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+@media (max-width: 768px) {
+  .bg-grid-pattern {
+    display: none !important;
+  }
+}
+
+/* -------------------- Navigation Styles -------------------- */
+.nav-section-header {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--void-500);
+  text-transform: uppercase;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.25rem;
+  border-left: 2px solid var(--void-600);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--machined-radius);
+  color: #a1a1aa;
+  text-decoration: none;
+  transition: all 0.2s ease-out;
+  position: relative;
+  border-left: 2px solid transparent;
+  font-family: var(--font-sans);
+  letter-spacing: var(--tracking-tight);
+}
+
+.nav-link:hover {
+  background: rgba(245, 158, 11, 0.05);
+  color: #e4e4e7;
+  border-left-color: var(--signal-amber);
+}
+
+.nav-link.active {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--signal-amber);
+  border-left-color: var(--signal-amber);
+}
+
+.nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 60%;
+  background: var(--signal-amber);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6),
+    0 0 16px rgba(245, 158, 11, 0.4);
+  border-radius: 1px;
+}
+
+.nav-number {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--void-500);
+  min-width: 1.5rem;
+}
+
+.nav-link:hover .nav-number,
+.nav-link.active .nav-number {
+  color: var(--signal-amber);
+}
+
+.nav-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  flex-shrink: 0;
+}
+
+.nav-text {
+  font-size: 0.8125rem;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* -------------------- Scrollbar Styling -------------------- */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--void-700);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--void-600);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--void-500);
+}
+
+/* -------------------- Animations -------------------- */
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.8),
+      0 0 20px rgba(16, 185, 129, 0.4);
+  }
+}
+
+@keyframes scan-line {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100vh);
+  }
+}
+
+@keyframes data-stream {
+  0% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes pulse-signal {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+  }
+
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.25);
+  }
+}
+
+.status-light-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* -------------------- HUD Elements -------------------- */
+.hud-border {
+  position: relative;
+}
+
+.hud-border::before,
+.hud-border::after {
+  content: '';
+  position: absolute;
+  background: var(--signal-amber);
+}
+
+.hud-corner {
+  position: relative;
+}
+
+.hud-corner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid var(--signal-amber);
+  border-left: 1px solid var(--signal-amber);
+}
+
+.hud-corner::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-bottom: 1px solid var(--signal-amber);
+  border-right: 1px solid var(--signal-amber);
+}
+
+/* -------------------- Utility Classes -------------------- */
+.thumb-action {
+  min-height: 56px;
+  min-width: 56px;
+}
+
+.thumb-action-large {
+  min-height: 72px;
+  min-width: 72px;
+}
+
+.gpu-accelerated {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.smooth-transition {
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+  will-change: transform, opacity;
+}
+
+/* -------------------- Slide Animations -------------------- */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%) translateZ(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0) translateZ(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    transform: translateY(20px) translateZ(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) translateZ(0);
+    opacity: 1;
+  }
+}
+
+.slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.slide-in-up {
+  animation: slide-in-up 0.3s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+/* -------------------- Button Press Animation -------------------- */
+@keyframes button-press {
+  0% {
+    transform: scale(1) translateZ(0);
+  }
+
+  50% {
+    transform: scale(0.95) translateZ(0);
+  }
+
+  100% {
+    transform: scale(1) translateZ(0);
+  }
+}
+
+.button-press:active {
+  animation: button-press 0.15s ease-out;
+}
+
+/* -------------------- Instrument Panel (Legacy) -------------------- */
+.instrument-panel {
+  background: var(--void-950);
+  border: 2px solid var(--signal-emerald);
+  border-radius: var(--machined-radius);
+  box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.1);
+}
+
+.instrument-display {
+  font-family: var(--font-mono);
+  background: var(--void-950);
+  border: 1px solid var(--signal-emerald);
+  color: var(--signal-emerald);
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.hud-data {
+  font-family: var(--font-mono);
+  color: var(--signal-emerald);
+  text-shadow: 0 0 8px rgba(16, 185, 129, 0.6),
+    0 0 16px rgba(16, 185, 129, 0.3);
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+@keyframes hud-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02) translateZ(0);
+  }
+}
+
+.hud-pulse {
+  animation: hud-pulse 2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes hud-blink {
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.hud-blink {
+  animation: hud-blink 1s step-end infinite;
+}
+
+/* -------------------- HUD Corners -------------------- */
+.hud-corners {
+  position: relative;
+}
+
+.hud-corners::before,
+.hud-corners::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: rgba(16, 185, 129, 0.5);
+  border-style: solid;
+}
+
+.hud-corners::before {
+  top: 0;
+  left: 0;
+  border-width: 2px 0 0 2px;
+}
+
+.hud-corners::after {
+  bottom: 0;
+  right: 0;
+  border-width: 0 2px 2px 0;
+}
+
+/* -------------------- Sidebar States -------------------- */
+#sidebar.open {
+  transform: translateX(0);
+}
+
+#overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ballistic-glass {
+  background: rgba(10, 10, 10, 0.95);
+  /* PERFORMANCE OPTIMIZATION: High opacity instead of blur */
+  /* backdrop-filter: blur(20px); */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--machined-radius);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ENHANCED CARD VARIANTS - Protocol-7 Visual Hierarchy
+   ═══════════════════════════════════════════════════════════════ */
+
+/* HERO CARD - Featured content (purple) */
+.ballistic-glass-hero {
+  position: relative;
+  background: linear-gradient(135deg,
+      rgba(139, 92, 246, 0.08) 0%,
+      var(--void-900) 60%);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+  box-shadow:
+    0 4px 24px rgba(139, 92, 246, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.ballistic-glass-hero::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 200%;
+  background: linear-gradient(45deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.02) 50%,
+      transparent 70%);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+/* CRITICAL CARD - Success states (emerald) */
+.ballistic-glass-critical {
+  position: relative;
+  background: linear-gradient(135deg,
+      rgba(16, 185, 129, 0.05) 0%,
+      var(--void-900) 50%,
+      rgba(16, 185, 129, 0.03) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 2px;
+  box-shadow:
+    0 0 20px rgba(16, 185, 129, 0.1),
+    inset 0 1px 0 rgba(16, 185, 129, 0.08);
+}
+
+.ballistic-glass-critical::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(16, 185, 129, 0.6),
+      transparent);
+}
+
+/* ACTIVE CARD - Ongoing operations (amber) */
+.ballistic-glass-active {
+  position: relative;
+  background: linear-gradient(135deg,
+      rgba(245, 158, 11, 0.04) 0%,
+      var(--void-900) 50%,
+      rgba(245, 158, 11, 0.02) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-left: 3px solid rgba(245, 158, 11, 0.6);
+  border-radius: 2px;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.08);
+}
+
+/* Pulse animation for active states */
+.pulse-indicator {
+  animation: pulse-glow-indicator 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow-indicator {
+
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 8px currentColor;
+  }
+
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 12px currentColor;
+  }
+}
+
+/* ================================================
+   PHASE 2: PROTOCOL-7 COMPONENT PRIMITIVES
+   ================================================ */
+
+/* -------------------- 1. TACTICAL CARD (The Container) -------------------- */
+/* Primary container with performance optimizations */
+.tactical-card {
+  background: var(--void-900);
+  /* Solid carbon color for speed */
+  /* Slightly transparent for glass effect */
+  border: 1px solid var(--void-800);
+  border-radius: 2px;
+  position: relative;
+  /* backdrop-filter: blur(12px); -- DISABLED FOR PERFORMANCE */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  /* Optimized shadow */
+}
+
+/* Corner Markers - Absolute Positioning */
+.corner-marker {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: rgba(255, 255, 255, 0.3);
+  border-style: solid;
+  border-width: 1px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.corner-marker.top-left {
+  top: -1px;
+  left: -1px;
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.corner-marker.top-right {
+  top: -1px;
+  right: -1px;
+  border-left: 0;
+  border-bottom: 0;
+}
+
+.corner-marker.bottom-left {
+  bottom: -1px;
+  left: -1px;
+  border-right: 0;
+  border-top: 0;
+}
+
+.corner-marker.bottom-right {
+  bottom: -1px;
+  right: -1px;
+  border-left: 0;
+  border-top: 0;
+}
+
+/* -------------------- 2. CONSOLE INPUT (The Form Field) -------------------- */
+/* Command-line aesthetic with touch optimization (48px+ target) */
+.console-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--void-700);
+  color: var(--signal-emerald);
+  font-family: 'JetBrains Mono', monospace;
+  padding: 12px 0;
+  /* Larger touch target */
+  width: 100%;
+  border-radius: 0;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.console-input:focus {
+  outline: none;
+  border-bottom-color: var(--signal-cyan);
+  box-shadow: 0 4px 12px -4px rgba(6, 182, 212, 0.3);
+  /* Subtle glow on floor */
+}
+
+.console-input::placeholder {
+  color: var(--void-500);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+}
+
+/* Console input variants */
+.console-input--amber:focus {
+  border-bottom-color: var(--signal-amber);
+  box-shadow: 0 4px 12px -4px rgba(245, 158, 11, 0.3);
+}
+
+.console-input--error {
+  border-bottom-color: var(--signal-crimson);
+  color: var(--signal-crimson);
+}
+
+/* -------------------- 3. SEGMENTED BAR (The Visualizer) -------------------- */
+/* Discrete segments instead of smooth gradients (cognitive: countable units) */
+.segmented-bar {
+  display: flex;
+  gap: 3px;
+  width: 100%;
+  height: 6px;
+}
+
+.segment {
+  flex: 1;
+  background: var(--void-800);
+  border-radius: 1px;
+  transition: background-color 0.3s ease;
+}
+
+.segment.active {
+  background: var(--signal-emerald);
+  box-shadow: 0 0 6px var(--signal-emerald-glow);
+}
+
+.segment.warning {
+  background: var(--signal-amber);
+  box-shadow: 0 0 6px var(--signal-amber-glow);
+}
+
+.segment.danger {
+  background: var(--signal-crimson);
+  box-shadow: 0 0 6px var(--signal-crimson-glow);
+}
+
+/* Segmented bar size variants */
+.segmented-bar--sm {
+  height: 4px;
+  gap: 2px;
+}
+
+.segmented-bar--lg {
+  height: 8px;
+  gap: 4px;
+}
+
+/* -------------------- 4. BORDER BEAM (The Loading/Active State) -------------------- */
+/* Conic gradient beam spinning around border (Houdini CSS API) */
+
+@property --beam-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.border-beam {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.border-beam::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 2px;
+  background: conic-gradient(from var(--beam-angle), transparent 30%, var(--signal-emerald) 50%, transparent 70%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: beam-spin 3s linear infinite;
+  z-index: 10;
+}
+
+.glass-morphism {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+}
+
+.tactical-header {
+  border-bottom: 1px solid var(--void-700);
+  background: linear-gradient(to bottom, var(--void-900), transparent);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.interactive-glow:hover {
+  box-shadow: 0 0 15px var(--signal-emerald-glow);
+  border-color: var(--signal-emerald-dim);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes beam-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+
+/* Border beam color variants */
+.border-beam--amber::after {
+  background: conic-gradient(from var(--beam-angle), transparent 40%, var(--signal-amber) 50%, transparent 60%);
+}
+
+.border-beam--cyan::after {
+  background: conic-gradient(from var(--beam-angle), transparent 40%, var(--signal-cyan) 50%, transparent 60%);
+}
+
+.border-beam--crimson::after {
+  background: conic-gradient(from var(--beam-angle), transparent 40%, var(--signal-crimson) 50%, transparent 60%);
+}
+
+/* Border beam speed variants */
+.border-beam--fast::after {
+  animation-duration: 2s;
+}
+
+.border-beam--slow::after {
+  animation-duration: 6s;
+}
+
+/* -------------------- 5. STATUS LIGHT (The Signal) -------------------- */
+/* Small indicator lights for system states */
+.status-light {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-safe {
+  background: var(--signal-emerald);
+  box-shadow: 0 0 8px var(--signal-emerald-glow);
+}
+
+.status-warning {
+  background: var(--signal-amber);
+  box-shadow: 0 0 8px var(--signal-amber-glow);
+}
+
+.status-critical {
+  background: var(--signal-crimson);
+  box-shadow: 0 0 8px var(--signal-crimson-glow);
+  animation: pulse-critical 1.5s infinite;
+}
+
+.status-info {
+  background: var(--signal-cyan);
+  box-shadow: 0 0 8px var(--signal-cyan-glow);
+}
+
+.status-offline {
+  background: var(--void-600);
+  box-shadow: none;
+}
+
+@keyframes pulse-critical {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+}
+
+/* Status light size variants */
+.status-light--sm {
+  width: 6px;
+  height: 6px;
+}
+
+.status-light--lg {
+  width: 12px;
+  height: 12px;
+}
+
+/* -------------------- 6. TACTICAL BUTTON (Bonus Primitive) -------------------- */
+/* Machined button with proper touch targets and haptic-ready states */
+.tactical-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  min-height: 48px;
+  background: var(--void-800);
+  border: 1px solid var(--void-700);
+  border-radius: 4px;
+  color: #e5e5e5;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.tactical-btn:hover {
+  background: var(--void-700);
+  border-color: var(--signal-emerald);
+  box-shadow: 0 0 15px var(--signal-emerald-glow);
+  transform: translateY(-1px);
+}
+
+.tactical-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.card-carbon {
+  background-color: var(--void-900);
+  border: 1px solid var(--void-800);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.card-carbon:hover {
+  border-color: var(--void-600);
+  background-color: var(--void-850);
+}
+
+.tactical-btn--primary {
+  background: var(--signal-amber);
+  border-color: var(--signal-amber);
+  color: var(--void-950);
+}
+
+.tactical-btn--primary:hover {
+  background: var(--signal-amber-dim);
+  border-color: var(--signal-amber-dim);
+}
+
+.tactical-btn--danger {
+  background: var(--signal-crimson);
+  border-color: var(--signal-crimson);
+  color: #fff;
+}
+
+.tactical-btn--ghost {
+  background: transparent;
+  border-color: var(--void-600);
+}
+
+.tactical-btn--ghost:hover {
+  background: var(--void-800);
+}
+
+/* -------------------- 7. DATA DISPLAY (Bonus Primitive) -------------------- */
+/* For rendering numerical/coordinate data with proper typography */
+.data-display {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  color: var(--signal-emerald);
+}
+
+.data-display--amber {
+  color: var(--signal-amber);
+}
+
+.data-display--crimson {
+  color: var(--signal-crimson);
+}
+
+.data-display--cyan {
+  color: var(--signal-cyan);
+}
+
+.data-display--lg {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.data-display--xl {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* ================================================
+   PHASE 3: MOTION & INTERACTION SYSTEM
+   Protocol-7 Spring Physics (CSS Approximation)
+   ================================================ */
+
+/* -------------------- SPRING TIMING FUNCTIONS -------------------- */
+/* These cubic-bezier curves approximate spring physics behavior */
+:root {
+  /* Tight Spring: Quick, snappy response (hover, toggles) */
+  --spring-tight: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Heavy Spring: Slower, more mass (modals, large transitions) */
+  --spring-heavy: cubic-bezier(0.22, 1.2, 0.36, 1);
+
+  /* Bounce Spring: Overshoot for playful interactions */
+  --spring-bounce: cubic-bezier(0.68, -0.6, 0.32, 1.6);
+
+  /* Mechanical: Precise, no overshoot (data updates) */
+  --spring-mechanical: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* -------------------- INTERACTIVE ELEMENT BASE -------------------- */
+/* Apply spring physics to all interactive elements */
+.spring-interactive {
+  transition: transform 0.2s var(--spring-tight),
+    box-shadow 0.2s var(--spring-mechanical),
+    background-color 0.15s ease;
+  will-change: transform;
+}
+
+.spring-interactive:hover {
+  transform: scale(1.02) translateZ(0);
+}
+
+.spring-interactive:active {
+  transform: scale(0.98) translateZ(0);
+}
+
+/* Heavy variant for larger elements */
+.spring-heavy {
+  transition: transform 0.3s var(--spring-heavy),
+    box-shadow 0.3s var(--spring-mechanical);
+}
+
+.spring-heavy:hover {
+  transform: scale(1.01) translateZ(0);
+}
+
+.spring-heavy:active {
+  transform: scale(0.99) translateZ(0);
+}
+
+/* -------------------- BUTTON SPRING STATES -------------------- */
+.tactical-btn {
+  transition: transform 0.2s var(--spring-tight),
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.2s var(--spring-mechanical);
+}
+
+.tactical-btn:hover {
+  transform: translateY(-1px) translateZ(0);
+}
+
+.tactical-btn:active {
+  transform: scale(0.98) translateY(0) translateZ(0);
+}
+
+/* -------------------- CARD SPRING STATES -------------------- */
+.tactical-card {
+  transition: transform 0.25s var(--spring-heavy),
+    box-shadow 0.25s var(--spring-mechanical),
+    border-color 0.2s ease;
+}
+
+.tactical-card:hover {
+  transform: translateY(-2px) translateZ(0);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+}
+
+.tactical-card:active {
+  transform: translateY(0) scale(0.995) translateZ(0);
+}
+
+/* -------------------- VIEW TRANSITIONS -------------------- */
+/* Smooth page/view transitions */
+.view-enter {
+  animation: view-slide-in 0.3s var(--spring-heavy) forwards;
+}
+
+.view-exit {
+  animation: view-slide-out 0.2s var(--spring-mechanical) forwards;
+}
+
+@keyframes view-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) translateZ(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+}
+
+@keyframes view-slide-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) translateZ(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-8px) translateZ(0);
+  }
+}
+
+/* Modal/overlay transitions */
+.modal-enter {
+  animation: modal-scale-in 0.25s var(--spring-bounce) forwards;
+}
+
+.modal-exit {
+  animation: modal-scale-out 0.15s var(--spring-mechanical) forwards;
+}
+
+@keyframes modal-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateZ(0);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+}
+
+@keyframes modal-scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateZ(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.98) translateZ(0);
+  }
+}
+
+/* -------------------- STAGGERED LIST ANIMATIONS -------------------- */
+/* For grid items loading in sequence */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: stagger-in 0.3s var(--spring-heavy) forwards;
+}
+
+.stagger-item:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.stagger-item:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.stagger-item:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+.stagger-item:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+.stagger-item:nth-child(5) {
+  animation-delay: 200ms;
+}
+
+.stagger-item:nth-child(6) {
+  animation-delay: 250ms;
+}
+
+.stagger-item:nth-child(7) {
+  animation-delay: 300ms;
+}
+
+.stagger-item:nth-child(8) {
+  animation-delay: 350ms;
+}
+
+@keyframes stagger-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* -------------------- NUMBER/DATA ANIMATIONS -------------------- */
+/* For price displays, counters, coordinates */
+.data-update {
+  animation: data-flash 0.4s var(--spring-mechanical);
+}
+
+@keyframes data-flash {
+  0% {
+    opacity: 1;
+    color: var(--signal-cyan);
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+
+  100% {
+    opacity: 1;
+    color: inherit;
+  }
+}
+
+/* Counting/scramble effect placeholder */
+.data-scramble {
+  animation: scramble-pulse 0.1s steps(1) 5;
+}
+
+@keyframes scramble-pulse {
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* -------------------- FOCUS RING ANIMATION -------------------- */
+/* Animated focus ring for keyboard navigation */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--void-950),
+    0 0 0 4px var(--signal-cyan);
+  animation: focus-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes focus-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px var(--void-950),
+      0 0 0 4px var(--signal-cyan);
+  }
+
+  50% {
+    box-shadow: 0 0 0 2px var(--void-950),
+      0 0 0 4px var(--signal-cyan),
+      0 0 12px var(--signal-cyan-glow);
+  }
+}
+
+/* -------------------- LOADING SHIMMER -------------------- */
+/* Skeleton loading effect */
+.shimmer {
+  background: linear-gradient(90deg,
+      var(--void-800) 0%,
+      var(--void-700) 50%,
+      var(--void-800) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* -------------------- ACCESSIBILITY: REDUCED MOTION -------------------- */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .spring-interactive:hover,
+  .spring-interactive:active,
+  .spring-heavy:hover,
+  .spring-heavy:active,
+  .tactical-btn:hover,
+  .tactical-btn:active,
+  .tactical-card:hover,
+  .tactical-card:active {
+    transform: none !important;
+  }
+
+  .scanline-heartbeat,
+  .border-beam::after {
+    display: none !important;
+  }
+}
+
+/* ================================================
+   PHASE 4: LAYOUT MODERNIZATION SYSTEM
+   Protocol-7 Bento Grid & Command Rail
+   ================================================ */
+
+/* -------------------- BENTO GRID SYSTEM -------------------- */
+/* Apple/Vercel-style modular dashboard layout */
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  width: 100%;
+}
+
+/* Mobile: Stack everything */
+@media (max-width: 639px) {
+  .bento-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+}
+
+/* Tablet and up: 2 column minimum */
+@media (min-width: 640px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Desktop: 3+ columns */
+@media (min-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+/* Bento Cell - Base */
+.bento-cell {
+  min-height: 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Square cells */
+.bento-cell.square {
+  aspect-ratio: 1;
+}
+
+/* Wide cells span 2 columns */
+.bento-cell.wide {
+  grid-column: span 2;
+}
+
+/* Tall cells span 2 rows */
+.bento-cell.tall {
+  grid-row: span 2;
+}
+
+/* Hero cell spans full width */
+.bento-cell.hero {
+  grid-column: 1 / -1;
+  min-height: 200px;
+}
+
+/* Responsive overrides for mobile */
+@media (max-width: 639px) {
+
+  .bento-cell.wide,
+  .bento-cell.tall,
+  .bento-cell.hero {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+}
+
+/* -------------------- COMMAND RAIL (Side Navigation) -------------------- */
+/* Persistent tactical navigation - Desktop only */
+
+.command-rail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 64px;
+  background: var(--void-900);
+  border-right: 1px solid var(--void-800);
+  display: none;
+  /* Hidden on mobile */
+  flex-direction: column;
+  padding: 1rem 0;
+  gap: 0.25rem;
+  z-index: 100;
+}
+
+/* Show on desktop */
+@media (min-width: 1024px) {
+  .command-rail {
+    display: flex;
+  }
+
+  /* Offset main content when rail is visible */
+  .has-command-rail {
+    margin-left: 64px;
+  }
+}
+
+/* Rail header (logo/brand) */
+.rail-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 64px;
+  border-bottom: 1px solid var(--void-800);
+  margin-bottom: 0.5rem;
+}
+
+.rail-logo {
+  width: 32px;
+  height: 32px;
+  color: var(--signal-amber);
+}
+
+/* Rail navigation items */
+.rail-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  margin: 0 0.5rem;
+  border-radius: 2px;
+  color: var(--void-500);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s var(--spring-tight);
+  text-decoration: none;
+  font-family: var(--font-sans);
+}
+
+.rail-item:hover {
+  color: #e5e5e5;
+  background: var(--void-800);
+}
+
+.rail-item.active {
+  color: var(--signal-emerald);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.rail-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 2px;
+  height: 24px;
+  background: var(--signal-emerald);
+  box-shadow: 0 0 8px var(--signal-emerald-glow);
+}
+
+.rail-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.rail-label {
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Rail spacer (push items to bottom) */
+.rail-spacer {
+  flex: 1;
+}
+
+/* Rail footer items (settings, etc.) */
+.rail-footer {
+  border-top: 1px solid var(--void-800);
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* -------------------- VIEWFINDER CORNERS (Tactical Framing) -------------------- */
+/* Bracket aesthetic for important UI areas */
+
+.viewfinder {
+  position: relative;
+  padding: 2rem;
+}
+
+.viewfinder-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--signal-cyan);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.viewfinder-corner.tl {
+  top: 0;
+  left: 0;
+  border-bottom: none;
+  border-right: none;
+}
+
+.viewfinder-corner.tr {
+  top: 0;
+  right: 0;
+  border-bottom: none;
+  border-left: none;
+}
+
+.viewfinder-corner.bl {
+  bottom: 0;
+  left: 0;
+  border-top: none;
+  border-right: none;
+}
+
+.viewfinder-corner.br {
+  bottom: 0;
+  right: 0;
+  border-top: none;
+  border-left: none;
+}
+
+/* Viewfinder color variants */
+.viewfinder--emerald .viewfinder-corner {
+  border-color: var(--signal-emerald);
+}
+
+.viewfinder--amber .viewfinder-corner {
+  border-color: var(--signal-amber);
+}
+
+.viewfinder--crimson .viewfinder-corner {
+  border-color: var(--signal-crimson);
+}
+
+/* Compact viewfinder */
+.viewfinder--compact {
+  padding: 1rem;
+}
+
+.viewfinder--compact .viewfinder-corner {
+  width: 12px;
+  height: 12px;
+  border-width: 1px;
+}
+
+/* -------------------- BOTTOM NAVIGATION (Mobile Tab Bar) -------------------- */
+/* iOS-style bottom navigation for mobile */
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 72px;
+  /* Safe area + content */
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  background: var(--void-900);
+  border-top: 1px solid var(--void-800);
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  padding-top: 0.5rem;
+  z-index: 100;
+}
+
+/* Hide on desktop */
+@media (min-width: 1024px) {
+  .bottom-nav {
+    display: none;
+  }
+}
+
+.bottom-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  color: var(--void-500);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  min-width: 64px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-item:active {
+  color: #e5e5e5;
+}
+
+.bottom-nav-item.active {
+  color: var(--signal-amber);
+}
+
+.bottom-nav-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.bottom-nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
+/* -------------------- CONTAINER UTILITIES -------------------- */
+/* Max-width containers for content */
+
+.container-prose {
+  max-width: 65ch;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container-wide {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.container-full {
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* -------------------- TOUCH TARGET UTILITIES -------------------- */
+/* Ensure all touch targets are at least 44x44 (iOS) or 48x48 (Android) */
+
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.touch-target-lg {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+.touch-target-xl {
+  min-height: 56px;
+  min-width: 56px;
+}
+
+/* -------------------- SAFE AREA UTILITIES -------------------- */
+/* For notched devices and home indicators */
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-left {
+  padding-left: env(safe-area-inset-left, 0);
+}
+
+.safe-right {
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+.safe-all {
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+
+/* -------------------- SCROLL UTILITIES -------------------- */
+/* Horizontal scroll containers */
+
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scroll-x::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari */
+}
+
+/* Snap scrolling */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+}
+
+.scroll-snap-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* -------------------- GPU ACCELERATION -------------------- */
+/* Performance optimization for animations */
+
+.gpu-layer {
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 60fps scroll optimization */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOAST NOTIFICATION ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+
+  to {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-in;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TACTICAL UI UTILITIES
+   ═══════════════════════════════════════════════════════════════ */
+
+.rounded-machined {
+  border-radius: var(--machined-radius);
+}
+
+.shadow-void-lg {
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+/* --- CLEANUP: Recovered from app.js inline styles --- */
+@keyframes scan-vertical {
+  0% {
+    background-position: 0 -100px;
+  }
+
+  100% {
+    background-position: 0 200%;
+  }
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  50% {
+    transform: translate(10px, 15px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+
+  70% {
+    transform: scale(1);
+    opacity: 0;
+    box-shadow: 0 0 0 10px rgba(245, 158, 11, 0);
+  }
+
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-up-fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-scan-line {
+  animation: scan-vertical 3s linear infinite;
+  background: linear-gradient(to bottom, transparent, rgba(245, 158, 11, 0.5), transparent);
+  height: 50px;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.animate-drift {
+  animation: drift 8s ease-in-out infinite;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.delay-400 {
+  animation-delay: 400ms;
+}
+
+.delay-500 {
+  animation-delay: 500ms;
+}
+
+.delay-600 {
+  animation-delay: 600ms;
+}
+
+.delay-700 {
+  animation-delay: 700ms;
+}
+
+.delay-800 {
+  animation-delay: 800ms;
+}
+
+.tech-grid-bg {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.bg-grid-pattern {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}

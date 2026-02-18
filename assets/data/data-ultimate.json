@@ -1,0 +1,1083 @@
+{
+  "version": 1,
+  "generated_at": "2026-02-14T03:00:41.274Z",
+  "threatData": [
+    {
+      "id": "monkey_snake_ambush",
+      "category": "jemaa",
+      "title": "Monkey/Snake Ambush",
+      "risk": "HIGH",
+      "loss": "100-500 DH",
+      "description": "• The Ambush: They put a snake/monkey on your shoulder suddenly.\n• The Extortion: They demand 200-300 DH to remove it or for the photo.",
+      "counter_measure": "• The 2-Meter Rule: Keep a safe distance. If they approach, raise your hand and yell 'NO'.\n• Price Lock: Never take a photo without agreeing on 10-20 DH total beforehand.",
+      "verbal_nuke": {
+        "phrase": "Sir Fhal-ek",
+        "phonetic": "Sir Fhal-ek",
+        "meaning": "Go Away",
+        "audio": "assets/audio/sir_b7alak.mp3"
+      }
+    },
+    {
+      "id": "orange_juice_roulette",
+      "category": "jemaa",
+      "title": "Orange Juice Roulette",
+      "risk": "HIGH",
+      "loss": "<50 DH",
+      "description": "• The Mix: Some carts dilute juice with tap water or sugar water.\n• The Ice: Huge amounts of ice made from tap water (stomach issues).",
+      "counter_measure": "• The Phrase: Always order 'Sans Glaçon' (No Ice).\n• Observation: Watch them squeeze oranges in front of you.\n• Safe Stall: Stall #40 has a good reputation.",
+      "verbal_nuke": {
+        "phrase": "L-3assir Bou-hdou",
+        "phonetic": "L-3a-ssir Bou-hdou",
+        "meaning": "Just Orange (No mix)",
+        "audio": "assets/audio/3assir.mp3"
+      }
+    },
+    {
+      "id": "the_henna_grab",
+      "category": "jemaa",
+      "title": "The Henna Grab",
+      "risk": "HIGH",
+      "loss": "100-500 DH",
+      "description": "• The Ambush: Women with syringes grab your hand and start drawing immediately.\n• The Poison: 'Black Henna' often contains PPD (toxic chemical, causes burns).",
+      "counter_measure": "• Body Shield: Keep hands in pockets. No hands = No target.\n• Action: Pull away instantly and forcefully.",
+      "verbal_nuke": {
+        "phrase": "La chok-ran",
+        "phonetic": "La chok-ran",
+        "meaning": "No Thanks",
+        "audio": "assets/audio/g06_la_shukran.mp3"
+      }
+    },
+    {
+      "id": "billShockStandoff",
+      "category": "restaurants",
+      "title": "Bill Shock Standoff",
+      "risk": "HIGH",
+      "loss": "600+ DH",
+      "description": "• The Shock: Bill is 3x or 4x expected.\n• The Swarm: Waiters gather to intimidate you.\n• Goal: Make you pay to escape.",
+      "counter_measure": "• Evidence: Show menu photo taken earlier.\n• Calc: Do math visibly.\n• Power Move: Put EXACT FAIR AMOUNT on table and leave.",
+      "verbal_nuke": {
+        "phrase": "Ay-yet l'Boul-ice",
+        "phonetic": "Ay-yet l'Boul-ice",
+        "meaning": "Call the Police",
+        "audio": "assets/audio/n3ayat_poulice.mp3"
+      }
+    },
+    {
+      "id": "entrapment",
+      "category": "restaurants",
+      "title": "Entrapment",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• They place bread, water, and olives immediately on the table (not free).",
+      "counter_measure": "• Immediate refusal. Say 'Blach' and gesture to return it. Don't touch it.",
+      "verbal_nuke": {
+        "phrase": "Blach",
+        "phonetic": "Blach",
+        "meaning": "No need",
+        "audio": "assets/audio/blach.mp3"
+      }
+    },
+    {
+      "id": "phantomBillTouts",
+      "category": "restaurants",
+      "title": "Phantom Bill & Touts",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• Menu Tricks: 'Price per 100g' or switching menus.\n• Bad Stalls: Avoid Stall #117 and #1.",
+      "counter_measure": "• Safe List: Stall #14 (Fish) or #31 (Meat).\n• Evidence: Photo the menu before ordering.",
+      "verbal_nuke": {
+        "phrase": "Ma-talabt-sh had-shi",
+        "phonetic": "Ma-talabt-sh had-shi",
+        "meaning": "I didn't order this",
+        "audio": "assets/audio/s14_matlabtch_hadchi.mp3"
+      }
+    },
+    {
+      "id": "carpetCooperative",
+      "category": "souk",
+      "title": "Carpet 'Cooperative'",
+      "risk": "MEDIUM",
+      "loss": "600+ DH",
+      "description": "• The Setup: Claiming to be 'Government Co-op' (Lie).\n• The Drama: Acting insulted if you offer low price.",
+      "counter_measure": "• Reverse Anchoring: Ask 500? Offer 50. Reset expectations.\n• Walk-Away: Price drops 70% when you leave.",
+      "verbal_nuke": {
+        "phrase": "Ghali Bezaf!",
+        "phonetic": "Gha-li Bez-zaf!",
+        "meaning": "Too Expensive!",
+        "audio": "assets/audio/s02_ghali_bezaf.mp3"
+      }
+    },
+    {
+      "id": "theMoneyMagician",
+      "category": "souk",
+      "title": "The Money Magician",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• Fold Under: Folding a bill underneath while counting.\n• Calculator Trick: Switching to 'Euro' at payment.",
+      "counter_measure": "• Control: Count change yourself slowly.\n• Clarity: Confirm 'Dirham?' before tapping card.",
+      "verbal_nuke": {
+        "phrase": "Machi Euro",
+        "phonetic": "Machi Euro",
+        "meaning": "Not Euro",
+        "audio": "assets/audio/s09_machi_euro.mp3"
+      }
+    },
+    {
+      "id": "governmentShopLie",
+      "category": "souk",
+      "title": "'Government Shop' Lie",
+      "risk": "MEDIUM",
+      "loss": "600+ DH",
+      "description": "• The Lie: 'Fixed Price because State-run'.\n• Reality: NO government shops exist in Souks.",
+      "counter_measure": "• Action: Ignore the title. Negotiate normally or walk away.",
+      "verbal_nuke": {
+        "phrase": "Ana fa-hem",
+        "phonetic": "Ana fa-hem",
+        "meaning": "I understand (the game)",
+        "audio": "assets/audio/g08_ana_fahem.mp3"
+      }
+    },
+    {
+      "id": "theCalculatorShift",
+      "category": "souk",
+      "title": "The Calculator Shift",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• Trap: Screen shows '500'. He claims it's Euros or uses '00' button to shift decimal.",
+      "counter_measure": "• Say currency out loud and check screen.",
+      "verbal_nuke": {
+        "phrase": "Dirham, Machi Euro!",
+        "phonetic": "Dirham, Machi Euro!",
+        "meaning": "Dirham, not Euro!",
+        "audio": "assets/audio/s09_machi_euro.mp3"
+      }
+    },
+    {
+      "id": "theSaffronScam",
+      "category": "souk",
+      "title": "The Saffron Scam",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• Trap: Selling red powder/corn silk as Saffron.",
+      "counter_measure": "• Water Test: Real saffron turns water yellow slowly. Fake turns it red immediately.",
+      "verbal_nuke": {
+        "phrase": "Hada M-zou-wer",
+        "phonetic": "HA-DA M-ZOO-WER",
+        "meaning": "This is fake",
+        "audio": "assets/audio/s08_hada_mzawer.mp3"
+      }
+    },
+    {
+      "id": "fakeArgan",
+      "category": "souk",
+      "title": "Fake Argan",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• The Lie: Selling Culinary Oil as Cosmetic.\n• The Fake: Veg oil mixed with scent in clear bottles (Light destroys Argan).",
+      "counter_measure": "• Check: Cosmetic is light gold, Culinary is dark/roasted. Must be in dark glass.",
+      "verbal_nuke": {
+        "phrase": null,
+        "phonetic": null,
+        "meaning": null
+      }
+    },
+    {
+      "id": "roadClosedTrap",
+      "category": "streets",
+      "title": "Road Closed Trap",
+      "risk": "HIGH",
+      "loss": "100-500 DH",
+      "description": "• The Lie: 'Road Closed' or 'Big Festival Today'.\n• Goal: Make you doubt map and follow them.",
+      "counter_measure": "• Vector: Don't stop. Walk with speed.\n• Sunglasses: Hide your eyes. No eye contact = No hook.",
+      "verbal_nuke": {
+        "phrase": "Ana Sa-ken Hna",
+        "phonetic": "Ana Sa-ken Hna",
+        "meaning": "I Live Here",
+        "audio": "assets/audio/s12_ana_saken_hna.mp3"
+      }
+    },
+    {
+      "id": "theTanneryRelay",
+      "category": "streets",
+      "title": "The Tannery Relay",
+      "risk": "HIGH",
+      "loss": "100-500 DH",
+      "description": "• The Relay: Passed from one guy to another.\n• Mint Trick: Shoving mint under nose creates 'Immediate Debt'.",
+      "counter_measure": "• Protocol: Do NOT go alone. Only with licensed guide.",
+      "verbal_nuke": {
+        "phrase": "Ma-bghit Wa-lou",
+        "phonetic": "Ma-bghit Wa-lou",
+        "meaning": "I don't want anything",
+        "audio": "assets/audio/s05_ma_bghit_walo.mp3"
+      }
+    },
+    {
+      "id": "theMellahTrap",
+      "category": "streets",
+      "title": "The Mellah Trap",
+      "risk": "MEDIUM",
+      "loss": "<50 DH",
+      "description": "• Lie: 'Jewish Cemetery is closed'.\n• Switch: Guiding you to fake 'Spice Market'.",
+      "counter_measure": "• Fact Check: Almost always open. Check Google Maps.",
+      "verbal_nuke": {
+        "phrase": "La, Shuk-ran",
+        "phonetic": "La, Shuk-ran",
+        "meaning": "No thanks",
+        "audio": "assets/audio/g06_la_shukran.mp3"
+      }
+    },
+    {
+      "id": "theHotelStaffImpostor",
+      "category": "streets",
+      "title": "Hotel Staff Impostor",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• Trap: Stranger claims to work at your Riad to gain trust.",
+      "counter_measure": "• Ask: 'Which hotel?' or 'What is my room number?'. He will freeze.",
+      "verbal_nuke": {
+        "phrase": "Ana 3aref Staff",
+        "phonetic": "Ana 3aref Staff",
+        "meaning": "I know the staff",
+        "audio": "assets/audio/e06_ana_3araf_staff.mp3"
+      }
+    },
+    {
+      "id": "theBillSwitch",
+      "category": "transport",
+      "title": "The Bill Switch",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• Switch: You hand 200 DH. Driver drops it, swaps for 20 DH, claims mistake.",
+      "counter_measure": "• Announce: 'Here is 200'.\n• Flash: Use phone light.\n• Photo: Take photo of bill in hand.",
+      "verbal_nuke": {
+        "phrase": "Ha Me-ten Der-ham",
+        "phonetic": "Ha Me-ten Der-ham",
+        "meaning": "Here is 200",
+        "audio": "assets/audio/s10_ha_200dh.mp3"
+      }
+    },
+    {
+      "id": "beforeRiding",
+      "category": "transport",
+      "title": "Meter Check",
+      "risk": "MEDIUM",
+      "loss": "100-500 DH",
+      "description": "• Lie: 'Meter broken' or fixed price demand.",
+      "counter_measure": "• Prerequisite: Say 'Turn on meter'. If refused, find another.",
+      "verbal_nuke": {
+        "phrase": "Kh-dem Comp-teur",
+        "phonetic": "Kh-dem Comp-teur",
+        "meaning": "Turn on meter",
+        "audio": "assets/audio/t02_khdem_compteur.mp3"
+      }
+    },
+    {
+      "id": "noChangeTrap",
+      "category": "transport",
+      "title": "No Change Trap",
+      "risk": "MEDIUM",
+      "loss": "<50 DH",
+      "description": "• Trap: 'No change' for your 100/200 DH note.",
+      "counter_measure": "• Prepare: Always carry coins (10, 20s). Pay exact.",
+      "verbal_nuke": {
+        "phrase": null,
+        "phonetic": null,
+        "meaning": null
+      }
+    }
+  ],
+  "intelData": {
+    "page_desc": "NOISE CANCELLATION. We analyzed 50+ blogs and 1000+ reviews. Targets, not options. Zero Decision Fatigue.",
+    "categories": {
+      "rations": {
+        "title": "RATIONS: SAFE DINING",
+        "subtitle": "Taste Without Fear",
+        "targets": [
+          {
+            "id": "le_barometre",
+            "name": "Le Baromètre",
+            "type": "Dining",
+            "window": "8:00 PM",
+            "vibe": "Industrial/Underground",
+            "item": "Coco Spice Cocktail",
+            "intel": "Underground in Gueliz. Decor resembles a giant chemistry lab. Food is excellent fusion. Smoking prohibited inside.",
+            "price": "💰💰💰",
+            "protocol": "Reservation Necessary",
+            "link": "https://lebarometre.net/",
+            "map": "https://maps.google.com/?q=31.637196991471736,-8.013994591845623"
+          },
+          {
+            "id": "al_fassia",
+            "name": "Al Fassia (Gueliz)",
+            "type": "Dining",
+            "window": "Dinner",
+            "vibe": "Aristocratic",
+            "item": "Roasted Lamb Shoulder",
+            "intel": "Pro Tip: You MUST order the 'Lamb Shoulder' (Epaule d'Agneau) 24 hours in advance. Cannot order on spot.",
+            "price": "💰💰💰",
+            "protocol": "Mandatory (48h prior for shoulder)",
+            "link": "https://www.alfassiarestaurant.com/",
+            "map": "https://maps.google.com/?q=31.63617641354789,-8.013664020642873"
+          },
+          {
+            "id": "nomad",
+            "name": "Nomad",
+            "type": "Dining",
+            "window": "Sunset",
+            "vibe": "Boho-Chic",
+            "item": "Nomad Burger / Saffron Cake",
+            "intel": "Request 'Upper Terrace' when booking. Tapas-style small plates, perfect for sharing.",
+            "price": "💰💰",
+            "protocol": "Mandatory (Weeks ahead for sunset)",
+            "link": "https://nomadmarrakech.com/reservation/",
+            "map": "https://maps.google.com/?q=31.62863159374366,-7.98753831058811"
+          },
+          {
+            "id": "le_jardin",
+            "name": "Le Jardin",
+            "type": "Dining",
+            "window": "Lunch (Shady)",
+            "vibe": "Green Jungle",
+            "item": "Chicken Pastilla",
+            "intel": "Look for turtles walking around. Pop into Norya Ayron boutique upstairs.",
+            "price": "💰💰",
+            "protocol": "Recommended for dinner",
+            "link": "https://lejardinmarrakech.com/reservation/",
+            "map": "https://maps.google.com/?q=31.632207886203563,-7.988876376487436"
+          },
+          {
+            "id": "amal_center",
+            "name": "Amal Center",
+            "type": "Dining",
+            "window": "Friday Lunch",
+            "vibe": "Charity & Homey",
+            "item": "Friday Couscous",
+            "intel": "Best Couscous in town (Fridays only). Non-profit supporting women.",
+            "price": "💰",
+            "protocol": "Highly Recommended",
+            "link": "https://www.amalnonprofit.org/",
+            "map": "https://maps.google.com/?q=31.639013613173013,-8.013795599037389"
+          },
+          {
+            "id": "fine_mama",
+            "name": "Fine Mama",
+            "type": "Dining",
+            "window": "Quick Lunch",
+            "vibe": "Chill & Young",
+            "item": "Buddha Bowl / Vegan",
+            "intel": "Great for vegans or a break from Tagines. Rooftop has view of Koutoubia.",
+            "price": "💰",
+            "protocol": "Direct Entry",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.62299963253861,-7.989680236384788"
+          }
+        ]
+      },
+      "oxygen": {
+        "title": "OXYGEN: GARDENS",
+        "subtitle": "The City's Lungs",
+        "targets": [
+          {
+            "id": "anima",
+            "name": "ANIMA Garden",
+            "type": "Garden",
+            "window": "Morning Shuttle",
+            "vibe": "Surreal & Arty",
+            "item": "Rodin Sculpture",
+            "intel": "Free Shuttle from Koutoubia. You MUST book the shuttle online in advance.",
+            "price": "💰💰",
+            "protocol": "Shuttle Reservation Mandatory",
+            "link": "https://www.anima-garden.com/shuttle/",
+            "map": "https://maps.google.com/?q=31.404413669247276,-7.824801064472283"
+          },
+          {
+            "id": "majorelle",
+            "name": "Jardin Majorelle",
+            "type": "Garden",
+            "window": "08:30 AM Slot",
+            "vibe": "Iconic & Crowded",
+            "item": "Blue Villa",
+            "intel": "Critical: Tickets are ONLINE ONLY (24h in advance). Buy 'Combo' ticket to skip lines.",
+            "price": "💰💰",
+            "protocol": "Online Only (Mandatory)",
+            "link": "https://www.jardinmajorelle.com/",
+            "map": "http://maps.google.com/?q=31.6414,-8.0031"
+          },
+          {
+            "id": "secret",
+            "name": "Le Jardin Secret",
+            "type": "Garden",
+            "window": "Sunset/Noon",
+            "vibe": "Oasis & Islamic",
+            "item": "The Tower View",
+            "intel": "Pay extra 40 DH for Tower ticket. Highest accessible point in Medina.",
+            "price": "💰",
+            "protocol": "Tickets at door or online",
+            "link": "https://www.lejardinsecretmarrakech.com/",
+            "map": "https://maps.google.com/?q=31.630710978312184,-7.989527808546041"
+          }
+        ]
+      },
+      "recon": {
+        "title": "RECON: HISTORY",
+        "subtitle": "The Icons",
+        "targets": [
+          {
+            "id": "ben_youssef",
+            "name": "Ben Youssef Madrasa",
+            "type": "Landmark",
+            "window": "09:00 AM",
+            "vibe": "Geometric & Zen",
+            "item": "Patio Reflection",
+            "intel": "Go upstairs, look through student windows for unique photo angle.",
+            "price": "💰",
+            "protocol": "Walk-in",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.63203,-7.98644"
+          },
+          {
+            "id": "bahia",
+            "name": "Bahia Palace",
+            "type": "Landmark",
+            "window": "09:00 AM Sharp",
+            "vibe": "Royal & Intricate",
+            "item": "Grand Courtyard",
+            "intel": "Skip main courtyard, head to 'Petit Riad' and Harem rooms for cedar ceilings.",
+            "price": "💰",
+            "protocol": "Tickets at door",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.621764923755464,-7.981952873508131"
+          },
+          {
+            "id": "el_badi",
+            "name": "El Badi Palace",
+            "type": "Landmark",
+            "window": "Golden Hour",
+            "vibe": "Ruined Grandeur",
+            "item": "Storks on Walls",
+            "intel": "Don't miss underground dungeons. Terrace offers 360 panorama.",
+            "price": "💰",
+            "protocol": "Tickets at entrance",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.618309464128803,-7.985881079187899"
+          },
+          {
+            "id": "saadian",
+            "name": "Saadian Tombs",
+            "type": "Landmark",
+            "window": "09:00 AM",
+            "vibe": "Spiritual",
+            "item": "12 Columns Chamber",
+            "intel": "Line for main chamber is long (45m). See garden tombs while waiting.",
+            "price": "💰",
+            "protocol": "Tickets at door",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.61736963572166,-7.988758620089434"
+          },
+          {
+            "id": "jemaa",
+            "name": "Jemaa el-Fnaa",
+            "type": "Landmark",
+            "window": "1hr pre-sunset",
+            "vibe": "Chaotic",
+            "item": "Le Grand Balcon",
+            "intel": "View from 'Café Glacier' (buy drink to enter). Food stall #34 is safe.",
+            "price": "Free",
+            "protocol": "No reservation",
+            "link": "#",
+            "map": "https://www.google.com/maps/search/?api=1&query=31.6258,-7.9891"
+          }
+        ]
+      },
+      "maze": {
+        "title": "THE MAZE: SOUKS",
+        "subtitle": "Trusted Artisans",
+        "targets": [
+          {
+            "id": "ensemble",
+            "name": "Ensemble Artisanal",
+            "type": "Gov Complex",
+            "window": "10:00 AM",
+            "vibe": "No-Hassle",
+            "item": "Fixed-Price Silver",
+            "intel": "Government-run. Visit HERE FIRST to learn real prices before haggling in souks.",
+            "price": "💰💰",
+            "protocol": "Walk-in",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.627049179549083,-7.9961787127521164"
+          },
+          {
+            "id": "33rue",
+            "name": "33 Rue Majorelle",
+            "type": "Concept Store",
+            "window": "After Garden",
+            "vibe": "Modern Chic",
+            "item": "Pop-Art Glasses",
+            "intel": "Opposite Majorelle. Fixed price. Contemporary design, not typical souk.",
+            "price": "💰💰",
+            "protocol": "Open to public",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.64113818826061,-8.001901834779275"
+          },
+          {
+            "id": "souks",
+            "name": "The Souks (Main)",
+            "type": "Market",
+            "window": "10:00 AM",
+            "vibe": "Maze & Sensory",
+            "item": "Leather & Rugs",
+            "intel": "Start at Ensemble Artisanal to calibrate prices. Offer 50% of asking price.",
+            "price": "💰💰",
+            "protocol": "High Risk - Read Anti-Scam",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.62797306445065,-7.988068851461597"
+          },
+          {
+            "id": "elfenn_shop",
+            "name": "El Fenn Boutique",
+            "type": "Boutique",
+            "window": "Daytime",
+            "vibe": "Boheme Chic",
+            "item": "Art Books & Decor",
+            "intel": "Curated by Vanessa Branson. You can visit shop even if not staying at hotel.",
+            "price": "💰💰💰",
+            "protocol": "Walk-in",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.626850313431632,-7.993429453515828"
+          },
+          {
+            "id": "mustapha",
+            "name": "Mustapha Blaoui",
+            "type": "Antiques",
+            "window": "Allow 1-2h",
+            "vibe": "Ali Baba Cave",
+            "item": "Vintage Rugs",
+            "intel": "Ultimate insider spot. NO SIGN. Look for door #142-144, ring bell.",
+            "price": "💰💰💰",
+            "protocol": "Ring Bell",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.63171238966448,-7.994141482459743"
+          }
+        ]
+      },
+      "elevation": {
+        "title": "ELEVATION: ROOFTOPS",
+        "subtitle": "The Sky Command",
+        "targets": [
+          {
+            "id": "bacha",
+            "name": "Bacha Coffee",
+            "type": "Cafe",
+            "window": "10:00 AM",
+            "vibe": "1910 Colonial",
+            "item": "100% Arabica",
+            "intel": "Queue is huge. HACK: Go to boutique counter for 'Takeaway' to skip wait.",
+            "price": "💰💰💰",
+            "protocol": "Walk-in Only (Expect Wait)",
+            "link": "#",
+            "map": "https://www.google.com/maps/place/31°37'52.2"
+          },
+          {
+            "id": "kasbah",
+            "name": "Kasbah Café",
+            "type": "Rooftop",
+            "window": "Sunset",
+            "vibe": "Panoramic",
+            "item": "Lemon Mint Juice",
+            "intel": "Top terrace for best photo of Kasbah Mosque minaret with storks.",
+            "price": "💰💰",
+            "protocol": "Preferred for dinner",
+            "link": "https://www.kasbahcafemarrakech.com/en",
+            "map": "https://maps.google.com/?q=31.61709531771335,-7.989525247593583"
+          },
+          {
+            "id": "shtatto",
+            "name": "Shtatto",
+            "type": "Rooftop",
+            "window": "Golden Hour",
+            "vibe": "Hipster",
+            "item": "Avocado Salad",
+            "intel": "No Alcohol. 'Flying Hats' decor. Tricky entrance through fashion store.",
+            "price": "💰💰",
+            "protocol": "Recommended",
+            "link": "https://www.instagram.com/shtattomarrakech/",
+            "map": "https://maps.google.com/?q=31.629227600094676,-7.9865257791337925"
+          },
+          {
+            "id": "maison_reine",
+            "name": "Maison Reine",
+            "type": "Rooftop",
+            "window": "12:00 PM",
+            "vibe": "Mediterranean",
+            "item": "Pistachio Tart",
+            "intel": "Must order Pistachio Tart. NO Alcohol. CASH ONLY. Entrance through boutique.",
+            "price": "💰💰",
+            "protocol": "Book via Insta or arrive 12:00",
+            "link": "https://www.instagram.com/maisonreine/",
+            "map": "https://maps.google.com/?q=31.62908749789458,-7.984260050456898"
+          },
+          {
+            "id": "boucharouite",
+            "name": "Musée Boucharouite",
+            "type": "Hidden Roof",
+            "window": "2-4 PM",
+            "vibe": "Silence",
+            "item": "Quietest Spot",
+            "intel": "Rag Rug museum. Rooftop serves only tea/cake. Located in dead-end.",
+            "price": "💰",
+            "protocol": "Walk-in",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.63266,-7.99468"
+          }
+        ]
+      },
+      "recovery": {
+        "title": "RECOVERY: SPA",
+        "subtitle": "Scrub & Recharge",
+        "targets": [
+          {
+            "id": "mythic",
+            "name": "Mythic Oriental",
+            "type": "Spa",
+            "window": "Morning",
+            "vibe": "Boutique",
+            "item": "Traditional Scrub",
+            "intel": "Authentic Riad vibe. Enjoy tea/pastries on terrace after.",
+            "price": "💰💰",
+            "protocol": "Preferred",
+            "link": "https://mythicoriental-spa.com/",
+            "map": "https://maps.google.com/?q=31.63518771412322,-7.992720849969207"
+          },
+          {
+            "id": "lesbains",
+            "name": "Les Bains de Marrakech",
+            "type": "Spa",
+            "window": "Afternoon",
+            "vibe": "Relaxing",
+            "item": "Duo Hammam",
+            "intel": "Offers Mixed/Couple Hammams. Book 'Package' (Bath+Massage).",
+            "price": "💰💰💰",
+            "protocol": "Essential (Book ahead)",
+            "link": "https://www.lesbainsdemarrakech.com/en/reservation",
+            "map": "https://maps.google.com/?q=31.617407532834704,-7.990624774745367"
+          },
+          {
+            "id": "mamounia",
+            "name": "La Mamounia Spa",
+            "type": "Luxury",
+            "window": "Anytime",
+            "vibe": "Dark & Sexy",
+            "item": "Indoor Pool Photo",
+            "intel": "Most grammed pool. Book treatment to get access.",
+            "price": "💰💰💰💰",
+            "protocol": "Mandatory",
+            "link": "#",
+            "map": "https://maps.google.com/?q=31.621419055564374,-7.9976726256911626"
+          },
+          {
+            "id": "royal",
+            "name": "Royal Mansour Spa",
+            "type": "Ultra-Luxury",
+            "window": "Daytime",
+            "vibe": "White Lace",
+            "item": "The White Atrium",
+            "intel": "Enter via 'Citrus Garden'. Looks like giant white lace birdcage.",
+            "price": "💰💰💰💰",
+            "protocol": "Mandatory (Well in advance)",
+            "link": "https://www.royalmansour.com/en/marrakech/spa-wellness/",
+            "map": "https://maps.google.com/?q=31.62514049265132,-8.000109107711262"
+          }
+        ]
+      },
+      "nightlife": {
+        "title": "NIGHT OPS",
+        "subtitle": "Evenings & Speakeasies",
+        "safety": [
+          {
+            "phase": "🧪 PHASE 1: DRINKS",
+            "rules": [
+              "Methanol Check: Smell for nail polish remover.",
+              "Sealed Rule: Stick to bottled beer/wine opened at table.",
+              "Bottle Switch: Send back open bottles immediately."
+            ]
+          },
+          {
+            "phase": "💸 PHASE 2: WALLET",
+            "rules": [
+              "Phantom Drink: Photo menu prices before ordering.",
+              "Hostess Trap: If a 'friendly' woman orders drinks, YOU pay."
+            ]
+          },
+          {
+            "phase": "🚕 PHASE 3: EXIT",
+            "rules": [
+              "Front Door Veto: Ignore taxis waiting outside clubs.",
+              "100m Dash: Walk away to flag moving taxi.",
+              "App Option: Use Heetch/Careem."
+            ]
+          }
+        ],
+        "quiet": [
+          {
+            "id": "elfenn_bar",
+            "name": "El Fenn Rooftop",
+            "vibe": "Solo-Female Friendly",
+            "item": "Desert Rose Cocktail",
+            "intel": "Best sunset view without noise. Popular with artists. Drinks: Walk-in.",
+            "price": "💰💰💰",
+            "link": "https://el-fenn.com/rooftop-bar/"
+          },
+          {
+            "id": "pointbar",
+            "name": "Pointbar",
+            "vibe": "Gueliz Relaxed",
+            "item": "Green Cuban",
+            "intel": "Safe spot to blend with locals. Good music.",
+            "price": "💰💰",
+            "link": "https://www.pointbar-restaurant.com/"
+          },
+          {
+            "id": "pergola",
+            "name": "LA Pergola",
+            "vibe": "Jazz & Wine",
+            "item": "Berber Mojito",
+            "intel": "Fine Moroccan wines inside the Medina. Live Jazz.",
+            "price": "💰💰",
+            "link": "#"
+          },
+          {
+            "id": "royal_bar",
+            "name": "Royal Mansour Bar",
+            "vibe": "Ultra-Luxury",
+            "item": "Mamoune Lady",
+            "intel": "Safest place in town. Zero harassment. Dress code: Chic.",
+            "price": "💰💰💰💰",
+            "link": "https://www.royalmansour.com/en/"
+          },
+          {
+            "id": "churchill",
+            "name": "Le Churchill",
+            "vibe": "Jazz / Historic",
+            "item": "Caviar & Champagne",
+            "intel": "1930s vibe inside Mamounia. Strict dress code.",
+            "price": "💰💰💰",
+            "link": "https://mamounia.com/"
+          },
+          {
+            "id": "lenvers",
+            "name": "L'Envers",
+            "vibe": "Art Bar",
+            "item": "Electronic Vibes",
+            "intel": "Modern art bar in Gueliz. Young creative crowd. Safe.",
+            "price": "💰💰",
+            "link": "#"
+          },
+          {
+            "id": "petanque",
+            "name": "Petanque Social Club",
+            "vibe": "Hidden / 1930s",
+            "item": "Lamb Shank",
+            "intel": "Hidden behind old gate in Gueliz. Discreet & historic.",
+            "price": "💰💰",
+            "link": "#"
+          },
+          {
+            "id": "68bar",
+            "name": "Le 68 Bar à Vin",
+            "vibe": "Wine Bar",
+            "item": "Coq au Vin",
+            "intel": "French expat HQ. Best wine selection. Smoke-free areas.",
+            "price": "💰💰",
+            "link": "#"
+          },
+          {
+            "id": "barometre_night",
+            "name": "Le Baromètre",
+            "vibe": "Speakeasy",
+            "item": "Rosée du Matin",
+            "intel": "Underground cocktail lab. Famous for 'Marrakech Market' drink.",
+            "price": "💰💰",
+            "link": "https://lebarometre.net/"
+          }
+        ],
+        "party": [
+          {
+            "id": "comptoir",
+            "name": "Comptoir Darna",
+            "vibe": "Dinner Show",
+            "item": "Crying Tiger",
+            "intel": "Famous belly dancers. Book weeks ahead. ⚠️ Check Bill.",
+            "price": "💰💰💰",
+            "link": "#"
+          },
+          {
+            "id": "theatro",
+            "name": "Theatro",
+            "vibe": "Nightclub",
+            "item": "Circus Performers",
+            "intel": "Top club. Strict door policy. ⚠️ Bouncer Alert.",
+            "price": "💰💰💰",
+            "link": "https://www.theatromarrakech.com/"
+          },
+          {
+            "id": "jadmahal",
+            "name": "Palais Jad Mahal",
+            "vibe": "Fire Eaters",
+            "item": "Thai/Moroccan",
+            "intel": "Fire eaters & live band. Very loud. Mandatory booking.",
+            "price": "💰💰💰",
+            "link": "https://www.palaisjadmahal.com/en"
+          },
+          {
+            "id": "epicurien",
+            "name": "Epicurien",
+            "vibe": "Chic Club",
+            "item": "Shrimp Tacos",
+            "intel": "Inside the Casino. Late dinner until 4am.",
+            "price": "💰💰",
+            "link": "https://www.essaadi.com/"
+          },
+          {
+            "id": "kabana",
+            "name": "Kabana",
+            "vibe": "Rooftop Party",
+            "item": "Sushi & Poptails",
+            "intel": "Safest party option. Solo-female friendly.",
+            "price": "💰💰",
+            "link": "https://www.kabana-marrakech.com/"
+          },
+          {
+            "id": "malak",
+            "name": "Malak Emeraude",
+            "vibe": "Local Elite",
+            "item": "Oriental Show",
+            "intel": "High-end band. More local elite crowd than tourists.",
+            "price": "💰💰💰",
+            "link": "https://www.malakemeraude.com/"
+          },
+          {
+            "id": "lotus",
+            "name": "The Lotus Club",
+            "vibe": "Cabaret",
+            "item": "Oh-La-La Show",
+            "intel": "Glamorous 1930s vibe. Great steak. ⚠️ Check Bill.",
+            "price": "💰💰💰",
+            "link": "https://www.lelotusclub.com/"
+          }
+        ]
+      }
+    }
+  },
+  "fortressData": {
+    "mission_statement": "Navigate Marrakech with confidence. This guide provides essential camouflage techniques, boundary-setting communication scripts, and vetted women-friendly locations. Transform from tourist to informed insider.",
+    "modules": [
+      {
+        "id": "mod_1",
+        "title": "MODULE 1: NAVIGATION & ZONING",
+        "content": [
+          {
+            "title": "The Commander Walk",
+            "text": "Predators look for 'Soft Targets'. Walk fast. Chin up. Shoulders back. Look bored. If lost, DO NOT STOP in the street. Duck into a shop."
+          },
+          {
+            "title": "Tech Reliance",
+            "text": "Download Organic Maps (Offline). Google Maps fails in deep Medina. Carry a Power Bank."
+          }
+        ],
+        "scam": {
+          "title": "THE 'ROAD IS CLOSED' SCAM",
+          "lie": "A guy says: 'C'est fermé!' or 'Mosque only!'. Goal: Divert you to a shop.",
+          "counter": "IGNORE him (Ghost Mode). CHECK map. KEEP WALKING."
+        },
+        "zones": {
+          "green": [
+            "Gueliz (The Decompression Zone)",
+            "Riad Zitoun (The Southern Vein)",
+            "Rue Mouassine (The VIP Sector)"
+          ],
+          "red": [
+            "The Tanneries (High Aggression - Never go solo)",
+            "Dead-End Derbs at Night (Isolation)"
+          ]
+        }
+      },
+      {
+        "id": "mod_2",
+        "title": "MODULE 2: THE VERBAL SHIELD",
+        "levels": [
+          {
+            "level": 1,
+            "name": "GHOST MODE",
+            "use": "Catcalling",
+            "action": "Sunglasses on. No eye contact. Absolute silence."
+          },
+          {
+            "level": 2,
+            "name": "PHANTOM HUSBAND",
+            "use": "Questions",
+            "script": "Meeting my husband in 5 mins."
+          },
+          {
+            "level": 3,
+            "name": "POLITE REFUSAL",
+            "use": "Shopkeepers",
+            "script": "LA, SHUKRAN",
+            "audio_file": "assets/audio/la_shukran.mp3",
+            "meaning": "No, Thanks"
+          },
+          {
+            "level": 4,
+            "name": "FIRM REJECTION",
+            "use": "Following",
+            "script": "LA, SAFI!",
+            "audio_file": "assets/audio/la_safi.mp3",
+            "meaning": "No, That's enough!"
+          },
+          {
+            "level": 5,
+            "name": "THE SHAME NUKE",
+            "use": "Harassment",
+            "script": "H-SHOO-MA!",
+            "audio_file": "assets/audio/hshuma.mp3",
+            "meaning": "SHAME ON YOU! (Attacks honor)"
+          },
+          {
+            "level": 6,
+            "name": "AUTHORITY CARD",
+            "use": "Danger",
+            "script": "POLICE TOURISTIQUE!",
+            "audio_file": "assets/audio/police.mp3",
+            "meaning": "I am calling the police"
+          }
+        ]
+      },
+      {
+        "id": "mod_3",
+        "title": "MODULE 3: VISUAL CAMOUFLAGE",
+        "blocks": [
+          {
+            "title": "The Expat Standard",
+            "do": "Loose linen, maxi dresses. Cover shoulders/knees.",
+            "avoid": "Shorts, Mini Skirts, Spaghetti Straps."
+          },
+          {
+            "title": "The Djellaba Hack",
+            "text": "Wear a local hooded robe. Signals respect and kills the male gaze instantly."
+          },
+          {
+            "title": "Tactical Accessories",
+            "items": [
+              "Sunglasses (Eye Armor)",
+              "Decoy Wedding Ring",
+              "Cross-Body Bag (Front)"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "mod_4",
+        "title": "MODULE 4: SAFE HAVENS",
+        "locations": [
+          {
+            "name": "Amal Women's Center",
+            "type": "Food",
+            "note": "Non-profit fortress run entirely by women. 100% Safe."
+          },
+          {
+            "name": "Henna Art Café",
+            "type": "Relax",
+            "note": "Anti-Scam Henna. 100% Natural. Quiet rooftop."
+          },
+          {
+            "name": "Les Bains de Marrakech",
+            "type": "Body",
+            "note": "Luxury spa sanctuary. Safe among women."
+          },
+          {
+            "name": "Dar El Bacha",
+            "type": "Quiet",
+            "note": "Airport-grade security. Luxury coffee. Perfect for reading."
+          }
+        ]
+      }
+    ]
+  },
+  "protocolsData": {
+    "user_rank": "TOURIST",
+    "xp": 0,
+    "ranks": [
+      "TOURIST",
+      "NOVICE",
+      "OPERATIVE",
+      "INSIDER",
+      "LOCAL LEGEND"
+    ],
+    "missions": [
+      {
+        "id": "bread",
+        "title": "THE BREAD PROTOCOL",
+        "image": "🍞",
+        "meta": "1 Hour | ~3 DH | Medium",
+        "context": "Bread is sacred ('Niama'). Locals don't bake at home; they send dough to the 'Ferran' (wood-fired oven) for a smoky taste you can't buy in stores.",
+        "steps": [
+          "Prep & Mark: Knead dough. Crucial: You must 'mark' your bread with a specific knife cut or stamp so the baker recognizes it.",
+          "The Drop-off: Carry dough on a wooden board ('Wossla'). Give it to the 'Maalem' and say: 'Afak tayeb liya had lkhobz'.",
+          "The Pickup: Return in ~45 mins. Pay the small fee (1-2 DH). Carry the hot bread home carefully."
+        ],
+        "tip": "Etiquette: Never throw bread on the floor. If a piece falls, pick it up and kiss it (sign of respect)."
+      },
+      {
+        "id": "hammam",
+        "title": "THE HAMMAM PROTOCOL",
+        "image": "🧖",
+        "meta": "2-3 Hours | ~150 DH | High",
+        "context": "This isn't a spa. It's a purification institution. Rich and poor sweat together. It's about shedding dead skin and social barriers.",
+        "steps": [
+          "The Kit: Buy Black Soap ('Saboun Beldi'), a Rough Glove ('Kess'), and Ghassoul Clay before entry.",
+          "The Process: Enter the Warm Room first to acclimate. Apply Black Soap and sit for 15 mins to soften skin.",
+          "The Scrub (Gommage): Hire a 'Kessal'. Rinse off soap completely, then let him scrub you. Watch the 'spaghetti' of dead skin peel off."
+        ],
+        "tip": "Vital Etiquette: Do NOT waste water. Filling buckets endlessly is seen as disrespectful. Keep your underwear on."
+      },
+      {
+        "id": "tangia",
+        "title": "THE TANGIA PROTOCOL",
+        "image": "🍲",
+        "meta": "4-6 Hours | ~150 DH | Medium",
+        "context": "Tangia is the 'Bachelor's Dish,' cooked in the hot ashes of the Hammam furnace, not in a kitchen. It's a male-dominated craft.",
+        "steps": [
+          "The Butcher: Order 'Jarret' (Shank) or 'Mokh' (Brain). Add garlic, cumin, saffron, smen, and preserved lemon. Shake the pot.",
+          "The Fernatchi: Take the sealed clay pot to the 'Fernatchi' (the ash master heating the Hammam water). He will bury it in the ashes.",
+          "The Feast: Pick it up after 4-6 hours. The meat should be 'confit' (falling off the bone). Eat communally."
+        ],
+        "tip": "Don't add water! The liquid comes from the meat and melting fats/butter."
+      },
+      {
+        "id": "tailor",
+        "title": "THE TAILOR PROTOCOL",
+        "image": "🧵",
+        "meta": "24-48 Hours | 400+ DH | Medium",
+        "context": "Instead of buying fast fashion, commission a 'Gandoura'. It involves picking the fabric, the embroidery ('Sfifa'), and the cut.",
+        "steps": [
+          "The Fabric: Ask for 'Sousdi' (light cotton) or 'Mlifa' (winter blend). You need ~3 meters.",
+          "The Maalem: Choose your 'Sfifa' color. Ask for a 'Makhzania' cut (traditional loose fit).",
+          "The Wait: A good piece takes 24-48 hours. Don't rush art."
+        ],
+        "tip": "Trust the tailor's taste for color matching. They are masters of classic aesthetics."
+      },
+      {
+        "id": "scent",
+        "title": "THE SCENT PROTOCOL",
+        "image": "🧪",
+        "meta": "45 Mins | 100+ DH | Easy",
+        "context": "The 'Attarine' souk is an open chemical lab. Here, you don't buy a brand; you build a scent based on your olfactory memory.",
+        "steps": [
+          "The Base: Start with Musk, Amber, or Oud to anchor the scent.",
+          "The Heart & Top: Add Rose of Dades, Jasmine, or Neroli (Orange Blossom).",
+          "The Recipe: Ask the perfumer to write down the 'Recipe Card' (percentages). This is your souvenir."
+        ],
+        "tip": "Smell coffee beans between tests to reset your nose ('Olfactory Reset')."
+      }
+    ]
+  }
+}

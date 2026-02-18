@@ -1,0 +1,1136 @@
+﻿# Refactor Progress
+
+## Completed
+
+- Baseline contract audit tooling:
+  - `scripts/refactor/audit-app-contract.mjs`
+  - `npm run audit:app-contract`
+- Refactor workspace docs:
+  - `refactor/README.md`
+  - `refactor/baseline-notes.md`
+  - `refactor/extraction-batches.md`
+- Batch 2 extractions (compatibility-first):
+  - `js/app/core/haptics.js`
+  - `js/app/core/common-utils.js`
+  - `js/app/access/token-utils.js`
+  - `js/app/access/tier-bridge.js`
+  - `js/app/access/magic-link-ui.js`
+  - `js/app/access/funnel-utils.js`
+- Batch 3 extractions (compatibility-first):
+  - `js/app/access/upgrade-context-utils.js`
+  - `js/app/access/feature-usage-utils.js`
+  - `js/app/access/logistics-gate-utils.js`
+- Batch 4 extractions (compatibility-first):
+  - `js/app/access/access-actions-utils.js`
+- Batch 5 extractions (compatibility-first):
+  - `js/app/access/logistics-ui-utils.js`
+- Batch 6 extractions (compatibility-first):
+  - `js/app/access/logistics-auth-modal-utils.js`
+- Batch 7 extractions (compatibility-first):
+  - `js/app/data/ultimate-data-pack-utils.js`
+- Batch 8 extractions (compatibility-first):
+  - `js/app/access/gatekeeper-utils.js`
+- Batch 9 extractions (compatibility-first):
+  - `js/app/access/lifecycle-utils.js`
+- Batch 10 extractions (compatibility-first):
+  - `js/app/access/logistics-runtime-utils.js`
+- Batch 11 extractions (compatibility-first):
+  - `js/app/navigation/navigation-utils.js`
+- Batch 12 extractions (compatibility-first):
+  - `js/app/i18n/language-ui-utils.js`
+- Batch 13 extractions (compatibility-first):
+  - `js/app/settings/overlay-utils.js`
+- Batch 14 extractions (compatibility-first):
+  - `js/app/settings/page-utils.js`
+- Batch 15 extractions (compatibility-first):
+  - `js/app/protocols/tab-routing-utils.js`
+- Batch 16 extractions (compatibility-first):
+  - `js/app/runtime/global-bindings-utils.js`
+- Batch 17 extractions (compatibility-first):
+  - `js/app/runtime/ux-i18n-runtime-utils.js`
+- Batch 18 extractions (compatibility-first):
+  - `js/app/runtime/interaction-runtime-utils.js`
+- Batch 19 extractions (compatibility-first):
+  - `js/app/runtime/sw-update-utils.js`
+- Batch 20 extractions (compatibility-first):
+  - `js/app/runtime/bootstrap-runtime-utils.js`
+- Batch 21 extractions (compatibility-first):
+  - `js/app/map/recent-locations-utils.js`
+- Batch 22 extractions (compatibility-first):
+  - `js/app/map/recent-locations-render-utils.js`
+- Batch 23 extractions (compatibility-first):
+  - `js/app/runtime/feedback-runtime-utils.js`
+- Batch 24 extractions (compatibility-first):
+  - `js/app/map/souk-location-utils.js`
+- Batch 25 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-helpers.js`
+- Batch 26 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-core-utils.js`
+- Batch 27 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-engine-utils.js`
+- Batch 28 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-optimizer-utils.js`
+- Batch 29 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-output-utils.js`
+- Batch 30 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-ui-utils.js`
+- Batch 31 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-selection-utils.js`
+- Batch 32 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-runtime-state-utils.js`
+- Batch 33 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-runner-utils.js`
+- Batch 34 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-ui-utils.js` (debrief/security helpers)
+- Batch 35 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-runtime-state-utils.js` (post-run button state helper)
+- Batch 36 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-render-utils.js`
+- Batch 37 extractions (compatibility-first):
+  - `js/app/price/session-ui-utils.js`
+- Batch 38 extractions (compatibility-first):
+  - `js/app/price/context-runtime-utils.js`
+- Batch 39 extractions (compatibility-first):
+  - `js/app/price/crowd-price-utils.js`
+- Batch 40 extractions (compatibility-first):
+  - `js/app/price/crowd-price-utils.js` (queue/network helpers)
+- Batch 41 extractions (compatibility-first):
+  - `js/app/price/hybrid-price-utils.js`
+- Batch 42 extractions (compatibility-first):
+  - `js/app/price/hybrid-price-utils.js` (result payload builder)
+- Batch 43 extractions (compatibility-first):
+  - `js/app/price/hybrid-price-utils.js` (telemetry payload builders)
+- Batch 44 extractions (compatibility-first):
+  - `js/app/price/crowd-price-utils.js` (post-haggle submission payload builder)
+- Batch 45 extractions (compatibility-first):
+  - `js/app/price/session-ui-utils.js` (post-haggle success/close/toast helpers)
+- Batch 46 extractions (compatibility-first):
+  - `js/app/price/deep-analysis-utils.js`
+- Batch 47 extractions (compatibility-first):
+  - `js/app/price/item-classifier-utils.js`
+- Batch 48 extractions (compatibility-first):
+  - `js/app/price/hybrid-price-runtime-utils.js`
+- Batch 49 extractions (compatibility-first):
+  - `js/app/price/vision-api-utils.js`
+- Batch 50 extractions (compatibility-first):
+  - `js/app/price/gemini-deep-utils.js`
+- Batch 51 extractions (compatibility-first):
+  - `js/app/price/vision-api-utils.js` (provider runtime helpers)
+- Batch 52 extractions (compatibility-first):
+  - `js/app/price/item-classifier-utils.js` (classify runtime helpers)
+- Batch 53 extractions (compatibility-first):
+  - `js/app/price/vision-api-utils.js` (manual fallback/stats helpers)
+- Batch 54 extractions (compatibility-first):
+  - `js/app/price/gemini-deep-utils.js` (zone log/request-body helpers)
+- Batch 55 extractions (compatibility-first):
+  - `js/app/price/item-classifier-utils.js` (logging/manual-fallback helpers)
+- Batch 56 extractions (compatibility-first):
+  - `js/app/price/gemini-deep-utils.js` (API envelope/result helpers)
+- Batch 57 extractions (compatibility-first):
+  - `js/app/price/vision-api-utils.js` (request header helpers)
+- Batch 58 extractions (compatibility-first):
+  - `js/app/price/crowd-price-utils.js` (query params helper)
+- Batch 59 extractions (compatibility-first):
+  - `js/app/price/crowd-price-utils.js` (`_computeStats` helpers)
+- Batch 60 extractions (compatibility-first):
+  - `js/app/price/crowd-price-utils.js` (`_rewardUser` counters helper)
+- Batch 61 extractions (compatibility-first):
+  - `js/app/price/item-classifier-utils.js` (manual category catalog + modal template helper)
+- Batch 62 extractions (compatibility-first):
+  - `js/app/price/item-classifier-utils.js` (selector modal mount/resolve + manual callback helpers)
+- Batch 63 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (detected-item + quick-price HTML helpers)
+- Batch 64 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (result-view color/markup + telemetry payload helpers)
+- Batch 65 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (manual classification + price-history persistence helpers)
+- Batch 66 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (shared sleep helper + quick-scan delay integration)
+- Batch 67 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (analysis progress ticker helpers)
+- Batch 68 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (analyzing-view/status + quick-capture image-source helpers)
+- Batch 69 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (capture/analyze flow UI-step helpers wiring)
+- Batch 70 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (deep-results quality/area/source/score/red-flags helpers)
+- Batch 71 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (price-check view reset helper)
+- Batch 72 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (deep-results full HTML builder helper)
+- Batch 73 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (deep contribution prompt HTML + input reader helpers)
+- Batch 74 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (deep contribution state + submit payload helper)
+- Batch 75 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy deep-results tier/auth/red-flags/score helpers)
+- Batch 76 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (`analyzeDeepPrice` result payload helper)
+- Batch 77 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy manual-selector catalog + modal builder helpers)
+- Batch 78 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy manual-selector mount/resolve/result helpers)
+- Batch 79 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy deep quick-price buttons + base-adjust text helpers)
+- Batch 80 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy deep reasoning HTML helper)
+- Batch 81 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (`fileToBase64` shared helper delegate)
+- Batch 82 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy deep results main HTML wrapper helper)
+- Batch 83 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy deep results container toggle helper)
+- Batch 84 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (upload deep-classification builder helper)
+- Batch 85 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (upload result renderer + manual-fallback apply helper)
+- Batch 86 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (legacy deep results view-container helper)
+- Batch 87 extractions (compatibility-first):
+  - `js/app/price/session-ui-utils.js` (post-haggle contribution pending/area/auto-close helpers)
+- Batch 88 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (upload initial-view/error-toast/reset-input helpers)
+- Batch 89 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (camera-start view toggle/revert/file-fallback helpers)
+- Batch 90 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (camera-start error-message resolver helper)
+- Batch 91 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (price-check results view resolver helper)
+  - `js/app/price/price-check-ui-utils.js` (deep results view payload resolver helper)
+  - `js/app/price/price-check-ui-utils.js` (deep contribution prompt render/resolve helpers)
+- Batch 92 extractions (compatibility-first):
+  - `app.js` (deep contribution prompt render compat helper)
+  - `app.js` (deep contribution input/validation/crowd-db/payload compat helpers)
+- Batch 93 extractions (compatibility-first):
+  - `app.js` (`showDeepResults` quality/area/source/score/red-flags/reasoning compat helper delegates)
+- Batch 94 extractions (compatibility-first):
+  - `app.js` (`showDeepResults` fallback HTML assembly extracted to shared compat builder helper)
+- Batch 95 extractions (compatibility-first):
+  - `app.js` (`showDeepResultsView` container/theme/score/red-flags/auth/quick-pricing/reasoning compat helper delegates)
+  - `app.js` (`showDeepResultsView` fallback HTML assembly extracted to shared compat builder helper)
+- Batch 96 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` manual-selection/result-render/manual-fallback compat helper delegates)
+- Batch 97 extractions (compatibility-first):
+  - `app.js` (`window.analyzeDeepPrice` standard-analysis fallback + deep-result payload compat helpers)
+- Batch 98 extractions (compatibility-first):
+  - `app.js` (`showManualCategorySelector` categories/modal/open compat helper delegates)
+- Batch 99 extractions (compatibility-first):
+  - `app.js` (`window.selectManualCategory` / `window.closeManualSelector` shared legacy-finalize compat helper)
+  - `app.js` (`window.selectCategory` / `window.closeCategorySelector` shared category-finalize compat helper)
+  - `app.js` (window-export parity guard assignments preserved for `_manualCategoryResolve` / `_categoryResolve`)
+- Batch 100 extractions (compatibility-first):
+  - `app.js` (`ItemClassifier.showCategorySelector` categories/modal/open compat helper delegates)
+- Batch 101 extractions (compatibility-first):
+  - `app.js` (`showPriceInputView` detected-item + quick-price compat helper delegates)
+  - `app.js` (`window.showManualPriceInput` manual classification compat helper delegate)
+- Batch 102 extractions (compatibility-first):
+  - `app.js` (`window.cancelPriceCheck` reset-views compat helper delegate)
+  - `app.js` (`window.captureForPriceCheck` progress ticker start/stop compat helper delegates)
+  - `app.js` (`window.analyzePriceNow` item-category/input-validation/loading/error compat helper delegates)
+- Batch 103 extractions (compatibility-first):
+  - `app.js` (`window.selectManualCategory` legacy selection-payload compat helper delegate)
+  - `app.js` (`window.selectCategory` category selection-payload compat helper delegate)
+- Batch 104 extractions (compatibility-first):
+  - `app.js` (`renderDeepContributionPromptCompat` fallback HTML extracted to dedicated compat builder helper)
+- Batch 105 extractions (compatibility-first):
+  - `app.js` (`window.handleQuickCapture` image-source + error-recovery compat helper delegates)
+- Batch 106 extractions (compatibility-first):
+  - `app.js` (`showDeepResults` deep contribution-state storage compat helper delegate)
+- Batch 107 extractions (compatibility-first):
+  - `app.js` (`showResultsView` level-colors/color-class/result-HTML compat helper delegates)
+- Batch 108 extractions (compatibility-first):
+  - `app.js` (`window.startPriceCheckCamera` camera-view/revert/upload-fallback/user-message compat helper delegates)
+- Batch 109 extractions (compatibility-first):
+  - `app.js` (`showResultsView` saved/context-record/session-log compat helper delegates)
+- Batch 110 extractions (compatibility-first):
+  - `app.js` (`window.savePriceCheckResult` history-load/entry/persist compat helper delegates)
+- Batch 111 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` deep-classification/error-notify/reset-input compat helper delegates)
+- Batch 112 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` / `window.captureForPriceCheck` / `window.showManualPriceInput` / `window.handleQuickCapture` shared scan-quota compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (price-check scan-quota resolver helper)
+- Batch 113 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` deep->standard->manual classification pipeline compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (upload classification pipeline resolver helper)
+- Batch 114 extractions (compatibility-first):
+  - `app.js` (`window.captureForPriceCheck` analyzing/progress setup extracted to capture-context compat helper)
+- Batch 115 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` unhandled-error fallback flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (upload unhandled-error resolver helper)
+- Batch 116 extractions (compatibility-first):
+  - `app.js` (`window.handleQuickCapture` quick-capture context + deep pipeline compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (quick-capture deep pipeline resolver helper)
+- Batch 117 extractions (compatibility-first):
+  - `app.js` (`window.analyzeDeepPrice` vendor-price/context/scam-check compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (analyze-deep vendor/context/scam-check resolver helpers)
+- Batch 118 extractions (compatibility-first):
+  - `app.js` (`showResultsView` render-context resolver compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (price-check results render-context resolver helper)
+- Batch 119 extractions (compatibility-first):
+  - `app.js` (`window.analyzePriceNow` shared analyze-loading hide compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (analyze-loading hide resolver helper)
+- Batch 120 extractions (compatibility-first):
+  - `app.js` (`window.savePriceCheckResult` history-save flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (price-check history-save resolver helper)
+- Batch 121 extractions (compatibility-first):
+  - `app.js` (`window.startPriceCheckCamera` camera-access gate extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (price-check camera-access resolver helper)
+- Batch 122 extractions (compatibility-first):
+  - `app.js` (`window.captureForPriceCheck` capture pipeline + error handling extracted to compat helpers)
+  - `js/app/price/price-check-ui-utils.js` (capture analysis pipeline + error resolver helpers)
+- Batch 123 extractions (compatibility-first):
+  - `app.js` (`window.showManualPriceInput` category-resolver + input-view compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (manual price input category/view resolver helpers)
+- Batch 124 extractions (compatibility-first):
+  - `app.js` (`showPriceInputView` render-context + renderer compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (price-input view context/render resolver helpers)
+- Batch 125 extractions (compatibility-first):
+  - `app.js` (`window.analyzePriceNow` vendor-price resolver + debug logger compat helper wiring)
+  - `js/app/price/price-check-ui-utils.js` (analyze-price vendor/debug resolver helpers)
+- Batch 126 extractions (compatibility-first):
+  - `app.js` (`showResultsView` post-render bookkeeping extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (price-check post-render bookkeeping resolver helper)
+- Batch 127 extractions (compatibility-first):
+  - `app.js` (`window.analyzePriceNow` analyze pipeline extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (analyze-price pipeline resolver helper)
+- Batch 128 extractions (compatibility-first):
+  - `app.js` (`showDeepContributionPrompt` / `window.submitCrowdPrice` contribution flow extracted to compat helpers)
+  - `js/app/price/price-check-ui-utils.js` (contribution prompt + crowd-submit flow resolver helpers)
+- Batch 129 extractions (compatibility-first):
+  - `app.js` (`showDeepResults` render flow extracted to compat orchestrator helper)
+  - `js/app/price/price-check-ui-utils.js` (deep-results render flow resolver helper)
+- Batch 130 extractions (compatibility-first):
+  - `app.js` (`window.handleQuickCapture` start preconditions extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (quick-capture start-context resolver helper)
+- Batch 131 extractions (compatibility-first):
+  - `app.js` (`showDeepResultsView` legacy deep-results render flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (legacy deep-results render flow resolver helper)
+- Batch 132 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` start preconditions extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (upload start-context resolver helper)
+- Batch 133 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` analyzing context setup extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (upload analyzing-context resolver helper)
+- Batch 134 extractions (compatibility-first):
+  - `app.js` (`window.analyzeDeepPrice` fallback/scam/payload flow extracted to compat orchestrator helper)
+  - `js/app/price/price-check-ui-utils.js` (analyze-deep flow resolver helper)
+- Batch 135 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` file->base64/blob persistence extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (upload base64/blob resolver helper)
+- Batch 136 extractions (compatibility-first):
+  - `app.js` (`window.analyzeDeepPrice` entry checker/vendor/validation wiring extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (analyze-deep action resolver helper)
+- Batch 137 extractions (compatibility-first):
+  - `app.js` (`window.handleTestImageUpload` full orchestration flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (upload flow orchestration resolver helper)
+- Batch 138 extractions (compatibility-first):
+  - `app.js` (`window.analyzePriceNow` full orchestration flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (analyze-price orchestration resolver helper)
+- Batch 139 extractions (compatibility-first):
+  - `app.js` (`window.handleQuickCapture` full orchestration flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (quick-capture orchestration resolver helper)
+- Batch 140 extractions (compatibility-first):
+  - `app.js` (`window.captureForPriceCheck` full orchestration flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (capture flow orchestration resolver helper)
+- Batch 141 extractions (compatibility-first):
+  - `app.js` (`window.showManualPriceInput` full orchestration flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (manual-price-input flow orchestration resolver helper)
+- Batch 142 extractions (compatibility-first):
+  - `app.js` (`window.cancelPriceCheck` flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (cancel-price-check flow resolver helper)
+- Batch 143 extractions (compatibility-first):
+  - `app.js` (`window.savePriceCheckResult` flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (save-price-result flow resolver helper)
+- Batch 144 extractions (compatibility-first):
+  - `app.js` (`window.startPriceCheckCamera` orchestration flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (camera-start orchestration resolver helper)
+- Batch 145 extractions (compatibility-first):
+  - `app.js` (`showResultsView` orchestration flow extracted to compat helper)
+  - `js/app/price/price-check-ui-utils.js` (results-view orchestration resolver helper)
+- Batch 146 extractions (compatibility-first):
+  - `app.js` (`VectorHUD` class methods rewired to compatibility delegates)
+  - `js/app/vector/vector-hud-utils.js` (Vector HUD runtime resolver helpers)
+- Batch 147 extractions (compatibility-first):
+  - `app.js` (`CurrencyWidget` + `PriceIntegration` class methods rewired to compatibility delegates)
+  - `js/app/currency/currency-ui-utils.js` (currency widget + price integration resolver helpers)
+- Batch 148 extractions (compatibility-first):
+  - `app.js` (`CurrencyRateProvider` + `CurrencyConverter` class methods rewired to compatibility delegates)
+  - `js/app/currency/currency-core-utils.js` (currency provider + converter resolver helpers)
+- Batch 149 extractions (compatibility-first):
+  - `app.js` (`VisionAPIClient._callGemini` request body + response parse/validation rewired to `vision-api-utils` helpers)
+  - `app.js` (`VisionAPIClient._callDeepSeek` request body + response parse/validation rewired to `vision-api-utils` helpers)
+  - `app.js` (`VisionAPIClient._callOpenRouter` request body + response parse/validation rewired to `vision-api-utils` helpers)
+  - `app.js` (`VisionAPIClient.callGeminiDeep` prompt resolved via `gemini-deep-utils` helper and fallback parse branches slimmed)
+  - `js/app/price/gemini-deep-utils.js` (`buildGeminiDeepPrompt` helper added for deep-analysis prompt ownership)
+- Batch 150 extractions (compatibility-first):
+  - `js/app/price/vision-api-utils.js` (shared vision classification payload/parser helpers for Gemini + chat-style providers)
+  - `app.js` (`VisionAPIClient._callGemini/_callDeepSeek/_callOpenRouter` unified on shared classification parser helpers)
+- Batch 151 extractions (compatibility-first):
+  - `js/app/price/gemini-deep-utils.js` (`prepareGeminiDeepZones` + `parseGeminiDeepAnalysisResponse` helper additions)
+  - `app.js` (`VisionAPIClient.callGeminiDeep` deep-response parse flow rewired to shared helper)
+- Batch 152 extractions (compatibility-first):
+  - `app.js` (`VisionAPIClient.callGeminiDeep` request-body wiring now uses `zoneData` payload directly)
+  - `app.js` (`VisionAPIClient.callGeminiDeep` fallback parse path now reuses `parseGeminiDeepApiResponse`/`parseGeminiDeepJson` when available)
+- Batch 153 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (`resolveHandleCameraStartError` helper added for camera start error handling flow)
+  - `app.js` (`handleCameraStartErrorCompat` now delegate-first via shared price-check camera error helper)
+- Batch 154 fixes (compatibility-first):
+  - `app.js` (`init` global runtime bindings now pass stable references for `checkAccess` / `showAccessDeniedModal` to prevent recursive stack overflow on gated navigation)
+  - Verified by runtime reproduce: `window.alidadeApp.navigateTo('FORTRESS')` / `window.alidadeApp.navigateTo('VECTOR')` no longer throw `Maximum call stack size exceeded`
+- Legacy wrappers preserved in `app.js` for:
+  - `Haptics`
+  - `normalizeTierTag`
+  - `escapeHtml`
+  - `getRequiredTierForView`
+  - `hasTierAccess`
+  - `decodeJWT`
+  - `validateAccessToken`
+  - `resolveUserTier`
+  - `syncTierFromLicenseManager`
+  - `updateUIByTier`
+  - `updateUIForPlan`
+  - `checkUrlForMagicLink`
+  - `updateTierDisplay`
+  - `trackTierFunnelEvent`
+  - `getUpgradeContext`
+  - `trackLockImpression`
+  - `getFeatureUsageStatus`
+  - `consumeFeatureUsage`
+  - `consumeAiScannerUsage`
+  - `isLicenseUserAuthenticated`
+  - `isProtocolsLogisticsAuthRequired`
+  - `getProtocolsLogisticsGateStatus`
+  - `getProtocolsLogisticsUsageText`
+  - `getProtocolsLogisticsUsageMeta`
+  - `ensureAiScannerAccess`
+  - `promptProtocolsUpgrade`
+  - `promptProtocolsWalletUpgrade`
+  - `openFeatureAuthModal`
+  - `ensureBasicFeatureAuth`
+  - `promptProtocolsLogisticsUpgrade`
+  - `renderProtocolsLogisticsGlassOverlay`
+  - `syncProtocolsLogisticsLockUi`
+  - `ensureProtocolsAuthModal`
+  - `openProtocolsAuthModal`
+  - `hasUltimateDataPackLoaded`
+  - `applyUltimateDataPack`
+  - `ensureUltimateDataPack`
+  - `ensureUltimateViewData`
+  - `checkAccess`
+  - `showAccessDeniedModal`
+  - `ensureUpgradeModalBridge`
+  - `bindTierChangeSync`
+  - `setupProtocolsLogisticsRuntime` (runtime block wrapper)
+  - `commitNavigation`
+  - `navigateTo`
+  - `renderLanguageSwitcher` (SETTINGS module version)
+  - `switchLanguage` (SETTINGS module version)
+  - `renderSettingsOverlay`
+  - `closeSettingsOverlay`
+  - `renderSettings`
+  - `toggleHaptics`
+  - `switchProtocolTab`
+  - `initializeAppGlobalBindings` (inside `init`)
+  - `initializeUxAndI18nRuntime` (inside `init`)
+  - `initializeInteractionRuntime` (inside `init`)
+  - `initializeServiceWorkerUpdateRuntime`
+  - `showUpdateNotification`
+  - `updateApp`
+  - `dismissUpdate`
+  - `startBootstrapRuntime` (init/bootstrap DOM-ready wiring)
+  - `trackMapLocation`
+  - `formatTimeAgo`
+  - `clearRecentLocations`
+  - `jumpToLocation`
+  - `renderRecentLocations` (active map-tracker declaration)
+  - `window.showToast`
+  - `bindGlobalButtonHaptics`
+  - `haversineDistance` (active souk-location declaration, meters)
+  - `detectSoukArea`
+  - `getCurrentPosition`
+  - `walkingTime`
+  - `isPrayerTime`
+  - `getSunsetTime`
+  - `isDestinationOpen`
+  - `getCrowdScore`
+  - `IntelligentRoutePlanner._isTaxiZone`
+  - `IntelligentRoutePlanner._haversineDistance`
+  - `IntelligentRoutePlanner._buildDistanceMatrix`
+  - `IntelligentRoutePlanner._getPenalty`
+  - `IntelligentRoutePlanner.optimize`
+  - `IntelligentRoutePlanner._calculateTotalCost`
+  - `IntelligentRoutePlanner._generateDetailedOutput` (travel leg/context/finalize helpers)
+  - `displayRouteResults` (hazards/timeline builders)
+  - `exportToGoogleMaps`
+  - `shareRoute` (active simple-share declaration)
+  - `toggleDestinationSelection` (selection mutation resolver)
+  - `isLunchPlace`
+  - `updateDestinationCount` (optimize button UI state helper)
+  - `runRouteOptimization` (meal-limit normalization helper)
+  - `runRouteOptimization` (constraints + start-node helpers)
+  - `displayRouteResults` (dropped/security section builders)
+  - `runRouteOptimization` (post-run button state helper)
+  - `renderDestinationList`
+  - `showSessionSummary` (insights/name/modal builders)
+  - `showContributionPrompt` (contribution modal builder)
+  - `analyzeWithContext`
+  - `startNegotiationWithContext`
+  - `CrowdPriceDB.submitPrice` (submission builder helper)
+  - `CrowdPriceDB._rewardUser` (rank resolver helper)
+  - `CrowdPriceDB.getUserStats`
+  - `CrowdPriceDB.submitPrice` / `_processRetryQueue` (POST headers helper)
+  - `CrowdPriceDB.getCrowdData` / `_getCrowdDataAllAreas` (read headers helper)
+  - `CrowdPriceDB._queueForRetry`
+  - `CrowdPriceDB._loadRetryQueue`
+  - `CrowdPriceDB._processRetryQueue` (stale retry helper)
+  - `calculateHybridPrice` (quality bracket/location/confidence/price-range helpers)
+  - `calculateHybridPrice` (result payload builder)
+  - `calculateHybridPrice` (context/session telemetry payload helpers)
+  - `showContributionPrompt` (submitPrice payload builder)
+  - `showContributionPrompt` (success/close/toast helpers)
+  - `analyzeSingleShotDeep`
+  - `calculateSmartPrice`
+  - `ItemClassifier._blobToBase64`
+  - `ItemClassifier._base64ToBlob`
+  - `calculateHybridPrice` (area/context + crowd-fetch + source-selection helpers)
+  - `VisionAPIClient._callGemini` (data-url/json/result helpers)
+  - `VisionAPIClient._callDeepSeek` (data-url/json/result helpers)
+  - `VisionAPIClient._callOpenRouter` (data-url/json/result helpers)
+  - `VisionAPIClient.callGeminiDeep` (zone/cleanup/parse helpers)
+  - `VisionAPIClient.analyzeImage` (provider resolve/dispatch/log helpers)
+  - `ItemClassifier.classify` (input/preview/validation helpers)
+  - `VisionAPIClient._fallbackToManual`
+  - `VisionAPIClient.getStats`
+  - `VisionAPIClient.callGeminiDeep` (zone log/request-body helpers)
+  - `ItemClassifier.classify` (log/manual-fallback helpers)
+  - `VisionAPIClient.callGeminiDeep` (API envelope/result helpers)
+  - `VisionAPIClient._callGemini` (headers helper)
+  - `VisionAPIClient._callDeepSeek` (headers helper)
+  - `VisionAPIClient._callOpenRouter` (headers helper)
+  - `VisionAPIClient.callGeminiDeep` (headers helper)
+  - `CrowdPriceDB.getCrowdData` (query params helper)
+  - `CrowdPriceDB._getCrowdDataAllAreas` (query params helper)
+  - `CrowdPriceDB._computeStats` (IQR/avg/stats helpers)
+  - `CrowdPriceDB._rewardUser` (counter totals helper)
+  - `ItemClassifier.showCategorySelector` (catalog/modal/mount/resolve helpers)
+  - `window.selectCategory` (modal close/payload/resolve helpers)
+  - `window.closeCategorySelector` (modal close/resolve helper)
+  - `showPriceInputView` (detected-item + quick-price template helpers)
+  - `showResultsView` (color resolver/result template + context/session payload helpers)
+  - `window.showManualPriceInput` (manual classification payload helper)
+  - `window.savePriceCheckResult` (history load/entry/persist helpers)
+  - `_blobToBase64` (shared base64 helper delegate)
+  - `_sleep` (shared sleep helper delegate)
+  - `window.captureForPriceCheck` (progress ticker start/stop helpers)
+  - `window.captureForPriceCheck` (analyzing view + status-step helpers)
+  - `window.analyzePriceNow` (analyzing view + status/progress helpers)
+  - `window.handleQuickCapture` (analyzing view + image-source + status-step helpers)
+  - `showDeepResults` (quality/area/source/score/red-flags helpers)
+  - `window.cancelPriceCheck` (shared view reset helper)
+  - `showDeepResults` (full deep-results HTML builder helper)
+  - `showDeepResults` (deep contribution-state storage helper)
+  - `window.showContributionPrompt` (deep contribution prompt HTML helper)
+  - `window.submitCrowdPrice` (deep input reader + submit payload helper)
+  - `showDeepResultsView` (legacy deep tier/auth/red-flags/score helpers)
+  - `window.analyzeDeepPrice` (deep result payload builder helper)
+  - `showManualCategorySelector` (legacy manual-selector category/modal/mount helpers)
+  - `window.selectManualCategory` (legacy manual selection result/resolve helpers)
+  - `window.closeManualSelector` (legacy manual modal close/resolve helper)
+  - `showDeepResultsView` (legacy deep quick-price buttons/base-adjust/reasoning helpers)
+  - `fileToBase64` (shared file/base64 helper delegate)
+  - `showDeepResultsView` (legacy deep results main HTML wrapper helper)
+  - `showDeepResultsView` (legacy deep results container toggle helper)
+  - `window.handleTestImageUpload` (upload status-step + deep-classification builder helper)
+  - `window.handleTestImageUpload` (upload final-render + manual-fallback apply helpers)
+  - `showContributionPrompt` (post-haggle callback pending/area/auto-close helpers)
+  - `window.handleTestImageUpload` (upload initial-view/error-toast/reset-input helpers)
+  - `window.startPriceCheckCamera` (camera-start view toggle/revert/file-fallback helpers)
+  - `window.startPriceCheckCamera` (camera-start error-message resolver helper)
+  - `window.handleTestImageUpload` (upload analysis-step/hide-show delegate wrappers)
+  - `window.handleTestImageUpload` (manual-selector resolve/cancel helper)
+  - `window.selectManualCategory` / `window.closeManualSelector` (shared manual-selection finalize helper)
+  - `showManualCategorySelector` (legacy modal open/mount/resolve helper)
+  - `ItemClassifier.showCategorySelector` (category-selector modal open helper)
+  - `window.selectCategory` / `window.closeCategorySelector` (shared category-selector finalize helper)
+  - `window.captureForPriceCheck` (analysis-step/hide-view delegate wrappers)
+  - `window.analyzePriceNow` (analysis-step delegate wrapper)
+  - `window.analyzePriceNow` (shared analyzing-hide helper wiring)
+  - `window.handleQuickCapture` (analysis-step/hide-view delegate wrappers)
+  - `showDeepResultsView` (legacy score/quick-pricing/reasoning resolver helpers)
+  - `showDeepResults` (score-bar + reasoning resolver helpers)
+  - `window.analyzeDeepPrice` (standard-analysis fallback helper)
+  - `window.showContributionPrompt` / `window.submitCrowdPrice` (deep contribution-state reader helper)
+  - `window.submitCrowdPrice` (contribution price-validation + crowd-db resolver helpers)
+  - `window.handleTestImageUpload` / `window.captureForPriceCheck` / `window.analyzePriceNow` / `window.handleQuickCapture` (shared analyzing-hide fallback helper)
+  - `window.handleTestImageUpload` / `window.captureForPriceCheck` / `window.analyzePriceNow` / `window.handleQuickCapture` (shared analysis-step updater factory helper)
+  - `window.handleTestImageUpload` / `window.captureForPriceCheck` / `window.analyzePriceNow` / `window.handleQuickCapture` (shared analyzing-view refs resolver helper)
+  - `window.showContributionPrompt` / `window.submitCrowdPrice` (deep contribution-state safe resolver helper)
+  - `window.handleTestImageUpload` (upload deep-classification resolver helper)
+  - `window.selectManualCategory` / `window.selectCategory` (manual selection result resolvers)
+  - `window.analyzeDeepPrice` (deep result payload resolver helper)
+  - `showDeepResultsView` (legacy quality/auth/red-flags resolver helpers)
+  - `showDeepResults` (modern quality/area/source/red-flags resolver helpers)
+  - `window.handleTestImageUpload` / `window.captureForPriceCheck` / `window.analyzePriceNow` / `window.handleQuickCapture` (`app.js` compat helpers for analyzing refs/step updater/hide)
+  - `window.handleTestImageUpload` (upload classification-view resolver helper)
+  - `window.handleTestImageUpload` (upload manual-fallback resolver helper)
+  - `window.selectManualCategory` / `window.closeManualSelector` (legacy manual finalize resolver helper)
+  - `window.selectCategory` / `window.closeCategorySelector` (category finalize resolver helper)
+  - `window.startPriceCheckCamera` (camera view/revert/upload-fallback/user-message resolver helpers)
+  - `showResultsView` (level/result/saved/context/session resolver helpers)
+  - `window.savePriceCheckResult` (history load/entry/persist resolver helpers)
+  - `showDeepResults` (results-view + deep-results payload resolver helpers)
+  - `window.showContributionPrompt` (contribution prompt view resolver helper)
+  - `window.showContributionPrompt` / `window.submitCrowdPrice` (shared deep-state compat helper)
+  - `window.submitCrowdPrice` (input/validation/crowd-db/payload compat helper wiring)
+  - `showDeepResults` (quality/area/source/score/red-flags/reasoning compat helper wiring)
+  - `showDeepResults` (shared compat deep-results HTML builder helper wiring)
+  - `showDeepResultsView` (container/theme/score/red-flags/auth/quick-pricing/reasoning compat helper wiring)
+  - `showDeepResultsView` (shared compat legacy deep-results HTML builder helper wiring)
+  - `window.handleTestImageUpload` (manual-selection/result-render/manual-fallback compat helper wiring)
+  - `window.analyzeDeepPrice` (standard-analysis fallback + deep-result payload compat helper wiring)
+  - `showManualCategorySelector` (categories/modal/open compat helper wiring)
+  - `window.selectManualCategory` / `window.closeManualSelector` (shared legacy-finalize compat helper wiring)
+  - `window.selectCategory` / `window.closeCategorySelector` (shared category-finalize compat helper wiring)
+  - `ItemClassifier.showCategorySelector` (categories/modal/open compat helper wiring)
+  - `showPriceInputView` (detected-item + quick-price compat helper wiring)
+  - `window.showManualPriceInput` (manual classification compat helper wiring)
+  - `window.cancelPriceCheck` (reset-views compat helper wiring)
+  - `window.captureForPriceCheck` (progress ticker start/stop compat helper wiring)
+  - `window.analyzePriceNow` (item-category/input-validation/loading/error compat helper wiring)
+  - `window.selectManualCategory` (legacy selection-payload compat helper wiring)
+  - `window.selectCategory` (category selection-payload compat helper wiring)
+  - `renderDeepContributionPromptCompat` (fallback HTML compat builder helper wiring)
+  - `window.handleQuickCapture` (image-source + error-recovery compat helper wiring)
+  - `showDeepResults` (deep contribution-state storage compat helper wiring)
+  - `showResultsView` (level-colors/color-class/result-HTML compat helper wiring)
+  - `window.startPriceCheckCamera` (camera-view/revert/upload-fallback/user-message compat helper wiring)
+  - `showResultsView` (saved/context-record/session-log compat helper wiring)
+  - `window.savePriceCheckResult` (history-load/entry/persist compat helper wiring)
+  - `window.handleTestImageUpload` (deep-classification/error-notify/reset-input compat helper wiring)
+  - `window.handleTestImageUpload` / `window.captureForPriceCheck` / `window.showManualPriceInput` / `window.handleQuickCapture` (shared scan-quota compat helper wiring)
+  - `price-check-ui-utils` (scan-quota resolver helper wiring)
+  - `window.handleTestImageUpload` (deep->standard->manual classification pipeline compat helper wiring)
+  - `price-check-ui-utils` (upload classification pipeline resolver helper wiring)
+  - `window.captureForPriceCheck` (analyzing/progress setup capture-context compat helper wiring)
+  - `window.handleTestImageUpload` (unhandled-error fallback flow compat helper wiring)
+  - `price-check-ui-utils` (upload unhandled-error resolver helper wiring)
+  - `window.handleQuickCapture` (quick-capture context + deep pipeline compat helper wiring)
+  - `price-check-ui-utils` (quick-capture deep pipeline resolver helper wiring)
+  - `window.analyzeDeepPrice` (vendor-price/context/scam-check compat helper wiring)
+  - `price-check-ui-utils` (analyze-deep vendor/context/scam-check resolver helper wiring)
+  - `showResultsView` (render-context resolver compat helper wiring)
+  - `price-check-ui-utils` (price-check results render-context resolver helper wiring)
+  - `window.analyzePriceNow` (shared analyze-loading hide compat helper wiring)
+  - `price-check-ui-utils` (analyze-loading hide resolver helper wiring)
+  - `window.savePriceCheckResult` (history-save flow compat helper wiring)
+  - `price-check-ui-utils` (price-check history-save resolver helper wiring)
+  - `window.startPriceCheckCamera` (camera-access gate compat helper wiring)
+  - `price-check-ui-utils` (price-check camera-access resolver helper wiring)
+  - `window.captureForPriceCheck` (capture pipeline + error compat helper wiring)
+  - `price-check-ui-utils` (capture analysis pipeline + error resolver helper wiring)
+  - `window.showManualPriceInput` (category-resolver + input-view compat helper wiring)
+  - `price-check-ui-utils` (manual price input category/view resolver helper wiring)
+  - `showPriceInputView` (render-context + renderer compat helper wiring)
+  - `price-check-ui-utils` (price-input view context/render resolver helper wiring)
+  - `window.analyzePriceNow` (vendor-price resolver + debug logger compat helper wiring)
+  - `price-check-ui-utils` (analyze-price vendor/debug resolver helper wiring)
+  - `showResultsView` (post-render bookkeeping compat helper wiring)
+  - `price-check-ui-utils` (price-check post-render bookkeeping resolver helper wiring)
+  - `window.analyzePriceNow` (analyze pipeline compat helper wiring)
+  - `price-check-ui-utils` (analyze-price pipeline resolver helper wiring)
+  - `showDeepContributionPrompt` / `window.submitCrowdPrice` (contribution flow compat helper wiring)
+  - `price-check-ui-utils` (contribution prompt + crowd-submit flow resolver helper wiring)
+  - `showDeepResults` (render flow compat orchestrator helper wiring)
+  - `price-check-ui-utils` (deep-results render flow resolver helper wiring)
+  - `window.handleQuickCapture` (start preconditions compat helper wiring)
+  - `price-check-ui-utils` (quick-capture start-context resolver helper wiring)
+  - `showDeepResultsView` (legacy deep-results render flow compat helper wiring)
+  - `price-check-ui-utils` (legacy deep-results render flow resolver helper wiring)
+  - `window.handleTestImageUpload` (start preconditions compat helper wiring)
+  - `price-check-ui-utils` (upload start-context resolver helper wiring)
+  - `window.handleTestImageUpload` (analyzing context setup compat helper wiring)
+  - `price-check-ui-utils` (upload analyzing-context resolver helper wiring)
+  - `window.analyzeDeepPrice` (fallback/scam/payload flow compat helper wiring)
+  - `price-check-ui-utils` (analyze-deep flow resolver helper wiring)
+  - `window.handleTestImageUpload` (file-to-base64/blob persistence compat helper wiring)
+  - `price-check-ui-utils` (upload base64/blob resolver helper wiring)
+  - `window.analyzeDeepPrice` (entry checker/vendor/validation compat helper wiring)
+  - `price-check-ui-utils` (analyze-deep action resolver helper wiring)
+  - `window.handleTestImageUpload` (upload orchestration compat helper wiring)
+  - `price-check-ui-utils` (upload orchestration resolver helper wiring)
+  - `window.analyzePriceNow` (analyze-price orchestration compat helper wiring)
+  - `price-check-ui-utils` (analyze-price orchestration resolver helper wiring)
+  - `window.handleQuickCapture` (quick-capture orchestration compat helper wiring)
+  - `price-check-ui-utils` (quick-capture orchestration resolver helper wiring)
+  - `window.captureForPriceCheck` (capture flow orchestration compat helper wiring)
+  - `price-check-ui-utils` (capture flow orchestration resolver helper wiring)
+  - `window.showManualPriceInput` (manual price input orchestration compat helper wiring)
+  - `price-check-ui-utils` (manual price input orchestration resolver helper wiring)
+  - `window.cancelPriceCheck` (cancel flow compat helper wiring)
+  - `price-check-ui-utils` (cancel flow resolver helper wiring)
+  - `window.savePriceCheckResult` (save flow compat helper wiring)
+  - `price-check-ui-utils` (save flow resolver helper wiring)
+  - `window.startPriceCheckCamera` (camera-start orchestration compat helper wiring)
+  - `price-check-ui-utils` (camera-start orchestration resolver helper wiring)
+  - `showResultsView` (results-view orchestration compat helper wiring)
+  - `price-check-ui-utils` (results-view orchestration resolver helper wiring)
+  - `VectorHUD` class methods (compat delegate wiring)
+  - `vector-hud-utils` (HUD runtime resolver helper wiring)
+  - `CurrencyWidget` + `PriceIntegration` class methods (compat delegate wiring)
+  - `currency-ui-utils` (widget/integration resolver helper wiring)
+  - `CurrencyRateProvider` + `CurrencyConverter` class methods (compat delegate wiring)
+  - `currency-core-utils` (provider/converter resolver helper wiring)
+  - `SmartNegotiator` class methods (compat delegate wiring)
+  - `smart-negotiator-utils` (strategy scoring/pricing/confidence/explanation resolver helper wiring)
+  - `NegotiationLearner` class methods (compat delegate wiring)
+  - `smart-negotiator-utils` (negotiation learner persistence/stats resolver helper wiring)
+  - `PriceChecker` class methods (compat delegate wiring)
+  - `price-check-ui-utils` (price-check controller start/stop/capture/analyze/reset resolver helper wiring)
+  - `renderPriceChecker` (compat delegate wiring)
+  - `price-check-ui-utils` (price-check main screen HTML/render resolver helper wiring)
+  - `window.runRouteOptimization` (compat delegate wiring)
+  - `window.displayRouteResults` (compat delegate wiring)
+  - `window.exportToGoogleMaps` / `window.shareRoute` (compat delegate wiring)
+  - `route-planner-runner-utils` (run optimization/results render/share/export orchestration resolver helper wiring)
+  - `renderRoutePlanner` (compat delegate wiring)
+  - `route-planner-ui-utils` (route planner shell HTML/render orchestration resolver helper wiring)
+  - `window.toggleDestinationSelection` (compat delegate wiring)
+  - `route-planner-selection-utils` (selection toggle orchestration + card-visual resolver helper wiring)
+  - `window.clearSelections` (compat delegate wiring)
+  - `setupRoutePlannerListeners` (compat delegate wiring)
+  - `route-planner-ui-utils` (selection reset + tab-listener orchestration resolver helper wiring)
+  - `updateDestinationCount` (compat delegate wiring)
+  - `route-planner-runtime-state-utils` (destination-count + optimize-button state orchestration resolver helper wiring)
+  - `IntelligentRoutePlanner._generateDetailedOutput` (compat delegate wiring)
+  - `route-planner-output-utils` (detailed-output orchestration resolver helper wiring)
+  - `renderDestinationList` (compat delegate wiring)
+  - `route-planner-render-utils` (destination-list render-flow + selection/destination resolver helper wiring)
+  - `window.loadDayIntoPlanner` (compat delegate wiring)
+  - `renderBriefingDay` (compat delegate wiring)
+  - `tab-routing-utils` (briefing->route bridge flow + briefing-day render-card resolver helper wiring)
+  - `renderWaypointCard` (compat delegate wiring)
+  - `tab-routing-utils` (waypoint type-badge resolver + waypoint-card render resolver helper wiring)
+  - `renderWalletTab` (compat delegate wiring)
+  - `wallet-ui-utils` (wallet visual-state + wallet-tab HTML/render-flow resolver helper wiring)
+  - `attachWalletListeners` (compat delegate wiring)
+  - `wallet-ui-utils` (wallet listeners orchestration resolver helper wiring)
+  - `renderWalletSetup` (compat delegate wiring)
+  - `wallet-ui-utils` (wallet setup-screen resolver helper wiring)
+  - `renderVectorHUD` (compat delegate wiring)
+  - `initVectorSensors` (compat delegate wiring)
+  - `vector-hud-utils` (vector HUD render/sensor orchestration resolver helper wiring)
+  - `getSunAzimuth` (compat delegate wiring)
+  - `updateSolarDisplay` (compat delegate wiring)
+  - `vector-hud-utils` (sun-azimuth + solar-display resolver helper wiring)
+  - `renderNegotiation` (compat delegate wiring)
+  - `smart-negotiator-utils` (negotiation shell HTML resolver helper wiring)
+  - `switchNegoTab` (compat delegate wiring)
+  - `smart-negotiator-utils` (negotiation tab-switch/render orchestration resolver helper wiring)
+  - `renderScriptsTab` (compat delegate wiring)
+  - `smart-negotiator-utils` (negotiation scripts catalog + scripts-tab HTML resolver helper wiring)
+  - `renderHaggleStage` (compat delegate wiring)
+  - `smart-negotiator-utils` (haggle-stage render/animation flow resolver helper wiring)
+  - `window.openFlashCard` / `window.playNegoAudio` (compat delegate wiring)
+  - `smart-negotiator-utils` (flash-card modal + negotiation-audio resolver helper wiring)
+  - `renderIntelTab` (compat delegate wiring)
+  - `renderHaggleStage1` / `renderHaggleStage2` / `renderHaggleStage3` / `renderHaggleStage4` / `renderHaggleStage5` (compat delegate wiring)
+  - `playHaggleAudio` / `recordNegotiationRound` / `getResultIcon` / `renderNegotiationHistory` / `mapContextAreaToNegotiationArea` (compat delegate wiring)
+  - `attachHaggleListeners` (compat delegate wiring)
+  - `startWalkawayTimer` (compat delegate wiring)
+  - `smart-negotiator-utils` (intel-tab + haggle-stage HTML resolver helper wiring)
+  - `smart-negotiator-utils` (haggle audio/history/map/timer resolver helper wiring)
+  - `smart-negotiator-utils` (haggle listeners orchestration resolver helper wiring)
+  - `IntelligentRoutePlanner` constructor (places normalization compat delegate wiring)
+  - `IntelligentRoutePlanner._buildDistanceMatrix` / `_getPenalty` / `optimize` / `_calculateTotalCost` (compat delegate wiring)
+  - `route-planner-core-utils` (`routePlannerNormalizePlaces` resolver helper wiring)
+  - `haversineDistance` / `walkingTime` / `isPrayerTime` / `getSunsetTime` / `isDestinationOpen` / `getCrowdScore` (route-planner helper compat delegate wiring)
+  - `trackMapLocation` / `formatTimeAgo` / `window.clearRecentLocations` / `window.jumpToLocation` / `renderRecentLocations` (map recent-locations compat delegate cleanup)
+  - `window.showToast` (runtime toast compat delegate cleanup)
+  - `js/app/protocols/route-planner-destinations.js` (destinations dataset extraction from `app.js`)
+  - `index.html` (route-planner destinations script registration before route-planner helpers)
+  - `app.js` (`MARRAKECH_DESTINATIONS` / `ALL_DESTINATIONS` migrated to compatibility globals)
+  - `renderRecentLocations` (vector HUD recent-locations compat delegate wiring)
+  - `vector-hud-utils` (`resolveRenderVectorRecentLocationsHtml` resolver helper wiring)
+  - `js/app/price/price-check-config-data.js` (price-check config/items/database static data extraction from `app.js`)
+  - `index.html` (price-check config-data script registration before `app.js`)
+  - `app.js` (`CONFIG` / `ITEM_LABELS` / `ITEM_DISPLAY_NAMES` / `PRICE_DATABASE_V2` migrated to compatibility globals)
+  - `app.js` (price-check deep/legacy compat fallback HTML builders slimmed to delegate-first shims; large inline fallback blocks removed from `app.js`)
+  - `app.js` (modern deep-results compat display helpers for quality/area/source/score/red-flags/reasoning slimmed to delegate-first shims)
+  - `app.js` (`showContributionPrompt` modal fallback HTML block removed; delegate-first modal builder via `session-ui-utils`)
+  - `app.js` (`CrowdPriceDB` submit/query/stats/reward/retry branches slimmed to delegate-first utility wiring)
+- `app.js` (`showContributionPrompt` action branches slimmed to delegate-first utility wiring)
+- `app.js` (manual/category selector catalog + modal + detected-item/quick-price fallback HTML blocks slimmed to delegate-first shims)
+- `app.js` (price-check orchestration helpers `runLegacyDeepResultsViewRenderCompat`, `runCaptureForPriceCheckFlowCompat`, `runAnalyzePriceNowFlowCompat`, `runShowResultsViewFlowCompat`, `runQuickCaptureFlowCompat`, `runHandleTestImageUploadFlowCompat` slimmed to delegate-first wrappers)
+- `app.js` (price-check compat orchestration/resolver helpers `runSubmitCrowdPriceFlowCompat`, `runDeepResultsRenderCompat`, `createUploadAnalyzingContextCompat`, `resolveUploadPipelineClassificationCompat`, `resolveUploadUnhandledErrorCompat`, `runQuickCaptureDeepPipelineCompat`, `runAnalyzePricePipelineCompat` slimmed to delegate-first wrappers)
+- `app.js` (deep-results compat wrappers `resolveDeepContributionStateCompat`, `resolvePriceCheckResultsViewCompat`, `resolveDeepResultsViewPayloadCompat`, `runDeepResultsRenderCompat`, badge/source/area/score/red-flags/reasoning/html resolvers streamlined to delegate-first one-path wrappers)
+- `app.js` (manual/category selector compat wrappers for category lists, modal building/opening, and finalize handlers streamlined with delegate-first guards; fallback behavior preserved)
+- Batch 155 extractions (compatibility-first):
+  - `js/app/price/vision-api-utils.js` (provider-call orchestrator resolvers for `analyzeImage`, Gemini, DeepSeek, OpenRouter)
+  - `app.js` (`VisionAPIClient.analyzeImage/_callGemini/_callDeepSeek/_callOpenRouter` slimmed to delegate-first wrappers)
+- Batch 156 extractions (compatibility-first):
+  - `js/app/price/gemini-deep-utils.js` (`resolveGeminiDeepCallFlow` orchestration resolver helper)
+  - `app.js` (`VisionAPIClient.callGeminiDeep` slimmed to delegate-first wrapper)
+- Batch 157 extractions (compatibility-first):
+  - `js/app/price/crowd-price-utils.js` (CrowdPriceDB submit/get/all-areas/compute/reward/retry-process orchestration resolvers)
+  - `app.js` (`CrowdPriceDB.submitPrice/getCrowdData/_getCrowdDataAllAreas/_computeStats/_rewardUser/_processRetryQueue` slimmed to delegate-first wrappers)
+- Batch 158 extractions (compatibility-first):
+  - `app.js` (large price-check compat block from camera/deep-contribution/deep-render/upload/analyze-deep helpers slimmed to delegate-first wrappers)
+  - `app.js` (window-export parity guard restored for `window._lastDeepAnalysis` / `window._lastHybridPrice`)
+- Batch 159 extractions (compatibility-first):
+  - `app.js` (price-check results/history/save + upload classification/error/reset compat helpers slimmed to delegate-first wrappers)
+  - `app.js` (large inline fallback HTML/result logic removed from compat helper path in favor of `price-check-ui-utils` resolvers)
+- Batch 160 extractions (compatibility-first):
+  - `app.js` (manual selector + price-input view compat helpers slimmed to delegate-first wrappers)
+  - `app.js` (`window._manualCategoryResolve` / `window._categoryResolve` fallback references preserved for parity safety)
+- Batch 161 extractions (compatibility-first):
+  - `app.js` (`runCaptureAnalysisPipelineCompat` / `handleCaptureAnalysisErrorCompat` / `runShowManualPriceInputFlowCompat` / analyze debug/vendor/loading compat helpers slimmed to delegate-first wrappers)
+- Batch 162 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (quick-capture context/error + upload deep/standard/low-confidence flow helpers)
+  - `app.js` (upload/quick-capture context/base64/error/start wrappers slimmed to delegate-first helper wiring)
+- Batch 163 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (analyze-price category/input-validation/loading-context/error helpers)
+  - `app.js` (`resolveAnalyzeItemCategoryCompat` / `validateAnalyzeInputsCompat` / `createAnalyzeLoadingContextCompat` / `handleAnalyzePriceErrorCompat` slimmed to delegate-first wrappers)
+- Batch 164 extractions (compatibility-first):
+  - `js/app/runtime/bootstrap-runtime-utils.js` (`resolveInitializeAlidadeAppFlow` orchestrator helper extracted from `app.js`)
+  - `app.js` (`initializeAlidadeApp` slimmed to runtime-utils delegation wrapper)
+  - `app.js` (parity guards restored for `window.alidade` export occurrence and `i18nReady` listener occurrence)
+- Batch 165 extractions (compatibility-first):
+  - `js/app/price/price-check-ui-utils.js` (analyze item-category/input validation/loading context/error resolver helpers)
+  - `app.js` (`resolveAnalyzeItemCategoryCompat` / `validateAnalyzeInputsCompat` / `createAnalyzeLoadingContextCompat` / `handleAnalyzePriceErrorCompat` rewired to new resolver helpers)
+- Batch 166 extractions (compatibility-first):
+  - `app.js` (manual selection result builders + scam-check compat helper fallbacks slimmed to delegate-first returns)
+  - `app.js` (`fileToBase64` / `_blobToBase64` / `_sleep` fallback branches slimmed to utility-first wrappers)
+- Batch 167 extractions (compatibility-first):
+  - `js/app/runtime/bootstrap-runtime-utils.js` (`resolveRenderTierUpsellFab` helper extracted from `app.js`)
+  - `app.js` (`window.renderTierUpsellFab` slimmed to runtime-utils delegation wrapper)
+- Batch 168 extractions (compatibility-first):
+  - `js/app/phrases/phrase-config-data.js` (phrase catalog + known-audio dataset extracted from `app.js`)
+  - `index.html` (phrase config-data script registration before `app.js`)
+  - `app.js` (`ARABIC_PHRASES` / `EXISTING_AUDIO_FILES` migrated to compatibility globals)
+- Batch 169 extractions (compatibility-first):
+  - `js/app/runtime/bootstrap-runtime-utils.js` (`resolveRenderDashboardView` helper extracted from `app.js`)
+  - `app.js` (`renderDashboard` slimmed to runtime-utils delegation wrapper)
+- Batch 170 extractions (compatibility-first):
+  - `js/app/runtime/bootstrap-runtime-utils.js` (`resolveGetAuthUserForGreeting` / `resolveGetTacticalCallsign` / `resolveRenderDashboardMenuItem` helpers extracted from `app.js`)
+  - `app.js` (`getAuthUserForGreeting` / `getTacticalCallsign` / `renderMenuItem` slimmed to runtime-utils delegation wrappers)
+- Batch 171 extractions (compatibility-first):
+  - `js/app/data/module-preview-data.js` (defense/intel/fortress/protocols preview datasets extracted from `app.js`)
+  - `index.html` (module preview-data script registration before `app.js`)
+  - `app.js` (`BASIC_THREAT_PREVIEW` / intel preview datasets / `BASIC_FORTRESS_PREVIEW` / protocols preview mission+briefing datasets migrated to compatibility globals)
+- Batch 172 extractions (compatibility-first):
+  - `js/app/data/market-currency-config-data.js` (`MARRAKECH_CONSTANTS` / `CURRENCY_CONFIG` / `FALLBACK_RATES` extracted from `app.js`)
+  - `index.html` (market+currency config-data script registration before `app.js`)
+  - `app.js` (market/currency constants migrated to compatibility globals via `marketCurrencyConfig`)
+- Batch 173 extractions (compatibility-first):
+  - `js/app/data/ui-icons-data.js` (`ICONS` SVG catalog extracted from `app.js`)
+  - `index.html` (UI icons data script registration before `app.js`)
+  - `app.js` (`ICONS` migrated to compatibility global `window.ALIDADE_UI_ICONS`)
+- Batch 174 extractions (compatibility-first):
+  - `js/app/access/tier-config-data.js` (`VALID_KEYS` + `TIER_DATA` extracted from `app.js`)
+  - `index.html` (tier config-data script registration before `app.js`)
+  - `app.js` (`VALID_KEYS` / `TIER_DATA` migrated to compatibility global `window.ALIDADE_TIER_CONFIG`)
+- Batch 175 extractions (compatibility-first):
+  - `js/app/access/tier-feature-map-data.js` (`VIEW_TIER_REQUIREMENTS` + `UPGRADE_CONTEXT_MAP` extracted from `app.js`)
+  - `index.html` (tier feature-map data script registration before `app.js`)
+  - `app.js` (tier requirement/upgrade context maps migrated to compatibility global `window.ALIDADE_TIER_FEATURE_MAP`)
+- Batch 176 extractions (compatibility-first):
+  - `js/app/data/context-map-data.js` (`PRAYER_TIMES` / `SOUK_LANDMARKS` / `CONTEXT_NEGOTIATION_TACTICS` / `CONTEXT_AREA_BOUNDS` extracted from `app.js`)
+  - `index.html` (context-map data script registration before `app.js`)
+  - `app.js` (map/context constants migrated to compatibility global `window.ALIDADE_CONTEXT_MAP_DATA`)
+- Batch 177 extractions (compatibility-first):
+  - `js/app/context/context-runtime.js` (`UnifiedContextEngine` / `SessionIntelligence` / session-summary hooks + context bridge actions extracted from `app.js`)
+  - `index.html` (context runtime script registration before `app.js`)
+  - `app.js` (context runtime block replaced by extracted module wiring with parity guards)
+- Batch 178 extractions (compatibility-first):
+  - `js/app/price/price-check-runtime.js` (large price-check runtime/compat block extracted from `app.js`)
+  - `index.html` (price-check runtime script registration immediately after `app.js`)
+  - `app.js` (price-check runtime block replaced with extraction marker)
+- Batch 179 extractions (compatibility-first):
+  - `js/app/price/price-check-core-runtime.js` (core price-check block from `CrowdPriceDB` through `PriceChecker` extracted from `app.js`)
+  - `index.html` (core runtime script registration between `app.js` and `price-check-runtime.js`)
+  - `app.js` (price-check core block replaced with extraction marker)
+- Batch 180 extractions (compatibility-first):
+  - `js/app/vector/vector-hud-runtime.js` (`VectorHUD` runtime class + global instance extracted from `app.js`)
+  - `index.html` (vector HUD runtime script registration after `vector-hud-utils` and before `app.js`)
+  - `app.js` (vector HUD runtime block replaced with extraction marker)
+- Batch 181 extractions (compatibility-first):
+  - `js/app/protocols/route-planner-runtime.js` (route-planner algorithm/UI/runtime/export block extracted from `app.js`)
+  - `index.html` (route-planner runtime script registration before `app.js`)
+  - `app.js` (route-planner block replaced with extraction marker)
+- Batch 182 extractions (compatibility-first):
+  - `js/app/price/price-check-media-runtime.js` (`PhotoCapture` / `ImageProcessor` / `DeepImageAnalyzer` extracted from `app.js`)
+  - `index.html` (price-check media runtime script registration between `app.js` and `price-check-core-runtime.js`)
+  - `app.js` (price-check media class block replaced with extraction marker)
+- Batch 183 extractions (compatibility-first):
+  - `js/app/map/souk-location-runtime.js` (`SOUK_LANDMARKS` + location helpers `haversineDistance` / `detectSoukArea` / `getCurrentPosition` extracted from `app.js`)
+  - `index.html` (souk location runtime script registration after `app.js` and before price-check runtimes)
+  - `app.js` (souk location block replaced with extraction marker)
+- Batch 184 extractions (compatibility-first):
+  - `js/app/fortress/fortress-runtime.js` (Fortress view runtime block: `FORTRESS_DATA`, module renderers, listeners, and accordion toggles extracted from `app.js`)
+  - `index.html` (fortress runtime script registration after `module-preview-data.js` and before `app.js`)
+  - `app.js` (fortress block replaced with extraction marker)
+- Batch 185 extractions (compatibility-first):
+  - `js/app/runtime/service-map-runtime.js` (service worker/update + map recent-locations + global haptic listener block extracted from `app.js`)
+  - `index.html` (service/map runtime script registration immediately after `app.js`)
+  - `app.js` (service/map block replaced with extraction marker)
+- Batch 186 extractions (compatibility-first):
+  - `js/app/runtime/app-initialization-runtime.js` (app initialization tail block: magic-link recovery, tier upsell hook, bootstrap/startup listeners extracted from `app.js`)
+  - `index.html` (app-initialization runtime script registration after service-map runtime)
+  - `app.js` (app-initialization block replaced with extraction marker)
+- Batch 187 extractions (compatibility-first):
+  - `js/app/intel/intel-organic-tabs-runtime.js` (`renderPharmacyTab` / `showPharmacyFlashCard` / `renderStreetFoodTab` / `renderRecoveryTab` / `renderMedEvacTab` extracted from `app.js`)
+  - `index.html` (intel organic-tabs runtime script registration after app/runtime extracted scripts)
+  - `app.js` (organic intel tabs block replaced with extraction marker)
+
+- Batch 188 extractions (compatibility-first):
+  - `js/app/protocols/protocols-runtime.js` (large protocols/wallet/settings runtime block extracted from `app.js`)
+  - `index.html` (protocols runtime script registration after `app.js` and before post-app runtimes)
+  - `app.js` (protocols/wallet/settings block replaced with extraction marker)
+
+- Batch 189 extractions (compatibility-first):
+  - `js/app/negotiation/negotiation-runtime.js` (negotiation/haggle runtime wrapper block extracted from `app.js`)
+  - `index.html` (negotiation runtime script registration after `protocols-runtime.js`)
+  - `app.js` (negotiation/haggle wrapper block replaced with extraction marker)
+
+- Batch 190 extractions (compatibility-first):
+  - `js/app/vector/vector-bridge-runtime.js` (vector HUD runtime bridge block extracted from `app.js`)
+  - `index.html` (vector bridge runtime script registration immediately after `app.js`)
+  - `app.js` (vector HUD bridge block replaced with extraction marker)
+- Batch 191 fixes (compatibility-first):
+  - `app.js` (legacy negotiation fallback listener renamed `attachNegoIntelListeners` to avoid duplicate declaration collision with intel module listener)
+
+- Batch 192 extractions (compatibility-first):
+  - `js/app/runtime/legacy-init-runtime.js` (legacy init block `initializeEmergencySOSModule` + `init` extracted from `app.js`)
+  - `index.html` (legacy init runtime script registration immediately after `app.js`)
+  - `app.js` (legacy initialization block replaced with extraction marker)
+
+- Batch 193 fixes (compatibility-first):
+  - `app.js` (nested animation callbacks renamed from generic `update` to `updateScramble` / `updatePriceDecrypt` to remove final duplicate symbol collision)
+
+- Batch 194 extractions (compatibility-first):
+  - `js/app/negotiation/negotiation-legacy-runtime.js` (legacy market-warfare negotiation fallback block extracted from `app.js`)
+  - `index.html` (legacy negotiation runtime loaded before `negotiation-runtime.js` to preserve override order)
+  - `app.js` (legacy negotiation fallback block replaced with extraction marker)
+
+- Batch 195 extractions (compatibility-first):
+  - `js/app/market/price-dictator-runtime.js` (`renderPriceDictator` + related market helpers extracted from `app.js`)
+  - `index.html` (price-dictator runtime script registration after negotiation runtimes)
+  - `app.js` (market price-dictator block replaced with extraction marker)
+
+- Batch 196 extractions (compatibility-first):
+  - `js/app/intel/organic-lab-shell-runtime.js` (`renderOrganicLabPlaceholder` + `window.switchOrganicTab` extracted from `app.js`)
+  - `index.html` (organic-lab shell runtime script registration before app-initialization/intel runtimes)
+  - `app.js` (organic-lab shell block replaced with extraction marker)
+
+- Batch 197 extractions (compatibility-first):
+  - `js/app/intel/intel-runtime.js` (`INTEL_DATA` + intel hidden-gems render/tabs/night-ops runtime block extracted from `app.js`)
+  - `index.html` (intel runtime script registration after organic-lab shell and before app initialization runtime)
+  - `app.js` (intel hidden-gems block replaced with extraction marker)
+
+- Batch 198 extractions (compatibility-first):
+  - `js/app/souk/souk-runtime.js` (souk ops runtime stack: ceramics/leather/rugs/metals/forensics/transport shield + souk entry block extracted from `app.js`)
+  - `index.html` (souk runtime script registration after market runtime)
+  - `app.js` (souk module block replaced with extraction marker)
+
+- Batch 199 extractions (compatibility-first):
+  - `js/app/defense/defense-runtime.js` (defense threat-matrix runtime stack extracted from `app.js`)
+  - `index.html` (defense runtime script registration after souk runtime)
+  - `app.js` (defense block replaced with extraction marker)
+
+- Batch 200 extractions (compatibility-first):
+  - `js/app/negotiation/negotiation-ai-runtime.js` (AI negotiation core: `NegotiationContext`, `SmartNegotiator`, `NegotiationLearner`, `negoLearner` global bootstrap extracted from `app.js`)
+  - `index.html` (negotiation AI runtime script registration immediately after `app.js`)
+  - `app.js` (negotiation AI core block replaced with extraction marker)
+
+- Batch 201 extractions (compatibility-first):
+  - `js/app/currency/currency-runtime.js` (offline-first currency converter runtime block extracted from `app.js`)
+  - `index.html` (currency runtime script registration after negotiation AI runtime)
+  - `app.js` (currency converter block replaced with extraction marker)
+
+- Batch 202 extractions (compatibility-first):
+  - `js/app/phrases/phrases-runtime.js` (phrase assistant runtime stack: `PhraseLibrary`, `PronunciationTrainer`, phrase UI/actions, and practice modal flow extracted from `app.js`)
+  - `index.html` (phrases runtime script registration after currency runtime)
+  - `app.js` (phrase assistant block replaced with extraction marker)
+
+- Batch 203 extractions (compatibility-first):
+  - `js/app/access/access-runtime.js` (cryptographic access/runtime gate stack extracted from `app.js`: token/tier resolution, plan syncing, feature gates, upgrade/auth modals, ultimate data-pack loader, and access lifecycle listeners)
+  - `index.html` (access runtime script registration after phrases runtime and before legacy init runtime)
+  - `app.js` (access/runtime gate block replaced with extraction marker)
+
+- Batch 204 extractions (compatibility-first):
+  - `js/app/runtime/app-shell-runtime.js` (app shell block extracted from `app.js`: icons bridge, navigation/routing, language switch flow, settings overlay hooks, master renderer, and dashboard shell helpers)
+  - `index.html` (app-shell runtime script registration after access runtime and before legacy init runtime)
+  - `app.js` (app shell block replaced with extraction marker)
+
+- Batch 205 extractions (compatibility-first):
+  - `js/app/runtime/foundation-runtime.js` (core foundation block extracted from `app.js`: i18n hooks, `StateManager`, haptics fallback, global error handlers, skeleton loaders, and decrypt animation helpers)
+  - `index.html` (foundation runtime script registration immediately after `app.js` and before dependent post-app runtimes)
+  - `app.js` (foundation block replaced with extraction marker)
+
+- Batch 206 extractions (compatibility-first):
+  - `js/app/runtime/app-constants-parity-runtime.js` (remaining `app.js` constants/parity anchors extracted: price-check config constants and context parity bindings)
+  - `index.html` (constants/parity runtime script registration after app-shell runtime)
+  - `app.js` (constants/parity block replaced with extraction marker)
+
+- Batch 207 fixes (stability-first):
+  - `js/app/protocols/protocols-runtime.js` (`modulePreviewData` bootstrap restored to prevent `ReferenceError` and empty Protocols tab content)
+  - `js/app/intel/intel-runtime.js` (`modulePreviewData` bootstrap restored for preview dataset parity)
+  - `js/app/runtime/legacy-init-runtime.js` (Emergency SOS dynamic import path fixed to `../../emergency-sos.js`)
+  - `sw.js` (cache version bumped to `alidade-tactical-v2.10` to flush stale runtime/script caches after refactor)
+  - Runtime smoke-check confirmed: HOME render ok, PROTOCOLS content loads, SOS widget present (`SOS READY`), and no startup `ReferenceError` in console.
+
+- Batch 208 fixes (stability + encoding hygiene):
+  - `js/app/defense/defense-runtime.js`, `js/app/intel/intel-runtime.js`, `js/app/protocols/protocols-runtime.js` (renamed per-file preview constants to avoid global lexical collision: `Identifier 'modulePreviewData' has already been declared`)
+  - `index.html` (targeted mojibake normalization for visible header/CTA text and loader/license console labels)
+  - Browser reload smoke-check reconfirmed: no startup `SyntaxError`, PROTOCOLS renders content, SOS still initialized.
+
+- Batch 209 fixes (stability + UI text normalization):
+  - `js/app/protocols/protocols-runtime.js` (cleaned Protocols tab labels, wallet/briefing copy, budget/tips strings, and placeholder emoji tokens that rendered as `??`; mission/settings strings normalized without logic changes)
+  - `js/app/runtime/bootstrap-runtime-utils.js` (dashboard emergency card/fab/menu labels normalized; removed visible placeholder markers like `?? ACTIVATE PROTOCOL`)
+  - `js/app/access/access-runtime.js` (tier/log text markers normalized; protocol-lock CTA icon text normalized)
+  - `js/app/runtime/foundation-runtime.js`, `js/app/runtime/app-shell-runtime.js`, `js/app/runtime/app-initialization-runtime.js`, `js/app/runtime/legacy-init-runtime.js` (runtime logs/settings text normalized to remove mojibake/placeholder tokens)
+  - `js/app/vector/vector-hud-utils.js` (vector HUD button labels + recent-locations placeholders normalized)
+  - Validation: `node --check` passed on all edited files; browser smoke-check confirmed PROTOCOLS content + tabs render correctly, SOS remains ready, and no startup runtime errors.
+
+- Batch 210 fixes (encoding + placeholder cleanup, no logic changes):
+  - `js/app/negotiation/negotiation-legacy-runtime.js`, `js/app/negotiation/negotiation-ai-runtime.js`, `js/app/intel/organic-lab-shell-runtime.js` (removed remaining visible `??` placeholders in tabs/icons/labels)
+  - `js/app/price/price-check-core-runtime.js`, `js/app/price/price-check-media-runtime.js`, `js/app/price/price-check-runtime.js`, `js/app/price/price-check-ui-utils.js`, `js/app/price/price-check-config-data.js`, `js/app/currency/currency-runtime.js` (normalized UI/log strings, removed placeholder markers, and cleaned mojibake-like output tokens in logs/messages)
+  - `js/app/phrases/phrases-runtime.js` (Arabic normalization regex repaired: Alef/Alef Maqsura/Taa Marbuta rules now use proper Arabic characters)
+  - `js/app/phrases/phrase-config-data.js` (full phrase `arabic` dataset rewritten with proper Arabic text; removed mojibake source data)
+  - Validation: `node --check` passed for all edited files; scan now shows only language-level nullish operators (`??`) and no mojibake pattern matches (`Ã|â|ï¸|�`) across `js/app` + `app.js`.
+  - Browser smoke-check:
+    - PHRASES renders Arabic correctly after reload.
+    - PROTOCOLS tabs/content render (no empty panel).
+    - HOME refresh is stable with no blocking runtime errors.
+    - Emergency SOS initializes and widget stays visible (`SOS READY`).
+    - Fortress/Vector access lock flow works without runtime exceptions.
+
+- Batch 211 fixes (cache hygiene + runtime smoke):
+  - `sw.js` rewritten with equivalent logic and normalized headers/comments (removed mojibake separators).
+  - Service worker cache key bumped to `alidade-tactical-v2.11` to force clean refresh after runtime/data encoding fixes.
+  - Browser smoke walkthrough re-run across main flows (`HOME`, `DEFENSE`, `SOUK OPS`, `INTEL`, `PROTOCOLS`, `PHRASES`, emergency SOS trigger/deactivation path).
+  - Console state after reload: no blocking `error` entries; only non-blocking warnings (`tailwindcdn` + early i18n fallback warning) remain.
+
+- Batch 212 cleanup (manifest-only, zero logic impact):
+  - `app.js` reduced to a clean extraction manifest comment file (removed leftover noisy markers/blank blocks).
+  - Validation: `node --check app.js` passed.
+
+- Batch 213 verification (contract audit pass):
+  - Ran `npm run audit:app-contract` against `app.js`.
+  - Result: declarations `0`, window exports `0`, duplicate names `0` (expected for fully extracted runtime manifest).
+
+- Batch 214 fixes (a11y + form hygiene, no logic changes):
+  - `js/tactical-briefing-ui.js` (added `label for` + `name` attributes for haggle/debrief inputs, and named debrief tactic checkboxes to reduce form-field warnings)
+  - `js/app/price/price-check-ui-utils.js` (added `label for` + `name`/`aria-label` attributes for vendor/deep/contribution/manual-select/upload controls in both primary and fallback renderers)
+  - `js/app/access/logistics-auth-modal-utils.js`, `js/app/access/access-runtime.js` (auth modal email/password inputs now include `name` + `aria-label` for accessibility parity)
+  - Validation: `node --check` passed for all edited files; browser smoke check on `HOME` + `PROTOCOLS` shows top-DOM form controls with `noIdNameCount: 0` and `noLabelCount: 0`.
+  - Residual DevTools `issue` warnings (`id/name` + `label`) were traced to `eruda` shadow DOM controls, not ALIDADE runtime templates.
+
+- Batch 215 fixes (debug-profile split + console noise reduction):
+  - `index.html` (replaced unconditional `eruda` CDN load with opt-in bootstrap: enabled only via `?debug_console=1` or `localStorage.ALIDADE_DEBUG_CONSOLE=1`)
+  - Effect: removed third-party shadow-DOM accessibility issue noise from default runtime sessions and reduced non-essential startup overhead.
+
+- Batch 216 fixes (startup init dedupe, no behavior change):
+  - `index.html` (merged duplicate i18n boot scripts into a single idempotent module bootstrap guarded by `window.__ALIDADE_I18N_BOOT__`)
+  - `index.html` (added `window.__ALIDADE_I18N_INIT_PROMISE__` to avoid repeated `i18n.init()` calls under re-entrant loads)
+  - `index.html` (normalized `i18nReady` dispatch to a single `CustomEvent` path with `detail.lang`, including fallback mode)
+  - `index.html` (made LicenseManager startup idempotent via `window.__ALIDADE_LICENSE_INIT_PROMISE__` and reused `window.licenseManager` if already present)
+  - Effect: less startup log noise and reduced duplicate initialization work without changing runtime feature logic.
+
+- Batch 217 cleanup (text hygiene + startup log gating):
+  - `index.html` (gated non-critical i18n/license startup logs behind `window.__ALIDADE_DEBUG_LOGS__`, enabled via `?debug_logs=1` or `localStorage.ALIDADE_DEBUG_LOGS=1`)
+  - `refactor/progress.md` (normalized residual mojibake arrow tokens `â†’` to ASCII `->` in historical batch notes)
+  - Effect: cleaner default console output and cleaner project docs without touching business/runtime behavior.
+
+- Batch 218 cleanup (runtime debug-log gating, no logic change):
+  - `js/app/runtime/bootstrap-runtime-utils.js` (startup/info tier-render logs moved to debug-only path via `debugLogs`/`debugLog`; warnings/errors unchanged)
+  - `js/app/runtime/legacy-init-runtime.js` (introduced local `debugLog` helper and routed non-critical initialization logs through it; existing behavior and event flow preserved)
+  - `js/app/runtime/service-map-runtime.js` (service/map adapter `log` callbacks and SW fallback info logs now debug-gated; error paths preserved)
+  - Effect: reduced default runtime console noise while keeping diagnostics available when `ALIDADE_DEBUG_LOGS` is enabled.
+
+- Batch 219 cleanup (access helper log gating, no logic change):
+  - `js/app/access/funnel-utils.js` (funnel event info logs moved behind debug flag)
+  - `js/app/access/token-utils.js` (tier-source and token activation info logs routed to debug-only logger; warnings unchanged)
+  - `js/app/access/tier-bridge.js` (tier sync/UI plan info logs debug-gated)
+  - `js/app/access/gatekeeper-utils.js` (feature-gate test harness info logs debug-gated)
+  - `js/app/access/magic-link-ui.js` (magic-link detected info log debug-gated)
+  - Effect: access flows keep warnings/errors visible while reducing default telemetry noise.
+
+- Batch 220 fixes (stability after log-gating pass):
+  - `js/app/runtime/legacy-init-runtime.js` (`debugLog` helper renamed to `legacyInitDebugLog` to avoid global identifier collisions in classic-script scope)
+  - `js/app/runtime/service-map-runtime.js` (`debugLog` helper renamed to `serviceMapDebugLog` for the same collision-safe reason)
+  - `sw.js` (cache version bumped to `alidade-tactical-v2.13` to force client refresh onto post-gating runtime scripts)
+  - Effect: removed `SyntaxError: Identifier 'debugLog' has already been declared` while keeping debug-gated logging behavior.
+
+- Batch 221 cleanup (foundation fallback log gating):
+  - `js/app/runtime/foundation-runtime.js` (early i18n fallback info log is now shown only when `ALIDADE_DEBUG_LOGS` is enabled)
+  - Effect: quieter default startup output while keeping fallback behavior unchanged.
+
+- Batch 222 cleanup (i18n warning noise gating):
+  - `i18n/index.js` (gated non-critical `console.debug`/`console.warn` translation-miss logs behind `ALIDADE_DEBUG_LOGS`)
+  - Behavior parity preserved: fallback resolution and dev `[MISSING: key]` return path unchanged.
+  - Smoke result: startup console dropped from translation-warning flood to baseline logs/warnings only (Tailwind CDN warning remains expected in dev).
+
+- Batch 223 cleanup (access-runtime debug-log gating):
+  - `js/app/access/access-runtime.js` (introduced `accessRuntimeDebugLog` and routed high-volume informational logs through debug-only path)
+  - Kept `console.warn` / `console.error` branches unchanged for operational visibility.
+  - Effect: reduced default access/tier telemetry noise without changing auth/gate behavior.
+
+- Batch 224 cache hygiene (post-runtime updates):
+  - `sw.js` cache version bumped to `alidade-tactical-v2.14` to ensure clients fetch latest runtime scripts after log-gating changes.
+  - Smoke check: app loads on HOME with no startup syntax/runtime errors; expected dev warnings remain (Tailwind CDN).
+
+- Batch 225 cleanup (app-shell + foundation render noise gating):
+  - `js/app/runtime/app-shell-runtime.js` (added `appShellDebugLog`; routed non-critical language-switch and view-render trace logs to debug-only path)
+  - `js/app/runtime/foundation-runtime.js` (added `foundationDebugLog`; routed high-volume i18n/haptics/state-init informational logs to debug-only path)
+  - Kept all `console.warn` / `console.error` paths unchanged for runtime visibility.
+  - Validation: `node --check` passed for both edited runtime files.
+
+- Batch 226 cleanup (route-planner bootstrap noise gating):
+  - `js/app/protocols/route-planner-runtime.js` (added `routePlannerDebugLog`; gated route-planner load/init info logs behind `ALIDADE_DEBUG_LOGS`)
+  - Validation: `node --check js/app/protocols/route-planner-runtime.js` passed.
+
+- Batch 227 cleanup (language UI encoding + debug-log policy):
+  - `js/app/i18n/language-ui-utils.js` (normalized language native labels to Unicode escapes: `Fran\u00E7ais`, `Espa\u00F1ol`)
+  - `js/app/i18n/language-ui-utils.js` (default informational language-switch logger is now debug-gated via `ALIDADE_DEBUG_LOGS`)
+  - Validation: `node --check js/app/i18n/language-ui-utils.js` passed.
+
+- Batch 228 cleanup (i18n controller info-log gating):
+  - `i18n/index.js` (added `i18nDebugLog` and routed non-critical `console.log` startup/load/switch traces through debug-only path)
+  - Kept `console.warn` / `console.error` operational paths unchanged.
+  - Validation note: file remains ESM; `node --check i18n/index.js` fails in CommonJS mode on `export` token (expected, not a runtime regression).
+
+- Batch 229 cleanup (large safe pass: cross-module info-log gating):
+  - `js/app/price/price-check-core-runtime.js`, `js/app/price/price-check-media-runtime.js`, `js/app/price/price-check-runtime.js`
+  - `js/app/price/item-classifier-utils.js`, `js/app/price/vision-api-utils.js`, `js/app/price/gemini-deep-utils.js`, `js/app/price/deep-analysis-utils.js`
+  - `js/app/currency/currency-runtime.js`, `js/app/phrases/phrases-runtime.js`, `js/app/protocols/protocols-runtime.js`
+  - `js/app/runtime/app-initialization-runtime.js`, `js/app/negotiation/negotiation-ai-runtime.js`
+  - `js/app/map/recent-locations-utils.js`, `js/app/map/souk-location-runtime.js`, `js/app/souk/souk-runtime.js`, `js/app/fortress/fortress-runtime.js`
+  - Added per-file debug-log wrappers and moved non-critical informational traces behind `ALIDADE_DEBUG_LOGS`; warning/error paths kept unchanged.
+  - `js/app/price/deep-analysis-utils.js` log text normalized (`â†’` -> `->`) during the same pass.
+  - Validation: `node --check` passed for all edited runtime/utility files in this batch.
+  - Console noise snapshot: project-wide `console.log` hits reduced from `132` to `59` (remaining hits are mainly debug-wrapper internals plus dev validator script output).
+
+- Batch 230 cleanup (map + route data adapters):
+  - `js/app/map/souk-location-utils.js` (adapter fallback logger now debug-gated via `ALIDADE_DEBUG_LOGS`)
+  - `js/app/protocols/route-planner-destinations.js` (destination-load info log moved to debug-only path)
+  - Validation: `node --check` passed for both files.
+
+- Batch 231 cleanup (tail-end runtime traces):
+  - `js/app/core/haptics.js` (haptics info trace now routed through debug-only logger)
+  - `js/app/negotiation/negotiation-legacy-runtime.js` (audio fallback info trace now debug-gated)
+  - Validation: `node --check` passed for both files.
+  - Noise snapshot: non-helper `console.log` occurrences in `js/app` + `i18n` reduced to `22` (20 are in `i18n/validator.js` CLI output, 1 in docs sample, 1 debug-gated fallback line).
+## Current Parity Snapshot
+
+- `app.js` lines: `35`
+- `app.js` declarations: `0`
+- `app.js` window exports: `0` (unique `0`)
+- duplicate declaration names: `0`
+
+## Next Candidate Batch
+
+- Continue low-risk cleanup/normalization only (runtime text + a11y hygiene), with strict smoke checks.
+- Candidate next pass: normalize any remaining non-critical mojibake candidates in legacy docs/comments.
+- Optional next pass: one more targeted log-gating sweep on remaining non-critical startup traces (if any), then move back to extraction batching.
+

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALIDADE | Activate License</title>
+
+    <!-- Tailwind & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Protocol-7 Design System -->
+    <style>
+        :root {
+            --color-void-950: #050505;
+            --color-void-900: #0A0A0A;
+            --color-void-800: #121212;
+            --color-void-700: #18181b;
+            --color-signal-emerald: #10b981;
+            --color-signal-crimson: #ef4444;
+            --color-text-primary: #f4f4f5;
+            --color-text-muted: #71717a;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at 12% 8%, rgba(245, 158, 11, 0.08), transparent 42%),
+                radial-gradient(circle at 84% 18%, rgba(16, 185, 129, 0.1), transparent 48%),
+                var(--color-void-950);
+            color: var(--color-text-primary);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100dvh;
+            margin: 0;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .grid-background {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-size: 20px 20px;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: rgba(16, 185, 129, 0.1);
+            animation: scan 8s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            0% {
+                top: -10%;
+            }
+
+            100% {
+                top: 110%;
+            }
+        }
+
+        .activation-card {
+            background: linear-gradient(180deg, rgba(12, 12, 18, 0.96) 0%, rgba(8, 8, 14, 0.96) 100%);
+            border: 1px solid #2c2f41;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 560px;
+            max-height: calc(100dvh - 24px);
+            overflow-y: auto;
+            padding: 1rem;
+            position: relative;
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.58);
+        }
+
+        .card-shell {
+            border: 1px solid #202332;
+            border-radius: 14px;
+            background: rgba(11, 12, 20, 0.85);
+            padding: 1rem;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .close-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 10px;
+            border: 1px solid #2f3345;
+            background: #11141f;
+            color: #d3d7ec;
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+            border-color: #4b5168;
+            color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .eyebrow {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            color: #9aa0b8;
+            text-transform: uppercase;
+        }
+
+        .machined-input {
+            background: var(--color-void-800);
+            border: 1px solid #2a2d3d;
+            color: var(--color-text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            border-radius: 11px;
+            transition: all 0.2s ease;
+            min-height: 46px;
+        }
+
+        .machined-input:focus {
+            outline: none;
+            border-color: var(--color-signal-emerald);
+            box-shadow: 0 0 0 1px var(--color-signal-emerald);
+        }
+
+        .btn-protocol {
+            background: linear-gradient(90deg, #f59e0b 0%, #f4b01f 100%);
+            color: #151616;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-radius: 11px;
+            border: 1px solid #f0c35c;
+            min-height: 48px;
+            transition: all 0.2s;
+        }
+
+        .btn-protocol:hover:not(:disabled) {
+            filter: brightness(1.04);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 22px rgba(245, 158, 11, 0.28);
+        }
+
+        .btn-protocol:disabled {
+            background: var(--color-void-700);
+            color: var(--color-text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .message-box {
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .message-box.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .auth-panel {
+            border: 1px solid #2a2d3c;
+            border-radius: 12px;
+            background: rgba(11, 12, 19, 0.8);
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+
+        .auth-primary-btn {
+            width: 100%;
+            border-radius: 11px;
+            min-height: 44px;
+            border: 1px solid #dfe5f8;
+            background: linear-gradient(180deg, #ffffff 0%, #eef2ff 100%);
+            color: #111427;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+
+        .auth-primary-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 16px rgba(255, 255, 255, 0.1);
+        }
+
+        .auth-action-btn {
+            width: 100%;
+            border-radius: 11px;
+            min-height: 44px;
+            border: 1px solid #34384c;
+            background: #111420;
+            color: #e6ebff;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            transition: all 0.2s ease;
+        }
+
+        .auth-action-btn:hover:not(:disabled) {
+            border-color: #4a516d;
+            transform: translateY(-1px);
+        }
+
+        .auth-action-btn.accent {
+            border-color: #3c6758;
+            color: #a8f3ce;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 14px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #32374b, transparent);
+        }
+
+        .divider span {
+            font-size: 10px;
+            color: #7f86a2;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .status-strong {
+            border-radius: 11px;
+            border: 1px solid #2d3449;
+            background: rgba(16, 18, 28, 0.86);
+        }
+
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            margin: 0 auto 16px;
+            border: 1px solid #355060;
+            background: radial-gradient(circle at 30% 30%, rgba(16, 185, 129, 0.26), rgba(10, 15, 26, 0.95));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: 700;
+            color: #9ef2cf;
+        }
+
+        /* Success Screen */
+        .success-screen {
+            display: none;
+        }
+
+        .success-screen.active {
+            display: block;
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 8px;
+                align-items: stretch;
+            }
+
+            .activation-card {
+                max-height: none;
+                min-height: calc(100dvh - 16px);
+                border-radius: 14px;
+                padding: 0.75rem;
+            }
+
+            .card-shell {
+                padding: 0.85rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="grid-background"></div>
+    <div class="scanline"></div>
+
+    <div class="activation-card mx-1 md:mx-4">
+        <!-- FORM VIEW -->
+        <div id="form-view" class="card-shell">
+            <div class="topbar">
+                <a href="index.html" class="close-btn" aria-label="Close">Close</a>
+                <span class="eyebrow">Insider Code</span>
+            </div>
+
+            <div class="text-center mb-6">
+                <div
+                    class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 mb-3">
+                    <span class="text-sm font-mono tracking-widest text-amber-300">LOCK</span>
+                </div>
+                <h1 class="text-[32px] md:text-4xl leading-tight font-extrabold tracking-tight text-zinc-100">Activate Protocol
+                </h1>
+                <p class="text-zinc-400 text-sm mt-2">Sign in for account access or activate your Ultimate license key.</p>
+            </div>
+
+            <form id="activation-form" class="space-y-4">
+                <div class="auth-panel">
+                    <p class="text-xs uppercase tracking-wider text-zinc-400 font-mono">Account Access</p>
+                    <p class="text-[12px] text-zinc-500 mt-1">Basic users and returning Ultimate users can sign in here.</p>
+
+                    <button type="button" id="auth-google-btn" class="auth-primary-btn mt-3">
+                        Continue With Google
+                    </button>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                        <input type="email" id="auth-email" autocomplete="email"
+                            class="machined-input w-full px-3 text-sm placeholder-zinc-700 font-sans"
+                            placeholder="Email">
+                        <div class="relative">
+                            <input type="password" id="auth-password" autocomplete="current-password"
+                                class="machined-input w-full px-3 text-sm placeholder-zinc-700 font-sans pr-16"
+                                placeholder="Password">
+                            <button type="button" id="auth-password-toggle"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] px-2 h-7 border border-zinc-700 rounded-md text-zinc-300 bg-zinc-900">
+                                Show
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                        <button type="button" id="auth-login-btn" class="auth-action-btn">
+                            Sign In
+                        </button>
+                        <button type="button" id="auth-signup-btn" class="auth-action-btn accent">
+                            Create Account
+                        </button>
+                    </div>
+
+                    <p class="text-[11px] text-zinc-600 font-mono mt-3">
+                        Relogin tip: use the same Google email used in your Gumroad purchase.
+                    </p>
+                </div>
+
+                <div class="divider">
+                    <span>Or Activate Ultimate License</span>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs uppercase tracking-wider text-zinc-500 font-mono">License Key</label>
+                    <input type="text" id="license_key" required
+                        class="machined-input w-full px-3 text-center text-base tracking-widest uppercase placeholder-zinc-700"
+                        placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="19">
+                    <p class="text-xs text-zinc-600 font-mono">Found in your Gumroad purchase confirmation email</p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-xs uppercase tracking-wider text-zinc-500 font-mono">Purchase Email</label>
+                    <input type="email" id="email" required class="machined-input w-full px-3 text-sm placeholder-zinc-700 font-sans"
+                        placeholder="email@example.com">
+                    <p class="text-xs text-zinc-600 font-mono">Must match the Gumroad purchase email</p>
+                </div>
+
+                <div id="status-message" class="message-box hidden p-3 status-strong text-sm text-center">
+                    <!-- Dynamic Content -->
+                </div>
+
+                <button type="submit" id="submit-btn" class="btn-protocol w-full py-3 flex items-center justify-center gap-2">
+                    <span id="submit-btn-label">Activate License</span>
+                    <svg id="spinner" class="animate-spin h-4 w-4 hidden" xmlns="http://www.w3.org/2000/svg" fill="none"
+                        viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                        </circle>
+                        <path class="opacity-75" fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                        </path>
+                    </svg>
+                </button>
+            </form>
+        </div>
+
+        <!-- SUCCESS VIEW -->
+        <div id="success-view" class="success-screen card-shell text-center">
+            <div class="topbar">
+                <a href="index.html" class="close-btn" aria-label="Close">Close</a>
+                <span class="eyebrow">Activation</span>
+            </div>
+            <div class="success-icon">OK</div>
+            <h2 class="text-2xl font-bold text-emerald-400 mb-4 font-mono tracking-wider">
+                CHECK YOUR EMAIL
+            </h2>
+            <p class="text-zinc-400 text-sm mb-2">
+                We sent an activation link to:
+            </p>
+            <p id="sent-email" class="text-zinc-100 font-mono text-lg mb-6">
+                <!-- Email here -->
+            </p>
+            <div class="bg-zinc-900/50 border border-zinc-800 rounded p-4 mb-6">
+                <p class="text-xs text-zinc-500 font-mono leading-relaxed">
+                    Click the link in your email to complete activation.<br>
+                    Check spam folder if not received within 2 minutes.
+                </p>
+            </div>
+            <a href="index.html"
+                class="inline-flex items-center justify-center w-full min-h-[44px] bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 px-6 py-2 rounded-xl text-sm font-mono transition-colors">
+                Return To Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Supabase SDK (REQUIRED) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Activation Logic -->
+    <script type="module">
+        import { LicenseManager } from './js/license-manager.js';
+
+        const SUPABASE_URL = 'https://tynugwtetlclqowlguai.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5bnVnd3RldGxjbHFvd2xndWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2ODgwNDQsImV4cCI6MjA4NjI2NDA0NH0.I2QFBzVVMJDzrFbJnPSdqV4dQK-SEKEx7IprdE-vmD0';
+
+        const form = document.getElementById('activation-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const submitLabel = document.getElementById('submit-btn-label');
+        const spinner = document.getElementById('spinner');
+        const msgBox = document.getElementById('status-message');
+        const formView = document.getElementById('form-view');
+        const successView = document.getElementById('success-view');
+        const sentEmailLabel = document.getElementById('sent-email');
+        const keyInput = document.getElementById('license_key');
+        const purchaseEmailInput = document.getElementById('email');
+        const authEmailInput = document.getElementById('auth-email');
+        const authPasswordInput = document.getElementById('auth-password');
+        const authPasswordToggle = document.getElementById('auth-password-toggle');
+        const authGoogleBtn = document.getElementById('auth-google-btn');
+        const authLoginBtn = document.getElementById('auth-login-btn');
+        const authSignupBtn = document.getElementById('auth-signup-btn');
+        const authButtons = [authGoogleBtn, authLoginBtn, authSignupBtn].filter(Boolean);
+
+        let licenseMgr = null;
+        let authRedirectQueued = false;
+        let isHandlingSession = false;
+
+        function showMessage(text, type = 'error') {
+            if (!msgBox) return;
+            msgBox.textContent = text;
+            msgBox.classList.remove('hidden', 'border-emerald-500', 'text-emerald-500', 'bg-emerald-900/10', 'border-red-500', 'text-red-500', 'bg-red-900/10');
+            if (type === 'success') {
+                msgBox.classList.add('border-emerald-500', 'text-emerald-500', 'bg-emerald-900/10');
+            } else {
+                msgBox.classList.add('border-red-500', 'text-red-500', 'bg-red-900/10');
+            }
+            msgBox.classList.add('visible');
+        }
+
+        function hideMessage() {
+            if (!msgBox) return;
+            msgBox.classList.add('hidden');
+            msgBox.classList.remove('visible');
+        }
+
+        function setActivationLoading(isLoading) {
+            submitBtn.disabled = isLoading;
+            spinner.classList.toggle('hidden', !isLoading);
+            if (submitLabel) {
+                submitLabel.textContent = isLoading ? 'Processing...' : 'Activate License';
+            }
+        }
+
+        function setAuthButtonsLoading(isLoading, activeButtonId = '') {
+            authButtons.forEach((button) => {
+                if (!button) return;
+                const originalLabel = button.dataset.originalLabel || button.textContent.trim();
+                button.dataset.originalLabel = originalLabel;
+                button.disabled = isLoading;
+                button.textContent = isLoading && button.id === activeButtonId ? 'Working...' : originalLabel;
+            });
+        }
+
+        function setAuthButtonsEnabled(enabled) {
+            authButtons.forEach((button) => {
+                if (!button) return;
+                button.disabled = !enabled;
+                button.classList.toggle('opacity-60', !enabled);
+                button.classList.toggle('cursor-not-allowed', !enabled);
+            });
+        }
+
+        function formatLicenseKey(raw) {
+            const cleaned = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
+            const chunks = cleaned.match(/.{1,4}/g) || [];
+            return chunks.join('-');
+        }
+
+        function normalizeEmail(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function hasAuthCallbackSignals() {
+            const params = new URLSearchParams(window.location.search);
+            const hash = String(window.location.hash || '');
+            return (
+                params.has('code') ||
+                params.has('token_hash') ||
+                params.has('type') ||
+                hash.includes('access_token=') ||
+                hash.includes('type=magiclink') ||
+                hash.includes('type=recovery')
+            );
+        }
+
+        function revealSuccess(email) {
+            if (sentEmailLabel) sentEmailLabel.textContent = email || '';
+            if (formView) formView.style.display = 'none';
+            successView?.classList.add('active');
+        }
+
+        function queueRedirect(delayMs = 900) {
+            if (authRedirectQueued) return;
+            authRedirectQueued = true;
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, delayMs);
+        }
+
+        async function handleAuthenticatedSession(session, source = 'auth_change') {
+            if (!session?.user || !licenseMgr || isHandlingSession) return;
+            isHandlingSession = true;
+
+            try {
+                await licenseMgr.finalizePendingActivation?.({ silent: true });
+                await licenseMgr.syncLicenseByEmail?.({ silent: true, force: true });
+
+                const tier = String(licenseMgr.getCurrentTier?.() || 'basic').toLowerCase();
+                if (tier === 'ultimate') {
+                    revealSuccess(session.user.email);
+                    showMessage('Ultimate access verified. Redirecting to dashboard...', 'success');
+                    queueRedirect(1200);
+                    return;
+                }
+
+                if (source !== 'initial_session') {
+                    showMessage('Signed in. Redirecting to dashboard...', 'success');
+                    queueRedirect(700);
+                    return;
+                }
+
+                showMessage(`Signed in as ${session.user.email}. Enter your license key to activate Ultimate.`, 'success');
+            } catch (error) {
+                console.error('[ACTIVATE] Session handling failed:', error);
+                showMessage('Signed in, but license sync failed. Try again.', 'error');
+            } finally {
+                isHandlingSession = false;
+            }
+        }
+
+        async function syncGoogleProviderState() {
+            if (!authGoogleBtn || !licenseMgr?.isOAuthProviderEnabled) return;
+            try {
+                const enabled = await licenseMgr.isOAuthProviderEnabled('google');
+                if (enabled === false) {
+                    authGoogleBtn.disabled = true;
+                    authGoogleBtn.textContent = 'Google Unavailable';
+                    showMessage('Google sign-in is disabled in Supabase. Use email/password.', 'error');
+                }
+            } catch (_error) {
+                // Non-blocking probe.
+            }
+        }
+
+        async function onActivateSubmit(event) {
+            event.preventDefault();
+            hideMessage();
+            if (!licenseMgr?.activateLicense) {
+                showMessage('Activation system is unavailable.', 'error');
+                return;
+            }
+
+            const key = formatLicenseKey(keyInput.value);
+            const email = normalizeEmail(purchaseEmailInput.value);
+            keyInput.value = key;
+            purchaseEmailInput.value = email;
+
+            if (!key || key.replace(/-/g, '').length < 8) {
+                showMessage('Invalid license key format.', 'error');
+                return;
+            }
+            if (!email || !email.includes('@')) {
+                showMessage('Invalid purchase email.', 'error');
+                return;
+            }
+
+            setActivationLoading(true);
+            try {
+                const result = await licenseMgr.activateLicense(key, email);
+                if (!result?.success) {
+                    showMessage(result?.error || 'Activation failed. Check your key and email.', 'error');
+                    return;
+                }
+                revealSuccess(email);
+                showMessage('Magic link sent. Check your inbox now.', 'success');
+            } catch (error) {
+                showMessage(error?.message || 'Activation failed. Try again.', 'error');
+            } finally {
+                setActivationLoading(false);
+            }
+        }
+
+        function getAuthCreds() {
+            return {
+                email: normalizeEmail(authEmailInput?.value),
+                password: String(authPasswordInput?.value || '')
+            };
+        }
+
+        async function onGoogleSignIn() {
+            hideMessage();
+            if (!licenseMgr?.signInWithGoogle) {
+                showMessage('Google sign-in is unavailable.', 'error');
+                return;
+            }
+            setAuthButtonsLoading(true, 'auth-google-btn');
+            const result = await licenseMgr.signInWithGoogle({
+                redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`
+            });
+            if (!result?.success) {
+                setAuthButtonsLoading(false);
+                showMessage(result?.error || 'Google sign-in failed.', 'error');
+            }
+        }
+
+        async function onPasswordSignIn() {
+            hideMessage();
+            const creds = getAuthCreds();
+            if (!creds.email || !creds.email.includes('@')) return showMessage('Enter a valid email address.', 'error');
+            if (!creds.password) return showMessage('Password is required.', 'error');
+            if (!licenseMgr?.signInWithPassword) return showMessage('Email sign-in is unavailable.', 'error');
+
+            setAuthButtonsLoading(true, 'auth-login-btn');
+            try {
+                const result = await licenseMgr.signInWithPassword(creds.email, creds.password);
+                if (!result?.success) {
+                    showMessage(result?.error || 'Sign-in failed.', 'error');
+                    return;
+                }
+                showMessage('Sign-in successful. Validating access...', 'success');
+                if (result?.data?.session?.user) {
+                    await handleAuthenticatedSession(result.data.session, 'password_signin');
+                }
+            } catch (error) {
+                showMessage(error?.message || 'Sign-in failed.', 'error');
+            } finally {
+                setAuthButtonsLoading(false);
+            }
+        }
+
+        async function onPasswordSignup() {
+            hideMessage();
+            const creds = getAuthCreds();
+            if (!creds.email || !creds.email.includes('@')) return showMessage('Enter a valid email address.', 'error');
+            if (creds.password.length < 6) return showMessage('Password must be at least 6 characters.', 'error');
+            if (!licenseMgr?.signUpWithPassword) return showMessage('Account creation is unavailable.', 'error');
+
+            setAuthButtonsLoading(true, 'auth-signup-btn');
+            try {
+                const result = await licenseMgr.signUpWithPassword(creds.email, creds.password);
+                if (!result?.success) {
+                    showMessage(result?.error || 'Account creation failed.', 'error');
+                    return;
+                }
+                if (result.requiresEmailConfirmation) {
+                    showMessage('Account created. Check your email to confirm.', 'success');
+                    return;
+                }
+                showMessage('Account created. Validating access...', 'success');
+                if (result?.data?.session?.user) {
+                    await handleAuthenticatedSession(result.data.session, 'password_signup');
+                }
+            } catch (error) {
+                showMessage(error?.message || 'Account creation failed.', 'error');
+            } finally {
+                setAuthButtonsLoading(false);
+            }
+        }
+
+        async function init() {
+            setAuthButtonsEnabled(false);
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.has('key')) keyInput.value = formatLicenseKey(params.get('key'));
+            if (params.has('email')) purchaseEmailInput.value = normalizeEmail(params.get('email'));
+
+            form.addEventListener('submit', onActivateSubmit);
+            keyInput.addEventListener('input', (event) => {
+                event.target.value = formatLicenseKey(event.target.value);
+            });
+
+            authGoogleBtn?.addEventListener('click', onGoogleSignIn);
+            authLoginBtn?.addEventListener('click', onPasswordSignIn);
+            authSignupBtn?.addEventListener('click', onPasswordSignup);
+
+            [authEmailInput, authPasswordInput].forEach((input) => {
+                input?.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        onPasswordSignIn();
+                    }
+                });
+            });
+
+            authPasswordToggle?.addEventListener('click', () => {
+                const nextType = authPasswordInput.type === 'password' ? 'text' : 'password';
+                authPasswordInput.type = nextType;
+                authPasswordToggle.textContent = nextType === 'password' ? 'Show' : 'Hide';
+            });
+
+            try {
+                licenseMgr = new LicenseManager(SUPABASE_URL, SUPABASE_ANON_KEY);
+                await licenseMgr.init();
+                if (!licenseMgr?.supabase?.auth) {
+                    throw new Error('Supabase auth client unavailable');
+                }
+
+                setAuthButtonsEnabled(true);
+                await syncGoogleProviderState();
+
+                const { data } = await licenseMgr.supabase.auth.getSession();
+                if (data?.session?.user) {
+                    const hasPending = Boolean(licenseMgr.hasPendingActivation?.());
+                    const currentTier = String(licenseMgr.getCurrentTier?.() || 'basic').toLowerCase();
+                    if (hasAuthCallbackSignals() || hasPending || currentTier === 'ultimate') {
+                        await handleAuthenticatedSession(data.session, 'initial_session');
+                    } else {
+                        showMessage(`Signed in as ${data.session.user.email}. Enter your license key to activate Ultimate.`, 'success');
+                    }
+                }
+
+                licenseMgr.supabase.auth.onAuthStateChange(async (event, session) => {
+                    if (!session?.user) return;
+                    if (event !== 'SIGNED_IN' && event !== 'TOKEN_REFRESHED' && event !== 'INITIAL_SESSION') return;
+                    await handleAuthenticatedSession(session, String(event || '').toLowerCase());
+                });
+            } catch (error) {
+                console.error('[ACTIVATE] Init failed:', error);
+                showMessage('System Error: Could not connect to server. Refresh and retry.', 'error');
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,804 @@
+﻿<!DOCTYPE html>
+<html lang="ar-MA" dir="auto" class="alidade-preboot">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALIDADE | Home Dashboard</title>
+    <meta name="description" content="ALIDADE - Your tactical navigation companion for operative field missions.">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icons/maskable_icon_x192.png">
+    <link rel="icon" type="image/png" href="assets/icons/maskable_icon_x192.png">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: JetBrains Mono & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Arabic Font Support -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Protocol-7 Component Primitives -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Supabase SDK v2 (Required for LicenseManager) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Inter', 'sans-serif'],
+                        'mono': ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        // THE VOID (Protocol-7) - Complete Palette
+                        void: {
+                            950: '#050505', // Deep Space (Main BG)
+                            900: '#0A0A0A', // Carbon Plate (Card Surface)
+                            800: '#121212', // Armor (Elevated)
+                            700: '#18181b', // Recess (Inputs)
+                            600: '#27272a', // Borders/Dividers
+                            500: '#3f3f46', // Disabled/Muted Text
+                        },
+                        // THE SIGNAL (Protocol-7) - Data States
+                        signal: {
+                            emerald: '#10b981', // Safe/Healthy/Lock
+                            amber: '#f59e0b',   // Caution/Loading
+                            crimson: '#ef4444', // Critical/Hostile
+                            cyan: '#06b6d4',    // Telemetry/Info
+                        }
+                    },
+                    borderRadius: {
+                        'machined': '2px',    // Standard
+                        'machined-sm': '1px', // Inputs
+                        'machined-lg': '4px', // Large Cards
+                    },
+                    letterSpacing: {
+                        'dls': '-0.025em', // Linear Dense Feel
+                    },
+                    animation: {
+                        'border-beam': 'border-beam calc(var(--duration)*1s) infinite linear',
+                    },
+                    keyframes: {
+                        'border-beam': {
+                            '100%': { 'offset-distance': '100%' },
+                        },
+                    },
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            /* VOID PALETTE - Complete Protocol-7 */
+            --color-void-950: #050505;
+            --color-void-900: #0A0A0A;
+            --color-void-850: #0f0f0f;
+            --color-void-800: #121212;
+            --color-void-700: #18181b;
+            --color-void-600: #27272a;
+            --color-void-500: #3f3f46;
+
+            /* SIGNAL PALETTE - Data States */
+            --color-signal-emerald: #10b981;
+            --color-signal-amber: #f59e0b;
+            --color-signal-crimson: #ef4444;
+            --color-signal-cyan: #06b6d4;
+        }
+
+        body {
+            background-color: var(--color-void-950);
+            font-family: 'Inter', 'Noto Sans Arabic', sans-serif;
+            color: #e5e5e5;
+            letter-spacing: -0.025em;
+            /* Critical DLS Rule */
+            overflow-x: hidden;
+        }
+
+        html {
+            scrollbar-gutter: stable both-edges;
+        }
+
+        #app {
+            transition: opacity 140ms ease-out, transform 140ms ease-out;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        html.alidade-preboot #app {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+
+        /* ===============================================================
+           PROTOCOL-7: CALIBRATED SPACE (ATMOSPHERE)
+           =============================================================== */
+
+        /* Micro-Grid Background */
+        .grid-background {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background-size: 20px 20px;
+            background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            pointer-events: none;
+        }
+
+        /* Vignette Mask */
+        .vignette-mask {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            background: radial-gradient(circle, transparent 60%, rgba(5, 5, 5, 0.8) 100%);
+            background: radial-gradient(circle, transparent 60%, #050505 100%);
+            /* Strict void-950 */
+            pointer-events: none;
+        }
+
+        /* Scanline Heartbeat */
+        .scanline-heartbeat {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            /* 1px visual, 2px actual for aliasing */
+            background: rgba(255, 255, 255, 0.05);
+            /* 5% Opacity */
+            box-shadow: 0 0 4px rgba(255, 255, 255, 0.1);
+            z-index: 9999;
+            pointer-events: none;
+            animation: scan-down 10s linear infinite;
+        }
+
+        @keyframes scan-down {
+            0% {
+                top: -2px;
+                opacity: 0;
+            }
+
+            5% {
+                opacity: 1;
+            }
+
+            95% {
+                opacity: 1;
+            }
+
+            100% {
+                top: 100%;
+                opacity: 0;
+            }
+        }
+
+        /* ===============================================================
+           COMPONENT PRIMITIVES (Refactored)
+           =============================================================== */
+
+        .ballistic-glass {
+            position: relative;
+            background-color: var(--color-void-900);
+            /* Carbon Plate */
+            border: 1px solid var(--color-void-800);
+            /* Machined Border */
+            border-radius: 2px;
+            /* Machined Radius */
+        }
+
+        .border-beam {
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+            /* Match new radius */
+        }
+
+        .border-beam::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1px;
+            border-radius: inherit;
+            background: conic-gradient(from var(--angle), transparent 20%, var(--color-signal-emerald) 50%, transparent 80%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            z-index: 10;
+            animation: beam-spin 3s linear infinite;
+        }
+
+        @property --angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+
+        @keyframes beam-spin {
+            from {
+                --angle: 0deg;
+            }
+
+            to {
+                --angle: 360deg;
+            }
+        }
+
+        /* Typography Utilities */
+        .font-sans {
+            font-family: 'Inter', 'Noto Sans Arabic', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glow System (Replacing Shadows) */
+        .glow-emerald {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+        }
+
+        .glow-amber {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.1);
+        }
+
+        .glow-crimson {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+        }
+
+        /* Skeleton Screens (Updated Colors) */
+        .skeleton-card {
+            background-color: var(--color-void-900);
+            border: 1px solid var(--color-void-800);
+            border-radius: 2px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Negotiation History (Refactored) */
+        .negotiation-history {
+            background: var(--color-void-900);
+            /* Card Surface */
+            border: 1px solid var(--color-void-800);
+            /* Armor Border */
+            border-radius: 2px;
+            /* Machined Radius */
+            padding: 1.5rem;
+            margin: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* History Timeline Items */
+        .history-round {
+            background: var(--color-void-800);
+            border-left: 3px solid var(--color-void-700);
+            padding: 1rem;
+            border-radius: 2px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===============================================================
+           PROTOCOL-7: CONSOLE INPUT (Command-Line Aesthetic)
+           =============================================================== */
+
+        .console-input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--color-void-700);
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--color-signal-emerald);
+            padding: 0.75rem 0;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .console-input:focus {
+            border-bottom-color: var(--color-signal-cyan);
+            box-shadow: 0 1px 0 0 var(--color-signal-cyan);
+        }
+
+        .console-input::placeholder {
+            color: var(--color-void-500);
+        }
+
+        /* ===============================================================
+           PROTOCOL-7: SEGMENTED BAR (Discrete Data Visualization)
+           =============================================================== */
+
+        .segmented-bar {
+            display: flex;
+            gap: 2px;
+        }
+
+        .segmented-bar .segment {
+            width: 100%;
+            height: 4px;
+            background: var(--color-void-700);
+            border-radius: 1px;
+            transition: background 0.2s ease;
+        }
+
+        .segmented-bar .segment.active {
+            background: var(--color-signal-emerald);
+        }
+
+        .segmented-bar .segment.warning {
+            background: var(--color-signal-amber);
+        }
+
+        .segmented-bar .segment.critical {
+            background: var(--color-signal-crimson);
+        }
+
+        /* ===============================================================
+           PROTOCOL-7: TACTICAL CARD CORNERS
+           =============================================================== */
+
+        .tactical-corners {
+            position: relative;
+        }
+
+        .tactical-corners::before,
+        .tactical-corners::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-color: var(--color-void-600);
+            pointer-events: none;
+        }
+
+        .tactical-corners::before {
+            top: 0;
+            left: 0;
+            border-top: 1px solid;
+            border-left: 1px solid;
+        }
+
+        .tactical-corners::after {
+            bottom: 0;
+            right: 0;
+            border-bottom: 1px solid;
+            border-right: 1px solid;
+        }
+
+        /* ===============================================================
+           ACCESSIBILITY: Focus States & Reduced Motion
+           =============================================================== */
+
+        /* Enhanced focus states for keyboard navigation */
+        *:focus-visible {
+            outline: 2px solid var(--color-signal-cyan);
+            outline-offset: 2px;
+        }
+
+        /* Respect reduced motion preference */
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .scanline-heartbeat {
+                display: none;
+            }
+        }
+
+        /* ===============================================================
+           EMOJI & INTERNATIONALIZATION
+           =============================================================== */
+
+        /* Emoji & Arabic Support */
+        * {
+            font-variant-emoji: emoji;
+        }
+
+        [dir="rtl"] {
+            direction: rtl;
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen text-zinc-100 antialiased bg-[#050505]">
+    <script>
+        (function () {
+            const root = document.documentElement;
+            window.__ALIDADE_MARK_READY__ = function () {
+                if (window.__ALIDADE_READY_MARKED__) return;
+                window.__ALIDADE_READY_MARKED__ = true;
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        root.classList.remove('alidade-preboot');
+                    });
+                });
+            };
+            setTimeout(() => {
+                root.classList.remove('alidade-preboot');
+            }, 4500);
+        })();
+    </script>
+    <!-- ATMOSPHERE LAYERS -->
+    <div class="grid-background"></div>
+    <div class="vignette-mask"></div>
+    <div class="scanline-heartbeat"></div>
+
+    <main id="app" class="max-w-md mx-auto px-4 py-8 mb-20 space-y-6 relative z-10">
+        <!-- HEADER ENHANCEMENT -->
+        <header class="tactical-header glass-morphism border-beam mb-8">
+            <div class="flex justify-between items-start">
+                <h1 class="font-mono text-xl tracking-widest text-signal-emerald pt-1">ALIDADE<span
+                        class="text-xs align-top opacity-50">TM</span></h1>
+
+                <!-- TIER STATUS WIDGET -->
+                <div id="tier-status" class="flex flex-col items-end gap-1">
+                    <!-- Tier Badge -->
+                    <div id="tier-badge" onclick="window.openUpgradeModal('header_click')"
+                        class="cursor-pointer px-2 py-0.5 rounded-sm bg-void-800 border border-void-700 text-[10px] font-mono font-bold tracking-wider text-zinc-500 hover:bg-void-700 transition-colors">
+                        LOADING...
+                    </div>
+
+                    <!-- Usage Stats (Hidden by default) -->
+                    <div id="usage-stats" class="hidden text-[10px] font-mono text-zinc-500 text-right">
+                        <span id="usage-label">Scans:</span>
+                        <span id="usage-count" class="text-zinc-300">0/0</span>
+                    </div>
+
+                    <!-- Upgrade Hint -->
+                    <button id="upgrade-hint" onclick="window.openUpgradeModal('upgrade_hint')"
+                        class="hidden text-[9px] font-mono text-signal-amber hover:underline cursor-pointer animate-pulse">
+                        Upgrade for more ->
+                    </button>
+                </div>
+            </div>
+        </header>
+        <!-- Content will be rendered by JavaScript -->
+    </main>
+
+    <!-- Knowledge Base for Smart Wallet -->
+    <script src="MARRAKECH_KNOWLEDGE_BASE_2026.js"></script>
+
+    <!-- i18n Bootstrap (single-pass, idempotent) -->
+    <script type="module">
+        (async () => {
+            if (window.__ALIDADE_I18N_BOOT__) return;
+            window.__ALIDADE_I18N_BOOT__ = true;
+            if (typeof window.__ALIDADE_DEBUG_LOGS__ === 'undefined') {
+                try {
+                    const params = new URLSearchParams(window.location.search);
+                    window.__ALIDADE_DEBUG_LOGS__ = params.get('debug_logs') === '1' ||
+                        localStorage.getItem('ALIDADE_DEBUG_LOGS') === '1';
+                } catch {
+                    window.__ALIDADE_DEBUG_LOGS__ = false;
+                }
+            }
+            const debugLogs = !!window.__ALIDADE_DEBUG_LOGS__;
+
+            try {
+                if (debugLogs) console.log('[LOADER] Loading i18n module...');
+                const i18nModule = await import('./i18n/index.js');
+                const i18n = i18nModule.default || i18nModule.i18n;
+
+                // Expose globally
+                window.i18n = i18n;
+                window.t = (key, vars) => i18n.t(key, vars);
+
+                // Initialize
+                if (!window.__ALIDADE_I18N_INIT_PROMISE__) {
+                    window.__ALIDADE_I18N_INIT_PROMISE__ = i18n.init();
+                }
+                await window.__ALIDADE_I18N_INIT_PROMISE__;
+                const lang = i18n.getCurrentLanguage();
+                if (debugLogs) console.log('[LOADER] [OK] i18n Ready:', lang);
+
+                // Signal readiness
+                window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang } }));
+            } catch (error) {
+                console.error('[LOADER] [ERROR] i18n Failed:', error);
+
+                // Emergency Fallback
+                window.i18n = {
+                    t: (key) => key.split('.').pop(),
+                    getCurrentLanguage: () => 'en',
+                    init: async () => { },
+                    setLanguage: async () => { }
+                };
+                window.t = window.i18n.t;
+                window.dispatchEvent(new CustomEvent('i18nReady', { detail: { lang: 'en' } }));
+            }
+        })();
+    </script>
+
+    <!-- License Manager Initialization -->
+    <script type="module">
+        import { LicenseManager } from './js/license-manager.js?v=20260216j';
+
+        // Configuration (Replace with actual keys before deployment)
+        const SUPABASE_URL = 'https://tynugwtetlclqowlguai.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5bnVnd3RldGxjbHFvd2xndWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2ODgwNDQsImV4cCI6MjA4NjI2NDA0NH0.I2QFBzVVMJDzrFbJnPSdqV4dQK-SEKEx7IprdE-vmD0';
+
+        window.ALIDADE_RUNTIME_CONFIG = {
+            ...(window.ALIDADE_RUNTIME_CONFIG || {}),
+            intelIngestEndpoint: `${SUPABASE_URL}/functions/v1/intel-ingest`
+        };
+
+        // Initialize and expose globally (idempotent)
+        if (!window.licenseManager) {
+            window.licenseManager = new LicenseManager(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        if (typeof window.__ALIDADE_DEBUG_LOGS__ === 'undefined') {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                window.__ALIDADE_DEBUG_LOGS__ = params.get('debug_logs') === '1' ||
+                    localStorage.getItem('ALIDADE_DEBUG_LOGS') === '1';
+            } catch {
+                window.__ALIDADE_DEBUG_LOGS__ = false;
+            }
+        }
+        const debugLogs = !!window.__ALIDADE_DEBUG_LOGS__;
+
+        // Start the manager and handle auth callbacks (single-pass)
+        (async () => {
+            if (!window.__ALIDADE_LICENSE_INIT_PROMISE__) {
+                window.__ALIDADE_LICENSE_INIT_PROMISE__ = (async () => {
+                    if (debugLogs) console.log('[APP] Initializing license system...');
+                    try {
+                        await window.licenseManager.init();
+                    } catch (error) {
+                        console.warn('[APP] License init degraded:', error);
+                        if (typeof window.licenseManager._loadFromCache === 'function') {
+                            window.licenseManager._loadFromCache();
+                        }
+                    }
+                    if (debugLogs) console.log('[APP] [OK] License system ready');
+                })();
+            }
+
+            await window.__ALIDADE_LICENSE_INIT_PROMISE__.catch(() => { });
+        })();
+    </script>
+
+    <!-- DEBUG RESET ONLY (Disabled in normal launches) -->
+    <script>
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const debugResetViaQuery = params.get('debug_reset') === '1';
+            const debugResetViaStorage = localStorage.getItem('ALIDADE_DEBUG_RESET') === '1';
+            const debugResetEnabled = debugResetViaQuery || debugResetViaStorage;
+            if (debugResetEnabled) {
+                console.warn('[DEBUG_RESET] Clearing local license/session cache...');
+                localStorage.removeItem('alidade_user_license');
+                localStorage.removeItem('alidade_user_license_v2');
+                localStorage.removeItem('alidade_license_cache');
+                localStorage.removeItem('alidade_feature_flags');
+                localStorage.removeItem('ALIDADE_DEBUG_RESET');
+
+                // Keep debug reset one-shot and remove the flag from URL too.
+                if (debugResetViaQuery) {
+                    params.delete('debug_reset');
+                    const nextQuery = params.toString();
+                    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+                    window.history.replaceState({}, document.title, nextUrl);
+                }
+                console.log('[DEBUG_RESET] Completed.');
+            }
+        } catch (e) {
+            console.error('[DEBUG_RESET] Failed:', e);
+        }
+    </script>
+
+    <!-- CORE LOGIC: Feature Gating -->
+    <script type="module" src="js/utils/feature-gate.js"></script>
+
+    <!-- Core Service: Haptics (extracted from app.js, legacy-compatible) -->
+    <script src="js/app/core/haptics.js"></script>
+    <script src="js/app/core/common-utils.js"></script>
+    <script src="js/app/access/token-utils.js"></script>
+    <script src="js/app/access/tier-bridge.js?v=20260216j"></script>
+    <script src="js/app/access/tier-config-data.js"></script>
+    <script src="js/app/access/tier-feature-map-data.js"></script>
+    <script src="js/app/access/magic-link-ui.js"></script>
+    <script src="js/app/access/funnel-utils.js"></script>
+    <script src="js/app/access/upgrade-context-utils.js"></script>
+    <script src="js/app/access/feature-usage-utils.js"></script>
+    <script src="js/app/access/logistics-gate-utils.js"></script>
+    <script src="js/app/access/gatekeeper-utils.js"></script>
+    <script src="js/app/access/lifecycle-utils.js"></script>
+    <script src="js/app/access/logistics-auth-modal-utils.js"></script>
+    <script src="js/app/access/logistics-ui-utils.js"></script>
+    <script src="js/app/access/logistics-runtime-utils.js"></script>
+    <script src="js/app/access/access-actions-utils.js"></script>
+    <script src="js/app/data/golden-record-runtime-utils.js?v=20260217a"></script>
+    <script src="js/app/power/power-runtime.js?v=20260217a"></script>
+    <script src="js/app/security/intel-event-runtime.js?v=20260218a"></script>
+    <script src="js/app/data/ultimate-data-pack-utils.js"></script>
+    <script src="js/app/price/session-ui-utils.js"></script>
+    <script src="js/app/price/context-runtime-utils.js"></script>
+    <script src="js/app/price/crowd-price-utils.js"></script>
+    <script src="js/app/price/hybrid-price-utils.js"></script>
+    <script src="js/app/price/hybrid-price-runtime-utils.js"></script>
+    <script src="js/app/price/deep-analysis-utils.js"></script>
+    <script src="js/app/price/gemini-deep-utils.js"></script>
+    <script src="js/app/price/item-classifier-utils.js"></script>
+    <script src="js/app/price/price-check-ui-utils.js"></script>
+    <script src="js/app/price/vision-api-utils.js"></script>
+    <script src="js/app/navigation/navigation-utils.js"></script>
+    <script src="js/app/i18n/language-ui-utils.js"></script>
+    <script src="js/app/settings/overlay-utils.js"></script>
+    <script src="js/app/settings/page-utils.js"></script>
+    <script src="js/app/protocols/tab-routing-utils.js"></script>
+    <script src="js/app/protocols/wallet-ui-utils.js"></script>
+    <script src="js/app/protocols/route-planner-destinations.js"></script>
+    <script src="js/app/protocols/route-planner-helpers.js"></script>
+    <script src="js/app/protocols/route-planner-core-utils.js"></script>
+    <script src="js/app/protocols/route-planner-engine-utils.js"></script>
+    <script src="js/app/protocols/route-planner-optimizer-utils.js"></script>
+    <script src="js/app/protocols/route-planner-output-utils.js"></script>
+    <script src="js/app/protocols/route-planner-ui-utils.js"></script>
+    <script src="js/app/protocols/route-planner-selection-utils.js"></script>
+    <script src="js/app/protocols/route-planner-runtime-state-utils.js"></script>
+    <script src="js/app/protocols/route-planner-runner-utils.js"></script>
+    <script src="js/app/protocols/route-planner-render-utils.js"></script>
+    <script src="js/app/runtime/global-bindings-utils.js?v=20260216j"></script>
+    <script src="js/app/runtime/ux-i18n-runtime-utils.js?v=20260216j"></script>
+    <script src="js/app/runtime/interaction-runtime-utils.js"></script>
+    <script src="js/app/runtime/sw-update-utils.js?v=20260216i"></script>
+    <script src="js/app/runtime/bootstrap-runtime-utils.js?v=20260216j"></script>
+    <script src="js/app/runtime/feedback-runtime-utils.js"></script>
+    <script src="js/app/map/recent-locations-utils.js"></script>
+    <script src="js/app/map/recent-locations-render-utils.js"></script>
+    <script src="js/app/map/souk-location-utils.js"></script>
+    <script src="js/app/negotiation/smart-negotiator-utils.js"></script>
+    <script src="js/app/vector/vector-hud-utils.js"></script>
+    <script src="js/app/vector/vector-hud-runtime.js"></script>
+    <script src="js/app/currency/currency-ui-utils.js"></script>
+    <script src="js/app/currency/currency-core-utils.js"></script>
+    <script src="js/app/data/market-currency-config-data.js"></script>
+    <script src="js/app/data/context-map-data.js"></script>
+    <script src="js/app/context/context-runtime.js"></script>
+    <script src="js/app/data/ui-icons-data.js"></script>
+    <script src="js/app/data/module-preview-data.js"></script>
+    <script src="js/app/fortress/fortress-runtime.js"></script>
+    <script src="js/app/price/price-check-config-data.js"></script>
+    <script src="js/app/phrases/phrase-config-data.js"></script>
+
+    <!-- Main Application Script (Standard Scope) -->
+    <script src="js/app/protocols/route-planner-runtime.js"></script>
+    <script src="app.js"></script>
+    <script src="js/app/runtime/foundation-runtime.js?v=20260216k"></script>
+    <script src="js/app/negotiation/negotiation-ai-runtime.js"></script>
+    <script src="js/app/currency/currency-runtime.js"></script>
+    <script src="js/app/phrases/phrases-runtime.js"></script>
+    <script src="js/app/access/access-runtime.js?v=20260216i"></script>
+    <script src="js/app/runtime/app-shell-runtime.js?v=20260216m"></script>
+    <script src="js/app/runtime/app-constants-parity-runtime.js"></script>
+    <script src="js/app/runtime/legacy-init-runtime.js?v=20260216l"></script>
+    <script src="js/app/vector/vector-bridge-runtime.js"></script>
+    <script src="js/app/protocols/protocols-runtime.js"></script>
+    <script src="js/app/negotiation/negotiation-legacy-runtime.js"></script>
+    <script src="js/app/negotiation/negotiation-runtime.js"></script>
+    <script src="js/app/market/price-dictator-runtime.js"></script>
+    <script src="js/app/souk/souk-runtime.js"></script>
+    <script src="js/app/defense/defense-runtime.js"></script>
+    <script src="js/app/runtime/service-map-runtime.js?v=20260216j"></script>
+    <script src="js/app/intel/organic-lab-shell-runtime.js"></script>
+    <script src="js/app/intel/intel-runtime.js"></script>
+    <script src="js/app/runtime/app-initialization-runtime.js?v=20260216j"></script>
+    <script src="js/app/intel/intel-organic-tabs-runtime.js"></script>
+    <script src="js/app/map/souk-location-runtime.js"></script>
+    <script src="js/app/price/price-check-media-runtime.js"></script>
+    <script src="js/app/price/price-check-core-runtime.js"></script>
+    <script src="js/app/price/price-check-runtime.js"></script>
+
+    <!-- Tactical Briefing System (Post-app.js - depends on price checker globals) -->
+    <script src="js/tactical-briefing.js"></script>
+    <script src="js/tactical-briefing-ui.js"></script>
+
+    <!-- Medina Navigator (Waypoints, Landmarks, Danger Zones - patches VectorHUD) -->
+    <script src="js/vector-nav-v2.js"></script>
+
+    <!-- Debug console (eruda): opt-in only -->
+    <script>
+        (function () {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const enabledViaQuery = params.get('debug_console') === '1';
+                const enabledViaStorage = localStorage.getItem('ALIDADE_DEBUG_CONSOLE') === '1';
+                if (!enabledViaQuery && !enabledViaStorage) return;
+
+                const erudaScript = document.createElement('script');
+                erudaScript.src = 'https://cdn.jsdelivr.net/npm/eruda';
+                erudaScript.async = true;
+                erudaScript.onload = () => {
+                    if (window.eruda && typeof window.eruda.init === 'function') {
+                        window.eruda.init();
+                        console.log('[DEBUG] Mobile console active');
+                    }
+                };
+                erudaScript.onerror = (error) => {
+                    console.warn('[DEBUG] Failed to load mobile console:', error);
+                };
+                document.body.appendChild(erudaScript);
+            } catch (error) {
+                console.warn('[DEBUG] Mobile console bootstrap failed:', error);
+            }
+        })();
+    </script>
+
+    <!-- AUDIO SYSTEMS (Hidden) -->
+    <audio id="sfx-hover" src="assets/audio/fes_ping.mp3" preload="auto"></audio>
+    <audio id="sfx-click" src="assets/audio/fes_ping.mp3" preload="auto"></audio>
+    <audio id="sfx-success" src="assets/audio/safi_thud.mp3" preload="auto"></audio>
+    <audio id="sfx-error" src="assets/audio/safi_thud.mp3" preload="auto"></audio>
+    <audio id="sfx-scan" src="assets/audio/ringtone.mp3" preload="auto" loop></audio>
+
+    <!-- COMPONENT: UPGRADE MODAL -->
+    <!-- Injected dynamically or included here -->
+    <div id="upgrade-modal-container"></div>
+    <script>
+        // Load Upgrade Modal Component
+        fetch('components/upgrade-modal.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('upgrade-modal-container').innerHTML = html;
+                // Re-execute scripts in the injected HTML
+                const scripts = document.getElementById('upgrade-modal-container').querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+
+                    if (!oldScript.src) {
+                        newScript.textContent = oldScript.textContent || '';
+                    }
+
+                    try {
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    } catch (scriptErr) {
+                        console.warn('[UPGRADE_MODAL] Script execution skipped:', scriptErr);
+                        oldScript.remove();
+                    }
+                });
+            })
+            .catch(err => console.error('Failed to load upgrade modal:', err));
+    </script>
+
+</body>
+
+</html>
+
+
+
+
+
+
