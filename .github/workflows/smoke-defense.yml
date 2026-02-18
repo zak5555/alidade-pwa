@@ -40,8 +40,12 @@ on:
         type: string
 
 concurrency:
-  group: smoke-defense-${{ github.ref }}
+  group: smoke-defense-${{ github.ref }}-${{ github.event_name }}-${{ github.event_name == 'workflow_dispatch' && inputs.verify_profile || 'auto' }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: write
 
 jobs:
   smoke-defense:
@@ -90,7 +94,17 @@ jobs:
           node-version: 20
 
       - name: Check full intel verify SLA
+        id: sla_check
+        continue-on-error: true
         run: npm run ops:intel:sla -- --max-age-hours "${SLA_MAX_AGE_HOURS}"
+
+      - name: Trigger full intel verify remediation
+        if: ${{ steps.sla_check.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run smoke-defense.yml --ref "${{ github.ref_name }}" -f verify_profile=full -f sla_max_age_hours="${SLA_MAX_AGE_HOURS}"
+          echo "SLA stale: remediation dispatch submitted (verify_profile=full)."
 
   intel-verify-fast:
     runs-on: ubuntu-latest
