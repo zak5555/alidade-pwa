@@ -78,8 +78,10 @@ jobs:
   intel-sla-watchdog:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: smoke-defense
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'fast' || inputs.verify_profile == 'both')) }}
+    needs:
+      - smoke-defense
+      - intel-verify-full
+    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'fast' || inputs.verify_profile == 'full' || inputs.verify_profile == 'both')) }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
