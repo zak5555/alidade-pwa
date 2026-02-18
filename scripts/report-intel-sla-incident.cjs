@@ -30,6 +30,16 @@ function parseBooleanFlag(flagName, fallback) {
     throw new Error(`${flagName} must be one of: true/false, 1/0, yes/no`);
 }
 
+function parseIntegerFlag(flagName, fallback, min, max) {
+    const value = findLastFlagValue(flagName);
+    if (value === undefined) return fallback;
+    const raw = Number(value);
+    if (!Number.isInteger(raw) || raw < min || raw > max) {
+        throw new Error(`${flagName} must be an integer in [${min}, ${max}]`);
+    }
+    return raw;
+}
+
 function parseModeFlag(flagName, fallback) {
     const value = findLastFlagValue(flagName);
     if (value === undefined) return fallback;
@@ -176,6 +186,35 @@ function isHttpStatusError(error, statusCode) {
     return message.includes(`HTTP ${statusCode}`);
 }
 
+function evaluateCommentCooldown(lastCommentCreatedAt, cooldownMinutes) {
+    if (!lastCommentCreatedAt || !Number.isFinite(cooldownMinutes) || cooldownMinutes <= 0) {
+        return {
+            active: false,
+            ageMinutes: null,
+            remainingMinutes: 0
+        };
+    }
+    const createdAtMs = Date.parse(String(lastCommentCreatedAt || ''));
+    if (!Number.isFinite(createdAtMs)) {
+        return {
+            active: false,
+            ageMinutes: null,
+            remainingMinutes: 0
+        };
+    }
+
+    const ageMs = Date.now() - createdAtMs;
+    const ageMinutesRaw = ageMs / (60 * 1000);
+    const active = ageMs >= 0 && ageMs < cooldownMinutes * 60 * 1000;
+    const remainingRaw = Math.max(0, cooldownMinutes - ageMinutesRaw);
+
+    return {
+        active,
+        ageMinutes: Number(ageMinutesRaw.toFixed(2)),
+        remainingMinutes: Number(remainingRaw.toFixed(2))
+    };
+}
+
 function buildIncidentBody({
     repo,
     workflowRef,
@@ -243,6 +282,30 @@ async function findOpenIssueByTitle(owner, repo, token, title) {
     const issues = await githubRequest(`/repos/${owner}/${repo}/issues?state=open&per_page=100`, token, 'GET');
     if (!Array.isArray(issues)) return null;
     return issues.find((issue) => !issue.pull_request && String(issue.title || '').trim() === title) || null;
+}
+
+async function findLatestIssueComment(owner, repo, token, issueNumber, issueCommentCount) {
+    const normalizedCount = Number.isInteger(issueCommentCount) && issueCommentCount > 0
+        ? issueCommentCount
+        : 0;
+    if (normalizedCount === 0) return null;
+
+    const pagedComments = await githubRequest(
+        `/repos/${owner}/${repo}/issues/${issueNumber}/comments?per_page=1&page=${normalizedCount}`,
+        token,
+        'GET'
+    );
+    if (Array.isArray(pagedComments) && pagedComments.length > 0) {
+        return pagedComments[0];
+    }
+
+    const fallbackComments = await githubRequest(
+        `/repos/${owner}/${repo}/issues/${issueNumber}/comments?per_page=100`,
+        token,
+        'GET'
+    );
+    if (!Array.isArray(fallbackComments) || fallbackComments.length === 0) return null;
+    return fallbackComments[fallbackComments.length - 1] || null;
 }
 
 async function createIncidentIssue({
@@ -350,6 +413,18 @@ async function main() {
     const dryRun = parseBooleanFlag('--dry-run', false);
     const labels = parseCsvFlag('--labels', process.env.INTEL_SLA_INCIDENT_LABELS || 'ops,incident,intel,sla,priority:p1');
     const assignees = parseCsvFlag('--assignees', process.env.INTEL_SLA_INCIDENT_ASSIGNEES || '');
+    const envCommentCooldownRaw = Number(String(process.env.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES || '').trim());
+    const envCommentCooldownMinutes = Number.isInteger(envCommentCooldownRaw) &&
+        envCommentCooldownRaw >= 0 &&
+        envCommentCooldownRaw <= 10080
+        ? envCommentCooldownRaw
+        : 60;
+    const commentCooldownMinutes = parseIntegerFlag(
+        '--comment-cooldown-minutes',
+        envCommentCooldownMinutes,
+        0,
+        10080
+    );
 
     if (!token) {
         throw new Error('Missing GitHub token (use GITHUB_TOKEN, GH_TOKEN, or --token)');
@@ -391,6 +466,7 @@ async function main() {
                 title,
                 labels,
                 assignees,
+                commentCooldownMinutes,
                 existingIssue: existingIssue
                     ? { number: existingIssue.number, url: existingIssue.html_url || null }
                     : null
@@ -405,7 +481,8 @@ async function main() {
                 action: 'no_open_issue',
                 title,
                 labels,
-                assignees
+                assignees,
+                commentCooldownMinutes
             }, null, 2));
             return;
         }
@@ -432,7 +509,8 @@ async function main() {
             commentUrl: createdComment?.html_url || null,
             title,
             labels,
-            assignees
+            assignees,
+            commentCooldownMinutes
         }, null, 2));
         return;
     }
@@ -446,6 +524,7 @@ async function main() {
             title,
             labels,
             assignees,
+            commentCooldownMinutes,
             existingIssue: existingIssue
                 ? { number: existingIssue.number, url: existingIssue.html_url || null }
                 : null
@@ -454,6 +533,42 @@ async function main() {
     }
 
     if (existingIssue) {
+        const mergedLabels = mergeUniqueValues(extractIssueLabelNames(existingIssue), labels);
+        const mergedAssignees = mergeUniqueValues(extractIssueAssignees(existingIssue), assignees);
+        const metadataUpdate = await patchIncidentIssueMetadata({
+            owner,
+            repo,
+            token,
+            issueNumber: existingIssue.number,
+            labels: mergedLabels,
+            assignees: mergedAssignees
+        });
+        const latestComment = await findLatestIssueComment(
+            owner,
+            repo,
+            token,
+            existingIssue.number,
+            Number(existingIssue.comments || 0)
+        );
+        const cooldown = evaluateCommentCooldown(latestComment?.created_at || '', commentCooldownMinutes);
+        if (cooldown.active) {
+            console.log(JSON.stringify({
+                ok: true,
+                mode,
+                action: 'comment_skipped_cooldown',
+                issueNumber: existingIssue.number,
+                issueUrl: existingIssue.html_url || null,
+                title,
+                labels: mergedLabels,
+                assignees: mergedAssignees,
+                commentCooldownMinutes,
+                cooldown,
+                assigneeFallback: Boolean(metadataUpdate.assigneeFallback),
+                assigneeFallbackReason: metadataUpdate.assigneeFallbackReason || null
+            }, null, 2));
+            return;
+        }
+
         const comment = [
             '### New SLA Failure Signal',
             '',
@@ -466,16 +581,6 @@ async function main() {
             'POST',
             commentPayload
         );
-        const mergedLabels = mergeUniqueValues(extractIssueLabelNames(existingIssue), labels);
-        const mergedAssignees = mergeUniqueValues(extractIssueAssignees(existingIssue), assignees);
-        const metadataUpdate = await patchIncidentIssueMetadata({
-            owner,
-            repo,
-            token,
-            issueNumber: existingIssue.number,
-            labels: mergedLabels,
-            assignees: mergedAssignees
-        });
 
         console.log(JSON.stringify({
             ok: true,
@@ -487,6 +592,7 @@ async function main() {
             title,
             labels: mergedLabels,
             assignees: mergedAssignees,
+            commentCooldownMinutes,
             assigneeFallback: Boolean(metadataUpdate.assigneeFallback),
             assigneeFallbackReason: metadataUpdate.assigneeFallbackReason || null
         }, null, 2));
@@ -512,6 +618,7 @@ async function main() {
         title,
         labels,
         assignees,
+        commentCooldownMinutes,
         assigneeFallback: Boolean(createResult.assigneeFallback),
         assigneeFallbackReason: createResult.assigneeFallbackReason || null
     }, null, 2));

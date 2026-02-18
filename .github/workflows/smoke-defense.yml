@@ -86,6 +86,7 @@ jobs:
       SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
       INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
       INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
+      INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
 
     steps:
       - name: Checkout
@@ -113,7 +114,8 @@ jobs:
             --branch "${{ github.ref_name }}" \
             --required-job intel-verify-full \
             --sla-max-age-hours "${SLA_MAX_AGE_HOURS}" \
-            --sla-outcome "${{ steps.sla_check.outcome }}"
+            --sla-outcome "${{ steps.sla_check.outcome }}" \
+            --comment-cooldown-minutes "${INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES:-60}"
 
       - name: Trigger full intel verify remediation
         id: remediation
@@ -162,7 +164,8 @@ jobs:
             --remediation-reason "${{ steps.remediation.outputs.reason }}" \
             --remediation-run-id "${{ steps.remediation.outputs.latest_run_id }}" \
             --remediation-run-url "${{ steps.remediation.outputs.latest_run_url }}" \
-            --remediation-run-conclusion "${{ steps.remediation.outputs.latest_run_conclusion }}"
+            --remediation-run-conclusion "${{ steps.remediation.outputs.latest_run_conclusion }}" \
+            --comment-cooldown-minutes "${INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES:-60}"
 
   intel-verify-fast:
     runs-on: ubuntu-latest
