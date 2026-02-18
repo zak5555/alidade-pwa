@@ -1239,6 +1239,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:sla script');
     assert(packageJson.includes('"ops:intel:sla:remediate"'),
         'package.json does not register ops:intel:sla:remediate script');
+    assert(packageJson.includes('"ops:intel:sla:incident:dry"'),
+        'package.json does not register ops:intel:sla:incident:dry script');
     assert(packageJson.includes('"ops:intel:ci"'),
         'package.json does not register ops:intel:ci script');
     assert(packageJson.includes('"ops:hooks:install"'),
@@ -1250,6 +1252,7 @@ function testIntelIngestOpsPresence() {
     const quickVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:quick'] || '');
     const intelSlaScript = String(packageManifest?.scripts?.['ops:intel:sla'] || '');
     const intelSlaRemediationScript = String(packageManifest?.scripts?.['ops:intel:sla:remediate'] || '');
+    const intelSlaIncidentDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:dry'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
     assert(quickVerifyScript.includes('--count 3'),
@@ -1264,6 +1267,10 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla:remediate does not execute remediation dispatcher script');
     assert(intelSlaRemediationScript.includes('--cooldown-minutes'),
         'ops:intel:sla:remediate does not configure cooldown window');
+    assert(intelSlaIncidentDryScript.includes('report-intel-sla-incident.cjs'),
+        'ops:intel:sla:incident:dry does not execute incident reporter script');
+    assert(intelSlaIncidentDryScript.includes('--dry-run true'),
+        'ops:intel:sla:incident:dry does not enforce dry-run mode');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
         'ops:intel:health:strict does not enforce source-reason allowlist');
     assert(strictVerifyScript.includes('--allowed-reject-source-reasons'),
@@ -1293,6 +1300,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not declare explicit permissions');
     assert(smokeWorkflow.includes('actions: write'),
         'smoke-defense workflow does not grant actions: write for watchdog remediation');
+    assert(smokeWorkflow.includes('issues: write'),
+        'smoke-defense workflow does not grant issues: write for incident creation');
     assert(smokeWorkflow.includes('verify_profile'),
         'smoke-defense workflow does not expose manual verify profile input');
     assert(smokeWorkflow.includes('sla_max_age_hours'),
@@ -1317,12 +1326,20 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow watchdog lane does not tolerate stale SLA check before remediation');
     assert(smokeWorkflow.includes('Trigger full intel verify remediation'),
         'smoke-defense workflow watchdog lane does not define full verify remediation step');
+    assert(smokeWorkflow.includes('id: remediation'),
+        'smoke-defense workflow watchdog remediation step does not expose step id');
     assert(smokeWorkflow.includes('dispatch-intel-verify-remediation.cjs'),
         'smoke-defense workflow watchdog remediation does not call remediation dispatcher');
     assert(smokeWorkflow.includes('--verify-profile full'),
         'smoke-defense workflow watchdog remediation does not force full verify profile');
     assert(smokeWorkflow.includes('--cooldown-minutes 30'),
         'smoke-defense workflow watchdog remediation does not enforce cooldown window');
+    assert(smokeWorkflow.includes('Open SLA incident issue'),
+        'smoke-defense workflow watchdog lane does not define SLA incident issue step');
+    assert(smokeWorkflow.includes('report-intel-sla-incident.cjs'),
+        'smoke-defense workflow watchdog lane does not call SLA incident reporter');
+    assert(smokeWorkflow.includes("steps.remediation.outputs.dispatched != 'true'"),
+        'smoke-defense workflow SLA incident gate does not check remediation dispatch outcome');
     assert(smokeWorkflow.includes('branches:') && smokeWorkflow.includes('- main'),
         'smoke-defense workflow push trigger is not limited to main branch');
 
@@ -1333,6 +1350,15 @@ function testIntelIngestOpsPresence() {
         'remediation dispatcher script does not expose cooldown active outcome');
     assert(remediationScript.includes('actions/workflows/'),
         'remediation dispatcher script does not call workflow dispatch API');
+    const incidentScript = readText('scripts/report-intel-sla-incident.cjs');
+    assert(incidentScript.includes('buildIncidentTitle'),
+        'incident reporter script does not define incident title strategy');
+    assert(incidentScript.includes('--dry-run'),
+        'incident reporter script does not support dry-run guard');
+    assert(incidentScript.includes('/issues?state=open'),
+        'incident reporter script does not dedupe on open issue scan');
+    assert(incidentScript.includes('/repos/${owner}/${repo}/issues'),
+        'incident reporter script does not create incidents through issues API');
     assert(smokeWorkflow.includes('paths-ignore:'),
         'smoke-defense workflow does not define trigger path ignore optimization');
 
@@ -1399,6 +1425,7 @@ async function main() {
         'scripts/check-intel-ingest-health.cjs',
         'scripts/check-intel-verify-sla.cjs',
         'scripts/dispatch-intel-verify-remediation.cjs',
+        'scripts/report-intel-sla-incident.cjs',
         'scripts/probe-intel-ingest.cjs',
         'scripts/verify-intel-ingest.cjs'
     ];
