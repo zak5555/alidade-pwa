@@ -11,6 +11,10 @@ Set these before deploying:
 Optional hardening:
 
 - Additional gateway controls (WAF/IP allowlist) in front of Edge endpoint
+- `INTEL_INGEST_SOURCE_RATE_LIMITS` for per-source per-session rate caps in the 60s window
+  - Format: `sourcePattern=limit` entries, comma-separated
+  - Wildcard supported only as suffix (`ops_verify_reject_*=30`) or full fallback (`*=120`)
+  - Example: `ops_verify=90,ops_verify_reject_*=30,*=120`
 
 Supabase CLI example:
 
@@ -27,6 +31,7 @@ Apply migration before function deploy:
 
 - `supabase/migrations/20260217220500_create_intel_event_stream.sql`
 - `supabase/migrations/20260218052018_add_intel_ingest_rejection_telemetry.sql`
+- `supabase/migrations/20260218063000_add_intel_ingest_rejected_by_source_reason_kpi.sql`
 
 This migration creates:
 

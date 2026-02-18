@@ -1046,6 +1046,14 @@ function testIntelIngestEdgeFunctionPresence() {
         'intel-ingest edge function does not enforce replay nonce guard');
     assert(source.includes('checkSessionRateLimit'),
         'intel-ingest edge function does not enforce per-session rate limiting');
+    assert(source.includes('SOURCE_RATE_LIMITS_ENV_KEY') && source.includes('INTEL_INGEST_SOURCE_RATE_LIMITS'),
+        'intel-ingest edge function does not define per-source rate-limit config env');
+    assert(source.includes('parseSourceRateLimitRules'),
+        'intel-ingest edge function does not parse per-source rate-limit rules');
+    assert(source.includes('resolveSourceRateLimit'),
+        'intel-ingest edge function does not resolve per-source rate-limit rule');
+    assert(source.includes('sessionSourceRateMemory'),
+        'intel-ingest edge function does not keep per-source rate-limit memory');
     assert(source.includes('checkGeoPlausibility'),
         'intel-ingest edge function does not enforce geo plausibility checks');
     assert(source.includes('stale_or_future_event'),
@@ -1260,6 +1268,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow schedule cron is missing or unexpected');
     assert(smokeWorkflow.includes('npm run ops:intel:ci'),
         'smoke-defense workflow intel verify does not use strict CI profile');
+
+    const ingestReadme = readText('supabase/functions/intel-ingest/README.md');
+    assert(ingestReadme.includes('INTEL_INGEST_SOURCE_RATE_LIMITS'),
+        'intel-ingest README does not document per-source rate-limit configuration');
 
     const preCommitHook = readText('.githooks/pre-commit');
     assert(preCommitHook.includes('security:scan:secrets:staged'),

@@ -18,6 +18,10 @@ type Rejection = {
     eventId: string | null;
     eventName: string | null;
     reason: string;
+    sessionId: string;
+    source: string;
+    occurredAt: string | null;
+    context: Record<string, JsonValue>;
 };
 
 type GeoSnapshot = {
@@ -26,12 +30,20 @@ type GeoSnapshot = {
     atMs: number;
 };
 
+type SourceRateLimitRule = {
+    sourcePattern: string;
+    maxEventsPerWindow: number;
+    isWildcard: boolean;
+};
+
 const CORS_HEADERS: HeadersInit = {
     "access-control-allow-origin": "*",
     "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-intel-ingest-key",
     "access-control-allow-methods": "POST, OPTIONS",
     "content-type": "application/json; charset=utf-8"
 };
+const UTF8_DECODER = new TextDecoder();
+const UTF8_ENCODER = new TextEncoder();
 
 const CANONICAL_EVENTS = new Set([
     "price.quote_seen",
@@ -46,15 +58,30 @@ const CANONICAL_EVENTS = new Set([
 ]);
 
 const MAX_EVENTS_PER_REQUEST = 200;
+const MAX_REQUEST_BODY_BYTES = 512 * 1024;
 const MAX_EVENT_AGE_MS = 5 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 60 * 1000;
 const NONCE_TTL_MS = 15 * 60 * 1000;
+const NONCE_MAP_MAX_ENTRIES = 100000;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const MAX_EVENTS_PER_SESSION_WINDOW = 120;
+const SOURCE_RATE_LIMITS_ENV_KEY = "INTEL_INGEST_SOURCE_RATE_LIMITS";
 const MAX_TRAVEL_SPEED_MPS = 70;
+const SESSION_GEO_TTL_MS = 30 * 60 * 1000;
+const SESSION_MAP_MAX_ENTRIES = 5000;
+const MAX_EVENT_ID_LENGTH = 128;
+const MAX_EVENT_NAME_LENGTH = 128;
+const MAX_SESSION_ID_LENGTH = 128;
+const MAX_SOURCE_LENGTH = 64;
+const MIN_NONCE_LENGTH = 12;
+const MAX_NONCE_LENGTH = 160;
+const MAX_META_BYTES = 8 * 1024;
+const MAX_PAYLOAD_BYTES = 32 * 1024;
+const MAX_EVENT_BYTES = 48 * 1024;
 
 const recentNonceMemory = new Map<string, number>();
 const sessionRateMemory = new Map<string, number[]>();
+const sessionSourceRateMemory = new Map<string, number[]>();
 const sessionGeoMemory = new Map<string, GeoSnapshot>();
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -67,7 +94,21 @@ function jsonResponse(body: unknown, status = 200): Response {
 function normalizeSessionId(meta: Record<string, JsonValue> | undefined): string {
     const raw = typeof meta?.sessionId === "string" ? meta.sessionId : "";
     const trimmed = raw.trim();
-    return trimmed || "anonymous";
+    if (!trimmed) return "anonymous";
+    const compact = trimmed
+        .slice(0, MAX_SESSION_ID_LENGTH)
+        .replace(/[^A-Za-z0-9._:-]/g, "");
+    return compact || "anonymous";
+}
+
+function normalizeSource(meta: Record<string, JsonValue> | undefined): string {
+    const raw = typeof meta?.source === "string" ? meta.source : "";
+    const trimmed = raw.trim();
+    if (!trimmed) return "unknown";
+    const compact = trimmed
+        .slice(0, MAX_SOURCE_LENGTH)
+        .replace(/[^A-Za-z0-9._:-]/g, "");
+    return compact || "unknown";
 }
 
 function normalizeString(value: unknown): string {
@@ -82,6 +123,23 @@ function parseOccurredAtMs(occurredAtRaw: string): number | null {
 function toFiniteNumber(value: unknown): number | null {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isRecordObject(value: unknown): value is Record<string, JsonValue> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function jsonByteLength(value: unknown): number {
+    try {
+        const serialized = JSON.stringify(value ?? null);
+        return UTF8_ENCODER.encode(serialized).length;
+    } catch (_error) {
+        return Number.POSITIVE_INFINITY;
+    }
+}
+
+function isSafeIdentifier(value: string): boolean {
+    return /^[A-Za-z0-9:_-]+$/.test(value);
 }
 
 function haversineDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -100,7 +158,7 @@ function isCanonicalEvent(eventName: string): boolean {
 }
 
 function validatePayloadSchema(eventName: string, payload: Record<string, JsonValue> | undefined): boolean {
-    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+    if (!isRecordObject(payload)) return false;
 
     switch (eventName) {
         case "context.update":
@@ -132,6 +190,12 @@ function cleanupNonceMemory(nowMs: number): void {
     recentNonceMemory.forEach((expiresAt, key) => {
         if (expiresAt <= nowMs) recentNonceMemory.delete(key);
     });
+    if (recentNonceMemory.size > NONCE_MAP_MAX_ENTRIES) {
+        for (const key of recentNonceMemory.keys()) {
+            recentNonceMemory.delete(key);
+            if (recentNonceMemory.size <= NONCE_MAP_MAX_ENTRIES) break;
+        }
+    }
 }
 
 function checkReplayNonce(sessionId: string, nonce: string, nowMs: number): boolean {
@@ -143,17 +207,131 @@ function checkReplayNonce(sessionId: string, nonce: string, nowMs: number): bool
     return true;
 }
 
-function checkSessionRateLimit(sessionId: string, nowMs: number): boolean {
+function parseSourceRateLimitRules(rawConfig: string): SourceRateLimitRule[] {
+    if (!rawConfig) return [];
+
+    const parsedRules: SourceRateLimitRule[] = [];
+    for (const entryRaw of rawConfig.split(",")) {
+        const entry = normalizeString(entryRaw).trim();
+        if (!entry) continue;
+
+        const separatorIndex = entry.includes("=")
+            ? entry.indexOf("=")
+            : entry.indexOf(":");
+        if (separatorIndex <= 0 || separatorIndex >= entry.length - 1) {
+            continue;
+        }
+
+        const sourcePatternRaw = entry.slice(0, separatorIndex).trim();
+        const maxEventsRaw = entry.slice(separatorIndex + 1).trim();
+        const maxEvents = Number(maxEventsRaw);
+        if (!Number.isInteger(maxEvents) || maxEvents < 1 || maxEvents > 10000) {
+            continue;
+        }
+        if (!sourcePatternRaw) {
+            continue;
+        }
+        if (sourcePatternRaw.includes("*") && sourcePatternRaw !== "*" && !sourcePatternRaw.endsWith("*")) {
+            continue;
+        }
+
+        parsedRules.push({
+            sourcePattern: sourcePatternRaw,
+            maxEventsPerWindow: maxEvents,
+            isWildcard: sourcePatternRaw === "*" || sourcePatternRaw.endsWith("*")
+        });
+    }
+
+    return parsedRules;
+}
+
+function sourceMatchesPattern(source: string, pattern: string, isWildcard: boolean): boolean {
+    if (!isWildcard) {
+        return source === pattern;
+    }
+    if (pattern === "*") {
+        return true;
+    }
+    const prefix = pattern.slice(0, -1);
+    return source.startsWith(prefix);
+}
+
+function resolveSourceRateLimit(source: string, sourceRules: SourceRateLimitRule[]): number {
+    if (!sourceRules.length) return MAX_EVENTS_PER_SESSION_WINDOW;
+
+    let fallbackLimit: number | null = null;
+    for (const rule of sourceRules) {
+        if (rule.sourcePattern === "*") {
+            fallbackLimit = rule.maxEventsPerWindow;
+            continue;
+        }
+        if (sourceMatchesPattern(source, rule.sourcePattern, rule.isWildcard)) {
+            return rule.maxEventsPerWindow;
+        }
+    }
+    return fallbackLimit ?? MAX_EVENTS_PER_SESSION_WINDOW;
+}
+
+function pruneRateMemory(memory: Map<string, number[]>, nowMs: number): void {
+    const memoryPruneThreshold = nowMs - RATE_LIMIT_WINDOW_MS;
+    memory.forEach((timestamps, key) => {
+        const fresh = timestamps.filter((stamp) => stamp >= memoryPruneThreshold);
+        if (fresh.length === 0) {
+            memory.delete(key);
+            return;
+        }
+        if (fresh.length !== timestamps.length) {
+            memory.set(key, fresh);
+        }
+    });
+    if (memory.size > SESSION_MAP_MAX_ENTRIES) {
+        for (const key of memory.keys()) {
+            memory.delete(key);
+            if (memory.size <= SESSION_MAP_MAX_ENTRIES) break;
+        }
+    }
+}
+
+function consumeRateLimit(
+    memory: Map<string, number[]>,
+    key: string,
+    nowMs: number,
+    maxEventsPerWindow: number
+): boolean {
     const startWindow = nowMs - RATE_LIMIT_WINDOW_MS;
-    const existing = sessionRateMemory.get(sessionId) || [];
+    const existing = memory.get(key) || [];
     const fresh = existing.filter((stamp) => stamp >= startWindow);
-    if (fresh.length >= MAX_EVENTS_PER_SESSION_WINDOW) {
-        sessionRateMemory.set(sessionId, fresh);
+    if (fresh.length >= maxEventsPerWindow) {
+        memory.set(key, fresh);
         return false;
     }
     fresh.push(nowMs);
-    sessionRateMemory.set(sessionId, fresh);
+    memory.set(key, fresh);
     return true;
+}
+
+function checkSessionRateLimit(
+    sessionId: string,
+    source: string,
+    nowMs: number,
+    sourceRateLimitRules: SourceRateLimitRule[]
+): boolean {
+    pruneRateMemory(sessionRateMemory, nowMs);
+    pruneRateMemory(sessionSourceRateMemory, nowMs);
+
+    const sessionAllowed = consumeRateLimit(
+        sessionRateMemory,
+        sessionId,
+        nowMs,
+        MAX_EVENTS_PER_SESSION_WINDOW
+    );
+    if (!sessionAllowed) {
+        return false;
+    }
+
+    const sourceLimit = resolveSourceRateLimit(source, sourceRateLimitRules);
+    const sessionSourceKey = `${sessionId}::${source}`;
+    return consumeRateLimit(sessionSourceRateMemory, sessionSourceKey, nowMs, sourceLimit);
 }
 
 function extractCoordinates(payload: Record<string, JsonValue> | undefined): { lat: number; lng: number } | null {
@@ -168,6 +346,19 @@ function checkGeoPlausibility(
     payload: Record<string, JsonValue> | undefined,
     occurredAtMs: number
 ): boolean {
+    const geoPruneThreshold = Date.now() - SESSION_GEO_TTL_MS;
+    sessionGeoMemory.forEach((snapshot, key) => {
+        if (snapshot.atMs < geoPruneThreshold) {
+            sessionGeoMemory.delete(key);
+        }
+    });
+    if (sessionGeoMemory.size > SESSION_MAP_MAX_ENTRIES) {
+        for (const key of sessionGeoMemory.keys()) {
+            sessionGeoMemory.delete(key);
+            if (sessionGeoMemory.size <= SESSION_MAP_MAX_ENTRIES) break;
+        }
+    }
+
     const coordinates = extractCoordinates(payload);
     if (!coordinates) return true;
 
@@ -188,7 +379,7 @@ function checkGeoPlausibility(
 }
 
 async function sha256Hex(value: string): Promise<string> {
-    const data = new TextEncoder().encode(value);
+    const data = UTF8_ENCODER.encode(value);
     const digest = await crypto.subtle.digest("SHA-256", data);
     return Array.from(new Uint8Array(digest))
         .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -224,11 +415,180 @@ async function verifyEnvelopeSignature(envelope: IntelEventEnvelope, secret: str
     return timingSafeEquals(providedSignature, computed);
 }
 
+function validateEnvelopeShape(event: IntelEventEnvelope): { ok: true } | { ok: false; reason: string } {
+    const signatureAlg = normalizeString(event.signature_alg).trim().toLowerCase();
+    if (signatureAlg !== "sha256") {
+        return { ok: false, reason: "invalid_signature_alg" };
+    }
+
+    const eventId = normalizeString(event.id).trim();
+    if (eventId && (eventId.length > MAX_EVENT_ID_LENGTH || !isSafeIdentifier(eventId))) {
+        return { ok: false, reason: "invalid_event_id" };
+    }
+
+    const nonce = normalizeString(event.nonce).trim();
+    if (nonce.length < MIN_NONCE_LENGTH || nonce.length > MAX_NONCE_LENGTH || !isSafeIdentifier(nonce)) {
+        return { ok: false, reason: "invalid_nonce" };
+    }
+
+    if (!isRecordObject(event.payload)) {
+        return { ok: false, reason: "payload_not_object" };
+    }
+    if (!isRecordObject(event.meta)) {
+        return { ok: false, reason: "meta_not_object" };
+    }
+
+    const payloadBytes = jsonByteLength(event.payload);
+    if (!Number.isFinite(payloadBytes) || payloadBytes > MAX_PAYLOAD_BYTES) {
+        return { ok: false, reason: "payload_too_large" };
+    }
+
+    const metaBytes = jsonByteLength(event.meta);
+    if (!Number.isFinite(metaBytes) || metaBytes > MAX_META_BYTES) {
+        return { ok: false, reason: "meta_too_large" };
+    }
+
+    const eventBytes = jsonByteLength({
+        id: eventId || null,
+        event_name: event.event_name ?? null,
+        occurred_at: event.occurred_at ?? null,
+        payload: event.payload,
+        meta: event.meta,
+        nonce,
+        signature: event.signature ?? null,
+        signature_alg: signatureAlg
+    });
+    if (!Number.isFinite(eventBytes) || eventBytes > MAX_EVENT_BYTES) {
+        return { ok: false, reason: "event_too_large" };
+    }
+
+    return { ok: true };
+}
+
+function buildRejection(event: IntelEventEnvelope | null | undefined, reason: string): Rejection {
+    const meta = isRecordObject(event?.meta) ? event.meta : {};
+    const eventIdRaw = normalizeString(event?.id).trim();
+    const eventNameRaw = normalizeString(event?.event_name).trim();
+    const occurredAtRaw = normalizeString(event?.occurred_at).trim();
+
+    return {
+        eventId: eventIdRaw ? eventIdRaw.slice(0, MAX_EVENT_ID_LENGTH) : null,
+        eventName: eventNameRaw ? eventNameRaw.slice(0, MAX_EVENT_NAME_LENGTH) : null,
+        reason,
+        sessionId: normalizeSessionId(meta),
+        source: normalizeSource(meta),
+        occurredAt: occurredAtRaw || null,
+        context: meta
+    };
+}
+
 function resolveSupabaseClient(): SupabaseClient | null {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     if (!supabaseUrl || !serviceRoleKey) return null;
     return createClient(supabaseUrl, serviceRoleKey);
+}
+
+async function readRequestBodyBytes(req: Request, maxBytes: number): Promise<{
+    ok: true;
+    bytes: Uint8Array;
+} | {
+    ok: false;
+    error: string;
+    status: number;
+    detail?: string;
+    maxRequestBodyBytes?: number;
+}> {
+    if (!req.body) {
+        return { ok: true, bytes: new Uint8Array() };
+    }
+
+    const reader = req.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (!value || value.byteLength === 0) continue;
+
+            total += value.byteLength;
+            if (total > maxBytes) {
+                try { await reader.cancel("request_body_too_large"); } catch (_error) { }
+                return {
+                    ok: false,
+                    error: "request_body_too_large",
+                    status: 413,
+                    maxRequestBodyBytes: maxBytes
+                };
+            }
+            chunks.push(value);
+        }
+    } catch (_error) {
+        return {
+            ok: false,
+            error: "invalid_body_stream",
+            status: 400
+        };
+    } finally {
+        try { reader.releaseLock(); } catch (_error) { }
+    }
+
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+    return { ok: true, bytes };
+}
+
+async function parseRequestJsonBody(req: Request): Promise<{
+    ok: true;
+    payload: { events?: IntelEventEnvelope[] };
+} | {
+    ok: false;
+    error: string;
+    status: number;
+    detail?: string;
+    maxRequestBodyBytes?: number;
+}> {
+    const contentType = normalizeString(req.headers.get("content-type")).toLowerCase();
+    if (contentType && !contentType.includes("application/json")) {
+        return {
+            ok: false,
+            error: "unsupported_media_type",
+            status: 415,
+            detail: "content-type must include application/json"
+        };
+    }
+
+    const bodyRead = await readRequestBodyBytes(req, MAX_REQUEST_BODY_BYTES);
+    if (!bodyRead.ok) {
+        return bodyRead;
+    }
+    if (bodyRead.bytes.byteLength > MAX_REQUEST_BODY_BYTES) {
+        return {
+            ok: false,
+            error: "request_body_too_large",
+            status: 413,
+            maxRequestBodyBytes: MAX_REQUEST_BODY_BYTES
+        };
+    }
+
+    const bodyText = UTF8_DECODER.decode(bodyRead.bytes);
+    let payload: { events?: IntelEventEnvelope[] } | null = null;
+    try {
+        payload = JSON.parse(bodyText);
+    } catch (_error) {
+        return {
+            ok: false,
+            error: "invalid_json",
+            status: 400
+        };
+    }
+    return { ok: true, payload: payload || {} };
 }
 
 async function persistAcceptedEvents(
@@ -299,6 +659,49 @@ async function persistAcceptedEvents(
     return { persistedCount, persistenceWarning: null };
 }
 
+async function persistRejectedEvents(
+    client: SupabaseClient | null,
+    rejectedEvents: Rejection[]
+): Promise<{ rejectedPersistedCount: number; rejectionPersistenceWarning: string | null }> {
+    if (!client) {
+        return { rejectedPersistedCount: 0, rejectionPersistenceWarning: "supabase_client_unavailable" };
+    }
+    if (Deno.env.get("INTEL_INGEST_PERSIST") !== "1") {
+        return { rejectedPersistedCount: 0, rejectionPersistenceWarning: "persistence_disabled" };
+    }
+    if (rejectedEvents.length === 0) {
+        return { rejectedPersistedCount: 0, rejectionPersistenceWarning: null };
+    }
+
+    const rows = rejectedEvents.map((rejection) => ({
+        event_id: rejection.eventId,
+        event_name: rejection.eventName,
+        occurred_at: rejection.occurredAt && Number.isFinite(Date.parse(rejection.occurredAt))
+            ? rejection.occurredAt
+            : null,
+        session_id: rejection.sessionId || "anonymous",
+        source: rejection.source || "unknown",
+        reason: rejection.reason,
+        context: rejection.context || {}
+    }));
+
+    const { error, count } = await client
+        .from("intel_event_rejections")
+        .insert(rows, { count: "exact" });
+
+    if (error) {
+        return {
+            rejectedPersistedCount: 0,
+            rejectionPersistenceWarning: `persist_rejections_failed:${error.message}`
+        };
+    }
+
+    return {
+        rejectedPersistedCount: Number.isFinite(Number(count)) ? Number(count) : rows.length,
+        rejectionPersistenceWarning: null
+    };
+}
+
 function authorizeRequest(req: Request, requiredApiKey: string): boolean {
     if (!requiredApiKey) return true;
 
@@ -315,6 +718,21 @@ serve(async (req: Request) => {
 
     if (req.method !== "POST") {
         return jsonResponse({ ok: false, error: "method_not_allowed" }, 405);
+    }
+
+    const contentLengthRaw = normalizeString(req.headers.get("content-length")).trim();
+    if (contentLengthRaw) {
+        const contentLength = Number(contentLengthRaw);
+        if (!Number.isFinite(contentLength) || contentLength < 0) {
+            return jsonResponse({ ok: false, error: "invalid_content_length" }, 400);
+        }
+        if (contentLength > MAX_REQUEST_BODY_BYTES) {
+            return jsonResponse({
+                ok: false,
+                error: "request_body_too_large",
+                maxRequestBodyBytes: MAX_REQUEST_BODY_BYTES
+            }, 413);
+        }
     }
 
     const persistEnabled = Deno.env.get("INTEL_INGEST_PERSIST") === "1";
@@ -339,13 +757,20 @@ serve(async (req: Request) => {
             detail: "Set INTEL_INGEST_SIGNING_SECRET in function secrets"
         }, 500);
     }
+    const sourceRateLimitRules = parseSourceRateLimitRules(
+        normalizeString(Deno.env.get(SOURCE_RATE_LIMITS_ENV_KEY)).trim()
+    );
 
-    let payload: { events?: IntelEventEnvelope[] } | null = null;
-    try {
-        payload = await req.json();
-    } catch (_error) {
-        return jsonResponse({ ok: false, error: "invalid_json" }, 400);
+    const parsedBody = await parseRequestJsonBody(req);
+    if (!parsedBody.ok) {
+        return jsonResponse({
+            ok: false,
+            error: parsedBody.error,
+            detail: parsedBody.detail,
+            maxRequestBodyBytes: parsedBody.maxRequestBodyBytes
+        }, parsedBody.status);
     }
+    const payload = parsedBody.payload;
 
     const incomingEvents = Array.isArray(payload?.events) ? payload.events : [];
     if (incomingEvents.length === 0) {
@@ -363,46 +788,54 @@ serve(async (req: Request) => {
     const rejectedEvents: Rejection[] = [];
 
     for (const event of incomingEvents) {
+        const envelopeShape = validateEnvelopeShape(event);
+        if (!envelopeShape.ok) {
+            rejectedEvents.push(buildRejection(event, envelopeShape.reason));
+            continue;
+        }
+
         const eventName = normalizeString(event?.event_name).trim();
         const eventId = normalizeString(event?.id).trim() || null;
         const occurredAt = normalizeString(event?.occurred_at).trim();
         const nonce = normalizeString(event?.nonce).trim();
-        const sessionId = normalizeSessionId(event?.meta);
+        const eventMeta = isRecordObject(event?.meta) ? event.meta : undefined;
+        const sessionId = normalizeSessionId(eventMeta);
+        const source = normalizeSource(eventMeta);
         const nowMs = Date.now();
         const occurredAtMs = parseOccurredAtMs(occurredAt);
 
         if (!eventName || !isCanonicalEvent(eventName)) {
-            rejectedEvents.push({ eventId, eventName: eventName || null, reason: "unknown_event" });
+            rejectedEvents.push(buildRejection(event, "unknown_event"));
             continue;
         }
         if (!occurredAtMs) {
-            rejectedEvents.push({ eventId, eventName, reason: "invalid_occurred_at" });
+            rejectedEvents.push(buildRejection(event, "invalid_occurred_at"));
             continue;
         }
         const eventAgeMs = nowMs - occurredAtMs;
         if (eventAgeMs > MAX_EVENT_AGE_MS || eventAgeMs < -MAX_FUTURE_SKEW_MS) {
-            rejectedEvents.push({ eventId, eventName, reason: "stale_or_future_event" });
+            rejectedEvents.push(buildRejection(event, "stale_or_future_event"));
             continue;
         }
         if (!validatePayloadSchema(eventName, event.payload)) {
-            rejectedEvents.push({ eventId, eventName, reason: "schema_validation_failed" });
+            rejectedEvents.push(buildRejection(event, "schema_validation_failed"));
             continue;
         }
-        if (!checkSessionRateLimit(sessionId, nowMs)) {
-            rejectedEvents.push({ eventId, eventName, reason: "rate_limit_exceeded" });
+        if (!checkSessionRateLimit(sessionId, source, nowMs, sourceRateLimitRules)) {
+            rejectedEvents.push(buildRejection(event, "rate_limit_exceeded"));
             continue;
         }
         if (!checkReplayNonce(sessionId, nonce, nowMs)) {
-            rejectedEvents.push({ eventId, eventName, reason: "replay_nonce_detected" });
+            rejectedEvents.push(buildRejection(event, "replay_nonce_detected"));
             continue;
         }
         if (!checkGeoPlausibility(sessionId, event.payload, occurredAtMs)) {
-            rejectedEvents.push({ eventId, eventName, reason: "geo_implausible" });
+            rejectedEvents.push(buildRejection(event, "geo_implausible"));
             continue;
         }
         const signatureOk = await verifyEnvelopeSignature(event, signingSecret);
         if (!signatureOk) {
-            rejectedEvents.push({ eventId, eventName, reason: "invalid_signature" });
+            rejectedEvents.push(buildRejection(event, "invalid_signature"));
             continue;
         }
 
@@ -411,6 +844,7 @@ serve(async (req: Request) => {
 
     const supabase = resolveSupabaseClient();
     const persistence = await persistAcceptedEvents(supabase, acceptedEvents);
+    const rejectionPersistence = await persistRejectedEvents(supabase, rejectedEvents);
     const status = rejectedEvents.length > 0 ? 202 : 200;
 
     return jsonResponse({
@@ -419,6 +853,8 @@ serve(async (req: Request) => {
         rejectedCount: rejectedEvents.length,
         persistedCount: persistence.persistedCount,
         persistenceWarning: persistence.persistenceWarning,
+        rejectedPersistedCount: rejectionPersistence.rejectedPersistedCount,
+        rejectionPersistenceWarning: rejectionPersistence.rejectionPersistenceWarning,
         rejected: rejectedEvents.slice(0, 50)
     }, status);
 });
