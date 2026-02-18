@@ -30,6 +30,17 @@ function parseBooleanFlag(flagName, fallback) {
     throw new Error(`${flagName} must be one of: true/false, 1/0, yes/no`);
 }
 
+function parseModeFlag(flagName, fallback) {
+    const value = findLastFlagValue(flagName);
+    if (value === undefined) return fallback;
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return fallback;
+    if (normalized !== 'open' && normalized !== 'resolve') {
+        throw new Error(`${flagName} must be "open" or "resolve"`);
+    }
+    return normalized;
+}
+
 function parseRepo(repoValue) {
     const normalized = String(repoValue || '').trim();
     const parts = normalized.split('/');
@@ -144,6 +155,30 @@ function buildIncidentBody({
     ].join('\n');
 }
 
+function buildResolutionComment({
+    repo,
+    workflowRef,
+    branch,
+    requiredJob,
+    slaMaxAgeHours,
+    slaOutcome
+}) {
+    const timestamp = new Date().toISOString();
+    return [
+        '### SLA Recovery Signal',
+        '',
+        `- Timestamp (UTC): ${timestamp}`,
+        `- Repository: ${repo}`,
+        `- Workflow: ${workflowRef}`,
+        `- Branch: ${branch}`,
+        `- Required Job: ${requiredJob}`,
+        `- SLA Threshold (hours): ${slaMaxAgeHours}`,
+        `- SLA Check Outcome: ${slaOutcome || 'success'}`,
+        '',
+        'Status: resolved automatically because SLA health is back within threshold.'
+    ].join('\n');
+}
+
 async function findOpenIssueByTitle(owner, repo, token, title) {
     const issues = await githubRequest(`/repos/${owner}/${repo}/issues?state=open&per_page=100`, token, 'GET');
     if (!Array.isArray(issues)) return null;
@@ -159,6 +194,7 @@ async function main() {
     const token = parseStringFlag('--token', resolveDefaultToken());
     const workflowRef = parseStringFlag('--workflow', 'smoke-defense.yml');
     const branch = parseStringFlag('--branch', 'main');
+    const mode = parseModeFlag('--mode', 'open');
     const requiredJob = parseStringFlag('--required-job', 'intel-verify-full');
     const slaMaxAgeHours = parseStringFlag('--sla-max-age-hours', '12');
     const slaOutcome = parseStringFlag('--sla-outcome', 'unknown');
@@ -176,7 +212,7 @@ async function main() {
     }
 
     const title = buildIncidentTitle(titlePrefix, workflowRef, branch);
-    const body = buildIncidentBody({
+    const incidentBody = buildIncidentBody({
         repo: `${owner}/${repo}`,
         workflowRef,
         branch,
@@ -190,13 +226,72 @@ async function main() {
         remediationRunUrl,
         remediationRunConclusion
     });
+    const resolutionComment = buildResolutionComment({
+        repo: `${owner}/${repo}`,
+        workflowRef,
+        branch,
+        requiredJob,
+        slaMaxAgeHours,
+        slaOutcome
+    });
 
     const existingIssue = await findOpenIssueByTitle(owner, repo, token, title);
+
+    if (mode === 'resolve') {
+        if (dryRun) {
+            console.log(JSON.stringify({
+                ok: true,
+                dryRun: true,
+                mode,
+                action: existingIssue ? 'would_close' : 'would_noop',
+                title,
+                existingIssue: existingIssue
+                    ? { number: existingIssue.number, url: existingIssue.html_url || null }
+                    : null
+            }, null, 2));
+            return;
+        }
+
+        if (!existingIssue) {
+            console.log(JSON.stringify({
+                ok: true,
+                mode,
+                action: 'no_open_issue',
+                title
+            }, null, 2));
+            return;
+        }
+
+        const commentPayload = { body: resolutionComment };
+        const createdComment = await githubRequest(
+            `/repos/${owner}/${repo}/issues/${existingIssue.number}/comments`,
+            token,
+            'POST',
+            commentPayload
+        );
+        const updatedIssue = await githubRequest(
+            `/repos/${owner}/${repo}/issues/${existingIssue.number}`,
+            token,
+            'PATCH',
+            { state: 'closed' }
+        );
+        console.log(JSON.stringify({
+            ok: true,
+            mode,
+            action: 'closed',
+            issueNumber: existingIssue.number,
+            issueUrl: updatedIssue?.html_url || existingIssue.html_url || null,
+            commentUrl: createdComment?.html_url || null,
+            title
+        }, null, 2));
+        return;
+    }
 
     if (dryRun) {
         console.log(JSON.stringify({
             ok: true,
             dryRun: true,
+            mode,
             action: existingIssue ? 'would_comment' : 'would_create',
             title,
             existingIssue: existingIssue
@@ -210,7 +305,7 @@ async function main() {
         const comment = [
             '### New SLA Failure Signal',
             '',
-            body
+            incidentBody
         ].join('\n');
         const commentPayload = { body: comment };
         const createdComment = await githubRequest(
@@ -221,6 +316,7 @@ async function main() {
         );
         console.log(JSON.stringify({
             ok: true,
+            mode,
             action: 'commented',
             issueNumber: existingIssue.number,
             issueUrl: existingIssue.html_url || null,
@@ -230,10 +326,11 @@ async function main() {
         return;
     }
 
-    const issuePayload = { title, body };
+    const issuePayload = { title, body: incidentBody };
     const createdIssue = await githubRequest(`/repos/${owner}/${repo}/issues`, token, 'POST', issuePayload);
     console.log(JSON.stringify({
         ok: true,
+        mode,
         action: 'created',
         issueNumber: createdIssue?.number || null,
         issueUrl: createdIssue?.html_url || null,

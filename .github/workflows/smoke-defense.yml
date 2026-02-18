@@ -99,6 +99,20 @@ jobs:
         continue-on-error: true
         run: npm run ops:intel:sla -- --max-age-hours "${SLA_MAX_AGE_HOURS}"
 
+      - name: Resolve SLA incident issue
+        if: ${{ steps.sla_check.outcome == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          node scripts/report-intel-sla-incident.cjs \
+            --mode resolve \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --required-job intel-verify-full \
+            --sla-max-age-hours "${SLA_MAX_AGE_HOURS}" \
+            --sla-outcome "${{ steps.sla_check.outcome }}"
+
       - name: Trigger full intel verify remediation
         id: remediation
         if: ${{ steps.sla_check.outcome == 'failure' }}
@@ -135,6 +149,7 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           node scripts/report-intel-sla-incident.cjs \
+            --mode open \
             --workflow smoke-defense.yml \
             --branch "${{ github.ref_name }}" \
             --required-job intel-verify-full \

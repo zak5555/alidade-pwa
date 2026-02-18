@@ -1241,6 +1241,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:sla:remediate script');
     assert(packageJson.includes('"ops:intel:sla:incident:dry"'),
         'package.json does not register ops:intel:sla:incident:dry script');
+    assert(packageJson.includes('"ops:intel:sla:incident:resolve:dry"'),
+        'package.json does not register ops:intel:sla:incident:resolve:dry script');
     assert(packageJson.includes('"ops:intel:ci"'),
         'package.json does not register ops:intel:ci script');
     assert(packageJson.includes('"ops:hooks:install"'),
@@ -1253,6 +1255,7 @@ function testIntelIngestOpsPresence() {
     const intelSlaScript = String(packageManifest?.scripts?.['ops:intel:sla'] || '');
     const intelSlaRemediationScript = String(packageManifest?.scripts?.['ops:intel:sla:remediate'] || '');
     const intelSlaIncidentDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:dry'] || '');
+    const intelSlaIncidentResolveDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:resolve:dry'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
     assert(quickVerifyScript.includes('--count 3'),
@@ -1269,8 +1272,14 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla:remediate does not configure cooldown window');
     assert(intelSlaIncidentDryScript.includes('report-intel-sla-incident.cjs'),
         'ops:intel:sla:incident:dry does not execute incident reporter script');
+    assert(intelSlaIncidentDryScript.includes('--mode open'),
+        'ops:intel:sla:incident:dry does not enforce open mode');
     assert(intelSlaIncidentDryScript.includes('--dry-run true'),
         'ops:intel:sla:incident:dry does not enforce dry-run mode');
+    assert(intelSlaIncidentResolveDryScript.includes('--mode resolve'),
+        'ops:intel:sla:incident:resolve:dry does not enforce resolve mode');
+    assert(intelSlaIncidentResolveDryScript.includes('--dry-run true'),
+        'ops:intel:sla:incident:resolve:dry does not enforce dry-run mode');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
         'ops:intel:health:strict does not enforce source-reason allowlist');
     assert(strictVerifyScript.includes('--allowed-reject-source-reasons'),
@@ -1322,6 +1331,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow watchdog lane does not resolve SLA max age input');
     assert(smokeWorkflow.includes('npm run ops:intel:sla -- --max-age-hours'),
         'smoke-defense workflow watchdog lane does not pass SLA max age override');
+    assert(smokeWorkflow.includes('Resolve SLA incident issue'),
+        'smoke-defense workflow watchdog lane does not define SLA incident resolve step');
+    assert(smokeWorkflow.includes('--mode resolve'),
+        'smoke-defense workflow SLA incident resolve step does not use resolve mode');
     assert(smokeWorkflow.includes('continue-on-error: true'),
         'smoke-defense workflow watchdog lane does not tolerate stale SLA check before remediation');
     assert(smokeWorkflow.includes('Trigger full intel verify remediation'),
@@ -1338,6 +1351,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow watchdog lane does not define SLA incident issue step');
     assert(smokeWorkflow.includes('report-intel-sla-incident.cjs'),
         'smoke-defense workflow watchdog lane does not call SLA incident reporter');
+    assert(smokeWorkflow.includes('--mode open'),
+        'smoke-defense workflow SLA incident open step does not use open mode');
     assert(smokeWorkflow.includes("steps.remediation.outputs.dispatched != 'true'"),
         'smoke-defense workflow SLA incident gate does not check remediation dispatch outcome');
     assert(smokeWorkflow.includes('branches:') && smokeWorkflow.includes('- main'),
@@ -1353,12 +1368,20 @@ function testIntelIngestOpsPresence() {
     const incidentScript = readText('scripts/report-intel-sla-incident.cjs');
     assert(incidentScript.includes('buildIncidentTitle'),
         'incident reporter script does not define incident title strategy');
+    assert(incidentScript.includes('parseModeFlag'),
+        'incident reporter script does not define incident mode parser');
+    assert(incidentScript.includes('--mode'),
+        'incident reporter script does not support mode argument');
     assert(incidentScript.includes('--dry-run'),
         'incident reporter script does not support dry-run guard');
     assert(incidentScript.includes('/issues?state=open'),
         'incident reporter script does not dedupe on open issue scan');
     assert(incidentScript.includes('/repos/${owner}/${repo}/issues'),
         'incident reporter script does not create incidents through issues API');
+    assert(incidentScript.includes("{ state: 'closed' }"),
+        'incident reporter script does not close open incident issues on resolve mode');
+    assert(incidentScript.includes('would_close'),
+        'incident reporter script does not expose resolve dry-run close outcome');
     assert(smokeWorkflow.includes('paths-ignore:'),
         'smoke-defense workflow does not define trigger path ignore optimization');
 
