@@ -1482,6 +1482,10 @@ function testIntelIngestOpsPresence() {
         'incident reporter script does not close open incident issues on resolve mode');
     assert(incidentScript.includes('would_close'),
         'incident reporter script does not expose resolve dry-run close outcome');
+    assert(healthScript.includes('findLastFlagValue'),
+        'health checker script does not support last-wins CLI flag parsing');
+    assert(verifyScript.includes('findLastFlagValue'),
+        'verify checker script does not support last-wins CLI flag parsing');
     assert(smokeWorkflow.includes('paths-ignore:'),
         'smoke-defense workflow does not define trigger path ignore optimization');
 

@@ -9,10 +9,20 @@ function getEnvValue(name) {
     return fallbackKey ? String(process.env[fallbackKey] || '').trim() : '';
 }
 
+function findLastFlagValue(flagName) {
+    let valueIndex = -1;
+    for (let index = 2; index < process.argv.length; index += 1) {
+        if (process.argv[index] === flagName) {
+            valueIndex = index + 1;
+        }
+    }
+    if (valueIndex === -1) return undefined;
+    return process.argv[valueIndex];
+}
+
 function parseIntegerFlag(flagName, fallback, min, max) {
-    const index = process.argv.indexOf(flagName);
-    if (index === -1) return fallback;
-    const raw = process.argv[index + 1];
+    const raw = findLastFlagValue(flagName);
+    if (raw === undefined) return fallback;
     const parsed = Number(raw);
     if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
         throw new Error(`${flagName} must be an integer in [${min}, ${max}]`);
@@ -21,9 +31,8 @@ function parseIntegerFlag(flagName, fallback, min, max) {
 }
 
 function parseNumberFlag(flagName, fallback, min, max) {
-    const index = process.argv.indexOf(flagName);
-    if (index === -1) return fallback;
-    const raw = process.argv[index + 1];
+    const raw = findLastFlagValue(flagName);
+    if (raw === undefined) return fallback;
     const parsed = Number(raw);
     if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
         throw new Error(`${flagName} must be a number in [${min}, ${max}]`);
@@ -32,9 +41,9 @@ function parseNumberFlag(flagName, fallback, min, max) {
 }
 
 function parseStringFlag(flagName, fallback) {
-    const index = process.argv.indexOf(flagName);
-    if (index === -1) return fallback;
-    return String(process.argv[index + 1] || '').trim() || fallback;
+    const value = findLastFlagValue(flagName);
+    if (value === undefined) return fallback;
+    return String(value || '').trim() || fallback;
 }
 
 function parseCsvFlag(flagName) {
