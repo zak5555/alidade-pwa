@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: smoke-defense
-    if: ${{ github.event_name != 'pull_request' && secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' && secrets.INTEL_INGEST_API_KEY != '' && secrets.INTEL_INGEST_SIGNING_SECRET != '' }}
+    if: ${{ github.event_name != 'pull_request' }}
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -45,17 +45,31 @@ jobs:
       INTEL_INGEST_SIGNING_SECRET: ${{ secrets.INTEL_INGEST_SIGNING_SECRET }}
 
     steps:
+      - name: Check required secrets
+        id: secrets_ready
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ] || [ -z "${INTEL_INGEST_API_KEY}" ] || [ -z "${INTEL_INGEST_SIGNING_SECRET}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "Missing one or more intel verify secrets. Skipping intel-verify job steps."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
 
       - name: Install dependencies
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         run: npm ci
 
       - name: Verify intel ingest pipeline
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         run: npm run ops:intel:verify -- --count 5 --window-minutes 60 --min-events 5 --max-delayed 25
