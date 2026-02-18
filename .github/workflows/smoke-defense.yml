@@ -2,7 +2,22 @@ name: Smoke Defense
 
 on:
   push:
+    branches:
+      - main
+    paths-ignore:
+      - '**/*.md'
+      - '.agent/**'
+      - '.codex/**'
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+    paths-ignore:
+      - '**/*.md'
+      - '.agent/**'
+      - '.codex/**'
   schedule:
     - cron: '17 */6 * * *'
   release:
