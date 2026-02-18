@@ -47,6 +47,52 @@ function parseCsvFlag(flagName) {
         .filter(Boolean);
 }
 
+function sourcePatternMatches(sourceName, sourcePattern) {
+    if (!sourcePattern) return false;
+    if (sourcePattern.endsWith('*')) {
+        return sourceName.startsWith(sourcePattern.slice(0, -1));
+    }
+    return sourceName === sourcePattern;
+}
+
+function parseAllowedRejectSourceReasonRules(flagName) {
+    const raw = parseStringFlag(flagName, '').trim();
+    if (!raw) return [];
+
+    return raw
+        .split(',')
+        .map((entryRaw) => String(entryRaw || '').trim())
+        .filter(Boolean)
+        .map((entry) => {
+            const separatorIndex = entry.indexOf(':');
+            if (separatorIndex <= 0 || separatorIndex >= entry.length - 1) {
+                throw new Error(`${flagName} entry "${entry}" must use sourcePattern:reason1|reason2`);
+            }
+
+            const sourcePattern = entry.slice(0, separatorIndex).trim();
+            const reasons = entry
+                .slice(separatorIndex + 1)
+                .split('|')
+                .map((value) => String(value || '').trim())
+                .filter(Boolean);
+
+            if (!sourcePattern) {
+                throw new Error(`${flagName} entry "${entry}" is missing sourcePattern`);
+            }
+            if (sourcePattern.includes('*') && !sourcePattern.endsWith('*')) {
+                throw new Error(`${flagName} sourcePattern "${sourcePattern}" only supports wildcard suffix "*"`);
+            }
+            if (reasons.length === 0) {
+                throw new Error(`${flagName} entry "${entry}" must include at least one reason`);
+            }
+
+            return {
+                sourcePattern,
+                reasons: Array.from(new Set(reasons))
+            };
+        });
+}
+
 function normalizeSupabaseUrl(rawUrl) {
     const normalized = String(rawUrl || '').trim();
     if (!normalized) return '';
@@ -267,6 +313,23 @@ function buildHealthChecks(metrics, minEvents, maxDelayed) {
             .map((value) => String(value || '').trim())
             .filter(Boolean)
         : [];
+    const allowedRejectSourceReasonRules = Array.isArray(metrics.__allowedRejectSourceReasonRules)
+        ? metrics.__allowedRejectSourceReasonRules
+            .map((rule) => {
+                const sourcePattern = String(rule && rule.sourcePattern ? rule.sourcePattern : '').trim();
+                const reasons = Array.isArray(rule && rule.reasons)
+                    ? rule.reasons
+                        .map((value) => String(value || '').trim())
+                        .filter(Boolean)
+                    : [];
+                if (!sourcePattern || reasons.length === 0) return null;
+                return {
+                    sourcePattern,
+                    reasons: Array.from(new Set(reasons))
+                };
+            })
+            .filter(Boolean)
+        : [];
     const requireSource = String(metrics.__requireSource || '').trim();
     const minSourceEvents = Number(metrics.__minSourceEventsThreshold || 0);
     const rejectSource = String(metrics.__rejectSource || '').trim();
@@ -281,6 +344,9 @@ function buildHealthChecks(metrics, minEvents, maxDelayed) {
     const rejectedByReason = metrics.rejectedByReason && typeof metrics.rejectedByReason === 'object'
         ? metrics.rejectedByReason
         : {};
+    const rejectedBySourceReason = metrics.rejectedBySourceReason && typeof metrics.rejectedBySourceReason === 'object'
+        ? metrics.rejectedBySourceReason
+        : {};
     const rejectedSourceKeys = Object.keys(rejectedBySource);
     const rejectedReasonKeys = Object.keys(rejectedByReason);
     const allowedRejectReasonsSet = new Set(allowedRejectReasons);
@@ -293,6 +359,26 @@ function buildHealthChecks(metrics, minEvents, maxDelayed) {
             const allowedByName = allowedRejectSourcesSet.has(sourceName);
             const allowedByPrefix = allowedRejectSourcePrefixes.some((prefix) => sourceName.startsWith(prefix));
             return !allowedByName && !allowedByPrefix;
+        })
+        : [];
+    const observedRejectSourceReasonPairs = Object.entries(rejectedBySourceReason)
+        .flatMap(([sourceName, reasonsBucket]) => {
+            if (!reasonsBucket || typeof reasonsBucket !== 'object') return [];
+            return Object.keys(reasonsBucket).map((reason) => ({ sourceName, reason }));
+        })
+        .sort((left, right) => {
+            if (left.sourceName === right.sourceName) {
+                return left.reason.localeCompare(right.reason);
+            }
+            return left.sourceName.localeCompare(right.sourceName);
+        });
+    const unexpectedRejectSourceReasonPairs = allowedRejectSourceReasonRules.length > 0
+        ? observedRejectSourceReasonPairs.filter(({ sourceName, reason }) => {
+            return !allowedRejectSourceReasonRules.some((rule) => {
+                const sourceMatches = sourcePatternMatches(sourceName, rule.sourcePattern);
+                const reasonMatches = rule.reasons.includes(reason);
+                return sourceMatches && reasonMatches;
+            });
         })
         : [];
     const sourceEventCount = requireSource ? Number(eventsBySource[requireSource] || 0) : null;
@@ -417,6 +503,19 @@ function buildHealthChecks(metrics, minEvents, maxDelayed) {
             ok: (allowedRejectSources.length > 0 || allowedRejectSourcePrefixes.length > 0)
                 ? unexpectedRejectSources.length === 0
                 : true
+        },
+        {
+            id: 'allowed_reject_source_reasons',
+            required: allowedRejectSourceReasonRules.length > 0
+                ? allowedRejectSourceReasonRules
+                    .map((rule) => `${rule.sourcePattern}:${rule.reasons.join('|')}`)
+                    .join(', ')
+                : 'not_required',
+            value: observedRejectSourceReasonPairs.map(({ sourceName, reason }) => `${sourceName}:${reason}`),
+            unexpected: unexpectedRejectSourceReasonPairs.map(({ sourceName, reason }) => `${sourceName}:${reason}`),
+            ok: allowedRejectSourceReasonRules.length > 0
+                ? unexpectedRejectSourceReasonPairs.length === 0
+                : true
         }
     ];
 }
@@ -441,6 +540,7 @@ async function runHealth(options) {
         allowedRejectReasons,
         allowedRejectSources,
         allowedRejectSourcePrefixes,
+        allowedRejectSourceReasonRules,
         rejectSource,
         minRejectSourceEvents,
         maxRejectSourceEvents
@@ -476,6 +576,7 @@ async function runHealth(options) {
         __allowedRejectReasons: allowedRejectReasons,
         __allowedRejectSources: allowedRejectSources,
         __allowedRejectSourcePrefixes: allowedRejectSourcePrefixes,
+        __allowedRejectSourceReasonRules: allowedRejectSourceReasonRules,
         __rejectSource: rejectSource,
         __minRejectSourceEventsThreshold: minRejectSourceEvents,
         __maxRejectSourceEventsThreshold: maxRejectSourceEvents
@@ -522,6 +623,7 @@ async function main() {
     const allowedRejectReasons = parseCsvFlag('--allowed-reject-reasons');
     const allowedRejectSources = parseCsvFlag('--allowed-reject-sources');
     const allowedRejectSourcePrefixes = parseCsvFlag('--allowed-reject-source-prefixes');
+    const allowedRejectSourceReasonRules = parseAllowedRejectSourceReasonRules('--allowed-reject-source-reasons');
     const requirePersistence = parseIntegerFlag('--require-persistence', 1, 0, 1) === 1;
     const rejectionProbeCount = parseIntegerFlag('--rejection-probe-count', 0, 0, 200);
     const rejectionProbeSource = parseStringFlag('--rejection-probe-source', 'ops_verify_reject_probe').trim();
@@ -607,6 +709,7 @@ async function main() {
         allowedRejectReasons,
         allowedRejectSources,
         allowedRejectSourcePrefixes,
+        allowedRejectSourceReasonRules,
         rejectSource,
         minRejectSourceEvents,
         maxRejectSourceEvents

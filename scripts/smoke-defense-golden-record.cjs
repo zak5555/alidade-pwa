@@ -1157,6 +1157,8 @@ function testIntelIngestOpsPresence() {
         'intel ingest health script does not support --allowed-reject-sources flag');
     assert(healthScript.includes('--allowed-reject-source-prefixes'),
         'intel ingest health script does not support --allowed-reject-source-prefixes flag');
+    assert(healthScript.includes('--allowed-reject-source-reasons'),
+        'intel ingest health script does not support --allowed-reject-source-reasons flag');
     assert(healthScript.includes('--reject-source'),
         'intel ingest health script does not support --reject-source flag');
     assert(healthScript.includes('--min-reject-source-events'),
@@ -1193,6 +1195,8 @@ function testIntelIngestOpsPresence() {
         'intel ingest verify script does not support --allowed-reject-sources flag');
     assert(verifyScript.includes('--allowed-reject-source-prefixes'),
         'intel ingest verify script does not support --allowed-reject-source-prefixes flag');
+    assert(verifyScript.includes('--allowed-reject-source-reasons'),
+        'intel ingest verify script does not support --allowed-reject-source-reasons flag');
     assert(verifyScript.includes('--reject-source'),
         'intel ingest verify script does not support --reject-source flag');
     assert(verifyScript.includes('--min-reject-source-events'),
@@ -1247,6 +1251,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow intel verify does not enforce allowed reject sources gate');
     assert(smokeWorkflow.includes('--allowed-reject-source-prefixes'),
         'smoke-defense workflow intel verify does not enforce allowed reject source prefixes gate');
+    assert(smokeWorkflow.includes('--allowed-reject-source-reasons'),
+        'smoke-defense workflow intel verify does not enforce allowed reject source-reason gate');
     assert(smokeWorkflow.includes('--require-persistence'),
         'smoke-defense workflow intel verify does not enforce persistence requirement');
 
