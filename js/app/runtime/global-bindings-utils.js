@@ -45,7 +45,9 @@
                     if (i18n) {
                         await i18n.setLanguage(lang);
                         closeSettingsOverlay();
-                        renderApp();
+                        if (target.__ALIDADE_SMOOTH_LANGUAGE_RUNTIME__ !== true) {
+                            renderApp();
+                        }
                     }
                 }
             };

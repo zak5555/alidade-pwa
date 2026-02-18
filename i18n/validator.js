@@ -12,10 +12,14 @@
 const fs = require('fs');
 const path = require('path');
 
+const print = (message = '') => {
+    process.stdout.write(`${message}\n`);
+};
+
 function validate() {
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('  ALIDADE i18n TRANSLATION VALIDATION');
-    console.log('═══════════════════════════════════════════════════════════════\n');
+    print('═══════════════════════════════════════════════════════════════');
+    print('  ALIDADE i18n TRANSLATION VALIDATION');
+    print('═══════════════════════════════════════════════════════════════\n');
 
     try {
         // Read and parse translation files (convert ESM to CJS-compatible)
@@ -78,11 +82,11 @@ function validate() {
         };
 
         // Report
-        console.log('📊 TRANSLATION COUNTS:');
-        console.log(`   English (master):  ${enKeys.length} keys`);
-        console.log(`   French:            ${frKeys.length} keys (${Math.round(frKeys.length / enKeys.length * 100)}%)`);
-        console.log(`   Spanish:           ${esKeys.length} keys (${Math.round(esKeys.length / enKeys.length * 100)}%)`);
-        console.log('');
+        print('📊 TRANSLATION COUNTS:');
+        print(`   English (master):  ${enKeys.length} keys`);
+        print(`   French:            ${frKeys.length} keys (${Math.round(frKeys.length / enKeys.length * 100)}%)`);
+        print(`   Spanish:           ${esKeys.length} keys (${Math.round(esKeys.length / enKeys.length * 100)}%)`);
+        print('');
 
         let hasErrors = false;
         let hasWarnings = false;
@@ -92,14 +96,14 @@ function validate() {
             hasErrors = true;
             console.error('❌ FRENCH MISSING KEYS:');
             missing.fr.forEach(k => console.error(`   - ${k}`));
-            console.log('');
+            print('');
         }
 
         if (missing.es.length > 0) {
             hasErrors = true;
             console.error('❌ SPANISH MISSING KEYS:');
             missing.es.forEach(k => console.error(`   - ${k}`));
-            console.log('');
+            print('');
         }
 
         // Extra keys (WARNINGS)
@@ -107,14 +111,14 @@ function validate() {
             hasWarnings = true;
             console.warn('⚠️  FRENCH EXTRA KEYS (not in English):');
             extra.fr.forEach(k => console.warn(`   - ${k}`));
-            console.log('');
+            print('');
         }
 
         if (extra.es.length > 0) {
             hasWarnings = true;
             console.warn('⚠️  SPANISH EXTRA KEYS (not in English):');
             extra.es.forEach(k => console.warn(`   - ${k}`));
-            console.log('');
+            print('');
         }
 
         // Check for empty strings
@@ -140,33 +144,33 @@ function validate() {
             hasWarnings = true;
             console.warn('⚠️  FRENCH EMPTY VALUES:');
             emptyFr.forEach(k => console.warn(`   - ${k}`));
-            console.log('');
+            print('');
         }
 
         if (emptyEs.length > 0) {
             hasWarnings = true;
             console.warn('⚠️  SPANISH EMPTY VALUES:');
             emptyEs.forEach(k => console.warn(`   - ${k}`));
-            console.log('');
+            print('');
         }
 
         // Summary
-        console.log('═══════════════════════════════════════════════════════════════');
+        print('═══════════════════════════════════════════════════════════════');
 
         if (hasErrors) {
             console.error('❌ VALIDATION FAILED');
             console.error('   Fix missing translations before deploy!');
-            console.log('═══════════════════════════════════════════════════════════════');
+            print('═══════════════════════════════════════════════════════════════');
             process.exit(1);
         } else if (hasWarnings) {
             console.warn('⚠️  VALIDATION PASSED WITH WARNINGS');
             console.warn('   Review extra/empty keys when possible.');
-            console.log('═══════════════════════════════════════════════════════════════');
+            print('═══════════════════════════════════════════════════════════════');
             process.exit(0);
         } else {
-            console.log('✅ VALIDATION PASSED');
-            console.log('   All translations complete and aligned!');
-            console.log('═══════════════════════════════════════════════════════════════');
+            print('✅ VALIDATION PASSED');
+            print('   All translations complete and aligned!');
+            print('═══════════════════════════════════════════════════════════════');
             process.exit(0);
         }
 
@@ -179,3 +183,4 @@ function validate() {
 
 // Run validation
 validate();
+

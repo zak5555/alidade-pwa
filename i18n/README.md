@@ -62,7 +62,7 @@ const langs = i18n.getAvailableLanguages();
 
 ```javascript
 window.addEventListener('languagechange', (e) => {
-    console.log('Language changed to:', e.detail.lang);
+    console.info('Language changed to:', e.detail.lang);
     renderApp(); // Re-render your UI
 });
 ```

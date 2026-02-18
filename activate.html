@@ -378,7 +378,7 @@
                     <label class="text-xs uppercase tracking-wider text-zinc-500 font-mono">License Key</label>
                     <input type="text" id="license_key" required
                         class="machined-input w-full px-3 text-center text-base tracking-widest uppercase placeholder-zinc-700"
-                        placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="19">
+                        placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="64">
                     <p class="text-xs text-zinc-600 font-mono">Found in your Gumroad purchase confirmation email</p>
                 </div>
 
@@ -441,7 +441,7 @@
 
     <!-- Activation Logic -->
     <script type="module">
-        import { LicenseManager } from './js/license-manager.js';
+        import { LicenseManager } from './js/license-manager.js?v=20260216j';
 
         const SUPABASE_URL = 'https://tynugwtetlclqowlguai.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5bnVnd3RldGxjbHFvd2xndWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2ODgwNDQsImV4cCI6MjA4NjI2NDA0NH0.I2QFBzVVMJDzrFbJnPSdqV4dQK-SEKEx7IprdE-vmD0';
@@ -467,6 +467,8 @@
         let licenseMgr = null;
         let authRedirectQueued = false;
         let isHandlingSession = false;
+        let isActivationInFlight = false;
+        let isGoogleSignInInFlight = false;
 
         function showMessage(text, type = 'error') {
             if (!msgBox) return;
@@ -514,9 +516,12 @@
         }
 
         function formatLicenseKey(raw) {
-            const cleaned = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
-            const chunks = cleaned.match(/.{1,4}/g) || [];
-            return chunks.join('-');
+            return String(raw || '')
+                .toUpperCase()
+                .replace(/[^A-Z0-9-]/g, '')
+                .replace(/-{2,}/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 64);
         }
 
         function normalizeEmail(value) {
@@ -534,6 +539,44 @@
                 hash.includes('type=magiclink') ||
                 hash.includes('type=recovery')
             );
+        }
+
+        function isTransientAuthError(error) {
+            const message = String(error?.message || error || '').toLowerCase();
+            return (
+                message.includes('abort') ||
+                message.includes('timed out') ||
+                message.includes('timeout') ||
+                message.includes('failed to fetch') ||
+                message.includes('network')
+            );
+        }
+
+        async function getSessionSafe(manager, maxAttempts = 3) {
+            if (!manager?.supabase?.auth?.getSession) {
+                return { session: null, error: new Error('Supabase auth client unavailable') };
+            }
+
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+                try {
+                    const { data, error } = await manager.supabase.auth.getSession();
+                    if (!error) return { session: data?.session || null, error: null };
+
+                    if (attempt < maxAttempts && isTransientAuthError(error)) {
+                        await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+                        continue;
+                    }
+                    return { session: null, error };
+                } catch (error) {
+                    if (attempt < maxAttempts && isTransientAuthError(error)) {
+                        await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+                        continue;
+                    }
+                    return { session: null, error };
+                }
+            }
+
+            return { session: null, error: null };
         }
 
         function revealSuccess(email) {
@@ -556,7 +599,7 @@
 
             try {
                 await licenseMgr.finalizePendingActivation?.({ silent: true });
-                await licenseMgr.syncLicenseByEmail?.({ silent: true, force: true });
+                const syncResult = await licenseMgr.syncLicenseByEmail?.({ silent: true, force: true });
 
                 const tier = String(licenseMgr.getCurrentTier?.() || 'basic').toLowerCase();
                 if (tier === 'ultimate') {
@@ -566,13 +609,13 @@
                     return;
                 }
 
-                if (source !== 'initial_session') {
-                    showMessage('Signed in. Redirecting to dashboard...', 'success');
-                    queueRedirect(700);
+                const signedInEmail = session.user.email || 'your account';
+                if (syncResult?.sourceFound === false) {
+                    showMessage(`Signed in as ${signedInEmail}. No matching purchase was found for this email yet. Enter your license key to link Ultimate.`, 'success');
                     return;
                 }
 
-                showMessage(`Signed in as ${session.user.email}. Enter your license key to activate Ultimate.`, 'success');
+                showMessage(`Signed in as ${signedInEmail}. Enter your license key to activate Ultimate.`, 'success');
             } catch (error) {
                 console.error('[ACTIVATE] Session handling failed:', error);
                 showMessage('Signed in, but license sync failed. Try again.', 'error');
@@ -597,6 +640,7 @@
 
         async function onActivateSubmit(event) {
             event.preventDefault();
+            if (isActivationInFlight) return;
             hideMessage();
             if (!licenseMgr?.activateLicense) {
                 showMessage('Activation system is unavailable.', 'error');
@@ -617,19 +661,35 @@
                 return;
             }
 
+            isActivationInFlight = true;
             setActivationLoading(true);
             try {
-                const result = await licenseMgr.activateLicense(key, email);
+                const timeoutMs = 12000;
+                const activationPromise = licenseMgr.activateLicense(key, email);
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => {
+                        reject(new Error('Activation request timed out. Please retry.'));
+                    }, timeoutMs);
+                });
+                const result = await Promise.race([activationPromise, timeoutPromise]);
                 if (!result?.success) {
                     showMessage(result?.error || 'Activation failed. Check your key and email.', 'error');
                     return;
                 }
+
+                if (result.requiresMagicLink === false) {
+                    showMessage('License activated successfully. Redirecting to dashboard...', 'success');
+                    queueRedirect(1200);
+                    return;
+                }
+
                 revealSuccess(email);
                 showMessage('Magic link sent. Check your inbox now.', 'success');
             } catch (error) {
                 showMessage(error?.message || 'Activation failed. Try again.', 'error');
             } finally {
                 setActivationLoading(false);
+                isActivationInFlight = false;
             }
         }
 
@@ -642,17 +702,40 @@
 
         async function onGoogleSignIn() {
             hideMessage();
+            if (isGoogleSignInInFlight) return;
             if (!licenseMgr?.signInWithGoogle) {
                 showMessage('Google sign-in is unavailable.', 'error');
                 return;
             }
+            isGoogleSignInInFlight = true;
             setAuthButtonsLoading(true, 'auth-google-btn');
-            const result = await licenseMgr.signInWithGoogle({
-                redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`
-            });
-            if (!result?.success) {
+            try {
+                const timeoutMs = 12000;
+                const signInPromise = licenseMgr.signInWithGoogle({
+                    redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`
+                });
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => {
+                        reject(new Error('Google sign-in timed out. Please retry.'));
+                    }, timeoutMs);
+                });
+                const result = await Promise.race([signInPromise, timeoutPromise]);
+                if (!result?.success) {
+                    showMessage(result?.error || 'Google sign-in failed.', 'error');
+                    return;
+                }
+
+                const oauthUrl = typeof result?.data?.url === 'string' ? result.data.url : '';
+                if (oauthUrl) {
+                    window.location.assign(oauthUrl);
+                    return;
+                }
+                showMessage('Google sign-in started. If redirect does not open, retry.', 'success');
+            } catch (error) {
+                showMessage(error?.message || 'Google sign-in failed.', 'error');
+            } finally {
                 setAuthButtonsLoading(false);
-                showMessage(result?.error || 'Google sign-in failed.', 'error');
+                isGoogleSignInInFlight = false;
             }
         }
 
@@ -743,7 +826,11 @@
 
             try {
                 licenseMgr = new LicenseManager(SUPABASE_URL, SUPABASE_ANON_KEY);
-                await licenseMgr.init();
+                try {
+                    await licenseMgr.init();
+                } catch (initError) {
+                    console.warn('[ACTIVATE] licenseMgr.init degraded:', initError);
+                }
                 if (!licenseMgr?.supabase?.auth) {
                     throw new Error('Supabase auth client unavailable');
                 }
@@ -751,14 +838,18 @@
                 setAuthButtonsEnabled(true);
                 await syncGoogleProviderState();
 
-                const { data } = await licenseMgr.supabase.auth.getSession();
-                if (data?.session?.user) {
+                const { session, error: sessionError } = await getSessionSafe(licenseMgr);
+                if (sessionError) {
+                    console.warn('[ACTIVATE] getSession degraded:', sessionError);
+                }
+
+                if (session?.user) {
                     const hasPending = Boolean(licenseMgr.hasPendingActivation?.());
                     const currentTier = String(licenseMgr.getCurrentTier?.() || 'basic').toLowerCase();
                     if (hasAuthCallbackSignals() || hasPending || currentTier === 'ultimate') {
-                        await handleAuthenticatedSession(data.session, 'initial_session');
+                        await handleAuthenticatedSession(session, 'initial_session');
                     } else {
-                        showMessage(`Signed in as ${data.session.user.email}. Enter your license key to activate Ultimate.`, 'success');
+                        showMessage(`Signed in as ${session.user.email}. Enter your license key to activate Ultimate.`, 'success');
                     }
                 }
 
@@ -769,7 +860,8 @@
                 });
             } catch (error) {
                 console.error('[ACTIVATE] Init failed:', error);
-                showMessage('System Error: Could not connect to server. Refresh and retry.', 'error');
+                setAuthButtonsEnabled(true);
+                showMessage('Connection is unstable. You can still sign in and retry activation.', 'error');
             }
         }
 

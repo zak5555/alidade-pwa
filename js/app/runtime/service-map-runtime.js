@@ -23,6 +23,15 @@ if ('serviceWorker' in navigator) {
         });
     } else {
         window.addEventListener('load', () => {
+            const host = String(window.location?.hostname || '').toLowerCase();
+            if (host === '127.0.0.1' || host === 'localhost') {
+                navigator.serviceWorker.getRegistrations()
+                    .then((registrations) => Promise.all(registrations.map((reg) => reg.unregister())))
+                    .then(() => serviceMapDebugLog('[SW] Dev host: unregistered workers'))
+                    .catch((err) => console.error('[SW] Dev unregister failed:', err));
+                return;
+            }
+
             navigator.serviceWorker.register('./sw.js').then(registration => {
                 serviceMapDebugLog('[SW] Registered');
 

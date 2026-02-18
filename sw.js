@@ -1,5 +1,5 @@
 /**
- * ALIDADE Service Worker v2.14
+ * ALIDADE Service Worker v2.17
  * Enhanced with:
  * - Cache-first strategy for app shell
  * - Proper offline support
@@ -9,7 +9,15 @@
  * - Multi-language i18n support (EN / FR / ES)
  */
 
-const CACHE_NAME = 'alidade-tactical-v2.14';
+const CACHE_NAME = 'alidade-tactical-v2.17';
+const SW_HOSTNAME = (() => {
+    try {
+        return new URL(self.location.href).hostname.toLowerCase();
+    } catch (_error) {
+        return '';
+    }
+})();
+const IS_LOCAL_DEV_SW = SW_HOSTNAME === '127.0.0.1' || SW_HOSTNAME === 'localhost';
 const APP_SHELL = [
     './',
     './index.html',
@@ -36,7 +44,11 @@ const OPTIONAL_ASSETS = [];
 // INSTALL - Aggressive caching of app shell
 // ===================================================================
 self.addEventListener('install', (event) => {
-    console.log('[SW] Installing v2.14...');
+    if (IS_LOCAL_DEV_SW) {
+        event.waitUntil(self.skipWaiting());
+        return;
+    }
+    console.log('[SW] Installing v2.17...');
 
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -64,7 +76,11 @@ self.addEventListener('install', (event) => {
 // ACTIVATE - Clean up old caches
 // ===================================================================
 self.addEventListener('activate', (event) => {
-    console.log('[SW] Activating v2.14...');
+    if (IS_LOCAL_DEV_SW) {
+        event.waitUntil(self.clients.claim());
+        return;
+    }
+    console.log('[SW] Activating v2.17...');
 
     event.waitUntil(
         caches.keys().then((keyList) => {
@@ -89,12 +105,18 @@ self.addEventListener('activate', (event) => {
 // FETCH - Cache-First with Network Fallback
 // ===================================================================
 self.addEventListener('fetch', (event) => {
+    if (IS_LOCAL_DEV_SW) {
+        return;
+    }
     const { request } = event;
     const url = new URL(request.url);
 
+    if (request.method !== 'GET') {
+        return;
+    }
+
     // Skip cross-origin requests (CDNs, external resources)
     if (url.origin !== location.origin) {
-        console.log('[SW] Skipping cross-origin:', url.href);
         return;
     }
 
@@ -103,19 +125,59 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    const isRuntimeCritical =
+        request.mode === 'navigate' ||
+        request.destination === 'script' ||
+        request.destination === 'style' ||
+        request.destination === 'worker' ||
+        /\.((m)?js|css|html)$/i.test(url.pathname);
+    const freshRequest = new Request(request, { cache: 'no-store' });
+
+    if (isRuntimeCritical) {
+        event.respondWith(
+            fetch(freshRequest).then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseToCache = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => {
+                        return cache.put(request, responseToCache);
+                    }).then(() => {
+                        console.log('[SW] Network refreshed:', request.url);
+                    }).catch((cacheError) => {
+                        console.warn('[SW] Failed to refresh cache entry:', request.url, cacheError);
+                    });
+                }
+                return networkResponse;
+            }).catch(async (error) => {
+                console.warn('[SW] Network failed, trying cache for critical asset:', request.url);
+                const cached = await caches.match(request);
+                if (cached) return cached;
+                if (request.destination === 'document') {
+                    const offlineShell = await caches.match('./index.html');
+                    if (offlineShell) return offlineShell;
+                }
+                throw error;
+            })
+        );
+        return;
+    }
+
     event.respondWith(
-        // CACHE-FIRST STRATEGY
+        // CACHE-FIRST STRATEGY for static assets
         caches.match(request).then((cachedResponse) => {
             if (cachedResponse) {
                 console.log('[SW] Cache HIT:', request.url);
 
                 // Return cached response immediately
                 // But also update cache in background
-                fetch(request).then((networkResponse) => {
+                fetch(freshRequest).then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
+                        const responseToCache = networkResponse.clone();
                         caches.open(CACHE_NAME).then((cache) => {
-                            cache.put(request, networkResponse.clone());
+                            return cache.put(request, responseToCache);
+                        }).then(() => {
                             console.log('[SW] Updated cache:', request.url);
+                        }).catch((cacheError) => {
+                            console.warn('[SW] Failed to update cache entry:', request.url, cacheError);
                         });
                     }
                 }).catch(() => {
@@ -128,7 +190,7 @@ self.addEventListener('fetch', (event) => {
 
             // CACHE MISS - Try network
             console.log('[SW] Cache MISS, fetching:', request.url);
-            return fetch(request).then((networkResponse) => {
+            return fetch(freshRequest).then((networkResponse) => {
                 // Cache successful responses
                 if (networkResponse && networkResponse.status === 200) {
                     const responseToCache = networkResponse.clone();
@@ -156,10 +218,15 @@ self.addEventListener('fetch', (event) => {
 // MESSAGE - Handle update notifications
 // ===================================================================
 self.addEventListener('message', (event) => {
+    if (IS_LOCAL_DEV_SW) {
+        return;
+    }
     if (event.data && event.data.type === 'SKIP_WAITING') {
         console.log('[SW] Skip waiting requested');
         self.skipWaiting();
     }
 });
 
-console.log('[SW] Service Worker script loaded');
+if (!IS_LOCAL_DEV_SW) {
+    console.log('[SW] Service Worker script loaded');
+}

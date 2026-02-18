@@ -387,6 +387,31 @@ function renderApp() {
     if (window.refreshEmergencySOSWidget) {
         window.refreshEmergencySOSWidget();
     }
+
+    const hasRealI18n = Boolean(
+        window.i18n &&
+        window.i18n.__ALIDADE_FALLBACK__ !== true &&
+        typeof window.i18n.t === 'function'
+    );
+    window.__ALIDADE_APP_RENDERED_WITH_REAL_I18N__ = hasRealI18n;
+    window.__ALIDADE_APP_RENDERED__ = true;
+    window.__ALIDADE_APP_LAST_RENDER_VIEW__ = currentView;
+    window.__ALIDADE_APP_LAST_RENDER_AT = Date.now();
+
+    if (!window.__ALIDADE_READY_REQUESTED__ && typeof window.__ALIDADE_MARK_READY__ === 'function') {
+        window.__ALIDADE_READY_REQUESTED__ = true;
+        const settleAuth = window.__ALIDADE_LICENSE_INIT_PROMISE__;
+        if (settleAuth && typeof settleAuth.then === 'function') {
+            Promise.race([
+                settleAuth.catch(() => { }),
+                new Promise((resolve) => setTimeout(resolve, 300))
+            ]).finally(() => {
+                window.__ALIDADE_MARK_READY__();
+            });
+        } else {
+            window.__ALIDADE_MARK_READY__();
+        }
+    }
 }
 
 function triggerEmergencySOSFromUI() {

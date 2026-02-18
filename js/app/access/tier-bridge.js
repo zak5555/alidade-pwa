@@ -81,6 +81,8 @@
                 : windowObj.USER_TIER;
 
             plan = normalize(plan);
+            const previousTier = normalize(windowObj.USER_TIER || 'BASIC');
+            const shouldRender = previousTier !== plan || windowObj.__ALIDADE_LAST_PLAN_RENDERED__ !== plan;
 
             if (typeof adapter.setCurrentUserPlan === 'function') {
                 adapter.setCurrentUserPlan(plan);
@@ -101,8 +103,9 @@
 
             debugLog(`[ALIDADE] Updating UI for plan: ${plan}`);
 
-            if (typeof adapter.renderApp === 'function') {
+            if (shouldRender && typeof adapter.renderApp === 'function') {
                 adapter.renderApp();
+                windowObj.__ALIDADE_LAST_PLAN_RENDERED__ = plan;
             }
 
             return plan;

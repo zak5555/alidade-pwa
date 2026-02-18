@@ -1121,6 +1121,24 @@
   - `js/app/negotiation/negotiation-legacy-runtime.js` (audio fallback info trace now debug-gated)
   - Validation: `node --check` passed for both files.
   - Noise snapshot: non-helper `console.log` occurrences in `js/app` + `i18n` reduced to `22` (20 are in `i18n/validator.js` CLI output, 1 in docs sample, 1 debug-gated fallback line).
+
+- Batch 232 cleanup (final residual `console.log` removal):
+  - `js/app/runtime/foundation-runtime.js` (fallback info line now uses `foundationDebugLog`, removing direct `console.log`)
+  - `i18n/validator.js` (CLI output switched from `console.log` to `print()` via `process.stdout.write` to preserve terminal behavior)
+  - `i18n/README.md` (example snippet uses `console.info` instead of `console.log`)
+  - Validation: `node --check` passed for `foundation-runtime.js` and `i18n/validator.js`.
+  - Residual snapshot: non-helper `console.log` occurrences in `js/app` + `i18n` = `0`.
+
+- Batch 233 fix (activation key acceptance + format handling):
+  - `js/license-manager.js` (`verifyLicense` now accepts non-prefixed valid key shapes like `XXXX-XXXX-XXXX-XXXX` and no longer hard-rejects keys only because they lack `BASIC-/ULTI-` prefix)
+  - `js/license-manager.js` (when RPC verification is unavailable, fallback accepts prefix-key hints only; unknown key formats now return retriable verification error instead of silently defaulting to BASIC)
+  - `activate.html` (`license_key` input max length increased to `64`; key normalization no longer force-reformats to strict 16-char chunks, preventing truncation/mangling of legitimate keys)
+  - Expected outcome: returning/purchased users can submit real license keys without immediate client-side “Invalid key format” rejection.
+
+- Batch 234 fix (activation UX for returning users):
+  - `activate.html` (`handleAuthenticatedSession` no longer auto-redirects BASIC users immediately after sign-in; it now keeps them on activation page with explicit guidance to link license key)
+  - `activate.html` (when email sync returns `sourceFound: false`, user gets a targeted message to link purchase via key instead of silent/basic redirect loop)
+  - Expected outcome: users who sign in with Google but are still BASIC can complete key-link flow without being bounced to dashboard prematurely.
 ## Current Parity Snapshot
 
 - `app.js` lines: `35`

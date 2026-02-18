@@ -12,6 +12,8 @@
             const target = adapter.windowObj || windowObj;
             const doc = adapter.document || target.document;
             if (!target || !doc) return;
+            if (target.__ALIDADE_UX_I18N_RUNTIME_BOUND__) return;
+            target.__ALIDADE_UX_I18N_RUNTIME_BOUND__ = true;
 
             const triggerHaptics = typeof adapter.triggerHaptics === 'function'
                 ? adapter.triggerHaptics
@@ -44,6 +46,9 @@
                 const i18n = getI18n();
                 const lang = event?.detail?.lang || i18n?.getCurrentLanguage?.() || doc.documentElement.lang || 'en';
                 log('[ALIDADE] \uD83C\uDF0D Language changed to:', lang);
+                if (target.__ALIDADE_SMOOTH_LANGUAGE_RUNTIME__ === true) {
+                    return;
+                }
                 renderApp();
             });
 

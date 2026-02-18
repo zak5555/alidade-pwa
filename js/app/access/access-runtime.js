@@ -174,12 +174,33 @@ function syncTierFromLicenseManager() {
     }
 
     const lm = window.licenseManager;
+    const managerTier = typeof lm?.getCurrentTier === 'function'
+        ? normalizeTierTag(lm.getCurrentTier())
+        : normalizeTierTag(lm?.user?.license_tier || USER_TIER || 'BASIC');
+
     if (!lm?.user?.license_tier) {
+        if (managerTier === 'ULTIMATE' && USER_TIER !== 'ULTIMATE') {
+            const oldTier = USER_TIER;
+            USER_TIER = 'ULTIMATE';
+            currentUserPlan = 'ULTIMATE';
+            window.USER_TIER = 'ULTIMATE';
+            if (typeof TIER_DATA !== 'undefined') {
+                currentTier = TIER_DATA.ULTIMATE || TIER_DATA.BASIC;
+            }
+            accessRuntimeDebugLog(`[TIER_BRIDGE] ${oldTier} -> ULTIMATE (from manager cache)`);
+            if (typeof updateUIForPlan === 'function') {
+                updateUIForPlan();
+            }
+            return;
+        }
         accessRuntimeDebugLog('[TIER_BRIDGE] No license data available yet');
         return;
     }
 
-    const dbTier = normalizeTierTag(lm.user.license_tier);
+    let dbTier = normalizeTierTag(lm.user.license_tier);
+    if (dbTier !== 'ULTIMATE' && managerTier === 'ULTIMATE') {
+        dbTier = 'ULTIMATE';
+    }
     const validTiers = ['ULTIMATE', 'BASIC'];
 
     if (!validTiers.includes(dbTier)) {
@@ -368,10 +389,28 @@ accessRuntimeDebugLog(`[ALIDADE] System Access Level: ${USER_TIER}`);
     let attempts = 0;
     const interval = setInterval(() => {
         attempts++;
+        const managerTier = typeof window.licenseManager?.getCurrentTier === 'function'
+            ? normalizeTierTag(window.licenseManager.getCurrentTier())
+            : normalizeTierTag(window.licenseManager?.user?.license_tier || 'BASIC');
+
+        if (managerTier === 'ULTIMATE' && USER_TIER !== 'ULTIMATE') {
+            USER_TIER = 'ULTIMATE';
+            currentUserPlan = 'ULTIMATE';
+            window.USER_TIER = 'ULTIMATE';
+            if (typeof TIER_DATA !== 'undefined') {
+                currentTier = TIER_DATA.ULTIMATE || TIER_DATA.BASIC;
+            }
+            if (typeof updateUIForPlan === 'function') {
+                updateUIForPlan();
+            }
+            clearInterval(interval);
+            return;
+        }
+
         if (window.licenseManager?.user?.license_tier) {
             clearInterval(interval);
             syncTierFromLicenseManager();
-        } else if (attempts >= 30) { // 30 × 200ms = 6s max wait
+        } else if (attempts >= 90) { // 90 x 200ms = 18s max wait
             clearInterval(interval);
             accessRuntimeDebugLog('[TIER_BRIDGE] Timeout waiting for LicenseManager');
         }
@@ -1225,6 +1264,60 @@ if (typeof window !== 'undefined') {
     }
 }
 
+// Keep plan badge/runtime gates in sync whenever auth state changes.
+if (typeof window !== 'undefined' && !window.__alidadeAuthTierBridgeBound) {
+    window.__alidadeAuthTierBridgeBound = true;
+    window.__alidadeAuthTierSyncInFlight = false;
+    window.__alidadeAuthTierLastSyncAt = 0;
+    window.addEventListener('alidade:auth-change', async () => {
+        if (window.__alidadeAuthTierSyncInFlight) return;
+        const now = Date.now();
+        if ((now - (window.__alidadeAuthTierLastSyncAt || 0)) < 3000) {
+            if (typeof syncTierFromLicenseManager === 'function') {
+                syncTierFromLicenseManager();
+            }
+            return;
+        }
+
+        window.__alidadeAuthTierSyncInFlight = true;
+        const lm = window.licenseManager;
+        try {
+            if (lm?.isAuthenticated?.() && lm?.authUser?.id) {
+                const currentLmTier = String(lm.getCurrentTier?.() || 'basic').toLowerCase();
+                if (currentLmTier !== 'ultimate') {
+                    try {
+                        await lm.syncLicenseByEmail?.({ silent: true, force: true });
+                        await lm.loadUserLicense?.(lm.authUser.id, lm.authUser);
+                    } catch (_error) {
+                        // Non-blocking: fallback to whatever tier is currently available.
+                    }
+                }
+            }
+            if (typeof syncTierFromLicenseManager === 'function') {
+                syncTierFromLicenseManager();
+            }
+            if (typeof window.updateUIByTier === 'function') {
+                window.updateUIByTier();
+            }
+        } finally {
+            window.__alidadeAuthTierLastSyncAt = Date.now();
+            window.__alidadeAuthTierSyncInFlight = false;
+        }
+    });
+}
+
+if (typeof window !== 'undefined' && !window.__alidadeInitialTierReconcileDone) {
+    window.__alidadeInitialTierReconcileDone = true;
+    setTimeout(() => {
+        if (typeof syncTierFromLicenseManager === 'function') {
+            syncTierFromLicenseManager();
+        }
+        if (typeof window.updateUIByTier === 'function') {
+            window.updateUIByTier();
+        }
+    }, 200);
+}
+
 const ULTIMATE_DATA_PACK_URL = 'assets/data/data-ultimate.json';
 let __ultimateDataPack = null;
 let __ultimateDataPackPromise = null;
@@ -1583,6 +1676,15 @@ if (typeof window !== 'undefined') {
             windowObj: window,
             normalizeTierTag,
             getUserTier: () => USER_TIER || 'BASIC',
+            setUserTier: (tier) => {
+                const normalizedTier = normalizeTierTag(tier || USER_TIER || 'BASIC');
+                USER_TIER = normalizedTier;
+                currentUserPlan = normalizedTier;
+                window.USER_TIER = normalizedTier;
+                if (typeof TIER_DATA !== 'undefined') {
+                    currentTier = TIER_DATA[normalizedTier] || TIER_DATA.BASIC;
+                }
+            },
             trackTierFunnelEvent: (eventName, payload) => trackTierFunnelEvent(eventName, payload),
             ensureUltimateDataPack: () => ensureUltimateDataPack(),
             updateUIByTier: () => {
@@ -1600,6 +1702,12 @@ if (typeof window !== 'undefined') {
         window.__alidadeTierChangeBound = true;
         window.addEventListener('alidade:tier-change', (event) => {
             const changedTier = normalizeTierTag(event?.detail?.tier || USER_TIER || 'BASIC');
+            USER_TIER = changedTier;
+            currentUserPlan = changedTier;
+            window.USER_TIER = changedTier;
+            if (typeof TIER_DATA !== 'undefined') {
+                currentTier = TIER_DATA[changedTier] || TIER_DATA.BASIC;
+            }
             if (changedTier === 'ULTIMATE' && window.__alidadeUpgradeAttempted && !window.__alidadeUpgradeSuccessTracked) {
                 window.__alidadeUpgradeSuccessTracked = true;
                 trackTierFunnelEvent('success', { source: 'tier_change_event', feature: 'UPGRADE' });

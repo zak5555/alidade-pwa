@@ -70,12 +70,21 @@
             const rerenderApp = typeof adapter.renderApp === 'function'
                 ? adapter.renderApp
                 : null;
+            const setUserTier = typeof adapter.setUserTier === 'function'
+                ? adapter.setUserTier
+                : null;
 
             target.addEventListener('alidade:tier-change', (event) => {
                 const fallbackTier = getUserTier();
                 const changedTier = normalizeTier
                     ? normalizeTier(event?.detail?.tier || fallbackTier || 'BASIC')
                     : String(event?.detail?.tier || fallbackTier || 'BASIC').trim().toUpperCase();
+
+                if (typeof setUserTier === 'function') {
+                    setUserTier(changedTier);
+                } else {
+                    target.USER_TIER = changedTier;
+                }
 
                 if (changedTier === 'ULTIMATE' && target.__alidadeUpgradeAttempted && !target.__alidadeUpgradeSuccessTracked) {
                     target.__alidadeUpgradeSuccessTracked = true;

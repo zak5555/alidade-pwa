@@ -5,15 +5,20 @@
  * ALIDADE™ - Main Application
  */
 
+const foundationDebugLog = (...args) => {
+    if (window.__ALIDADE_DEBUG_LOGS__ === true) {
+        console.log(...args);
+    }
+};
+
 // ---------------------------------------------------------------
 // INTERNATIONALIZATION (i18n) - Multi-Language Support
 // ---------------------------------------------------------------
 // EMERGENCY FALLBACK: Prevent "i18n is not defined" errors
 if (typeof window.i18n === 'undefined') {
-    if (window.__ALIDADE_DEBUG_LOGS__ === true) {
-        console.log('[APP] i18n not yet loaded, creating temporary fallback');
-    }
+    foundationDebugLog('[APP] i18n not yet loaded, creating temporary fallback');
     window.i18n = {
+        __ALIDADE_FALLBACK__: true,
         t: (key, vars, defaultValue) => defaultValue || key.split('.').pop() || key,
         getCurrentLanguage: () => 'en',
         init: async () => { },
@@ -23,12 +28,6 @@ if (typeof window.i18n === 'undefined') {
 }
 
 // NOTE: i18n is loaded properly via index.html module script
-
-const foundationDebugLog = (...args) => {
-    if (window.__ALIDADE_DEBUG_LOGS__ === true) {
-        console.log(...args);
-    }
-};
 
 // ---------------------------------------------------------------
 // STATE MANAGEMENT
@@ -229,6 +228,8 @@ function isObject(item) {
 // i18n INTEGRATION (COMPLETE SOLUTION)
 // ---------------------------------------------------------------
 
+window.__ALIDADE_SMOOTH_LANGUAGE_RUNTIME__ = true;
+
 // Placeholder t() function until i18n is ready
 window.t = (key, vars, defaultValue) => {
     // Show defaultValue or key name until translations load
@@ -237,13 +238,19 @@ window.t = (key, vars, defaultValue) => {
 
 // When i18n system is ready (triggered from index.html)
 window.addEventListener('i18nReady', (event) => {
+    if (window.__ALIDADE_I18N_READY_HANDLED__) {
+        return;
+    }
+    window.__ALIDADE_I18N_READY_HANDLED__ = true;
+
     foundationDebugLog('[APP] i18n ready, language:', event.detail.lang);
 
     // Expose t() function globally
     window.t = (key, vars, defaultValue) => window.i18n.t(key, vars, defaultValue);
 
-    // Re-render app if already loaded
-    if (typeof renderApp === 'function') {
+    // Re-render only if the app already painted once with fallback labels.
+    const renderedWithRealI18n = window.__ALIDADE_APP_RENDERED_WITH_REAL_I18N__ === true;
+    if (window.__ALIDADE_APP_RENDERED__ === true && !renderedWithRealI18n && typeof renderApp === 'function') {
         foundationDebugLog('[APP] Re-rendering with translations...');
         renderApp();
     }

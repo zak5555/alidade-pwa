@@ -32,6 +32,13 @@ export class LicenseManager {
             route_optimizations_count: this._readLocalTotalUsage(this.logisticsFeatureName)
         };
         this.oauthProviderEnabledCache = {};
+        this._hydrationPromise = null;
+        this._hydrationUserId = null;
+        this._lastHydrationAt = 0;
+        this._lastAuthChangeKey = null;
+        this._lastTierBroadcast = null;
+        this._lastTierDisplay = null;
+        this._minHydrationIntervalMs = 20000;
 
         this.tierOrder = ['basic', 'ultimate'];
         this.featureLimits = Object.freeze({
@@ -66,28 +73,26 @@ export class LicenseManager {
         console.log('[LICENSE] Initializing manager...');
 
         if (this.supabase?.auth) {
-            this.supabase.auth.onAuthStateChange(async (_event, session) => {
-                if (session?.user) {
-                    this.authUser = session.user;
-                    await this.loadUserLicense(session.user.id, session.user);
-                    await this.finalizePendingActivation({ silent: true });
-                    await this.syncLicenseByEmail({ silent: true });
-                } else {
-                    this.authUser = null;
-                    this.user = null;
-                    localStorage.removeItem(this.cacheKey);
-                    localStorage.removeItem(this.legacyCacheKey);
-                    this.profileUsage.route_optimizations_count = this._readLocalTotalUsage(this.logisticsFeatureName);
-                }
-                this._notifyAuthStateChange();
+            this.supabase.auth.onAuthStateChange((_event, session) => {
+                Promise.resolve()
+                    .then(async () => {
+                        if (session?.user) {
+                            await this._hydrateAuthenticatedState(session.user);
+                        } else {
+                            this._resetAuthState();
+                        }
+                    })
+                    .catch((error) => {
+                        console.warn('[LICENSE] Auth state change handling degraded:', error);
+                    })
+                    .finally(() => {
+                        this._notifyAuthStateChange();
+                    });
             });
 
-            const { data: { session } } = await this.supabase.auth.getSession();
+            const session = await this._readSessionWithRetry();
             if (session?.user) {
-                this.authUser = session.user;
-                await this.loadUserLicense(session.user.id, session.user);
-                await this.finalizePendingActivation({ silent: true });
-                await this.syncLicenseByEmail({ silent: true });
+                await this._hydrateAuthenticatedState(session.user);
             } else {
                 this._loadFromCache();
             }
@@ -96,6 +101,92 @@ export class LicenseManager {
         }
 
         this._loadFromCache();
+    }
+
+    async _hydrateAuthenticatedState(authUser) {
+        if (!authUser?.id) return;
+
+        const userId = authUser.id;
+        const now = Date.now();
+        this.authUser = authUser;
+
+        if (this._hydrationPromise && this._hydrationUserId === userId) {
+            return this._hydrationPromise;
+        }
+        if (this._hydrationUserId === userId && (now - this._lastHydrationAt) < this._minHydrationIntervalMs) {
+            return;
+        }
+
+        this._hydrationUserId = userId;
+        this._hydrationPromise = (async () => {
+            let hasFreshProfile = false;
+            const currentTier = this.getCurrentTier();
+            const shouldForceSync = currentTier !== 'ultimate';
+
+            try {
+                const finalizeResult = await this.finalizePendingActivation({ silent: true });
+                hasFreshProfile = Boolean(finalizeResult?.success) || hasFreshProfile;
+            } catch (error) {
+                console.warn('[LICENSE] finalizePendingActivation degraded:', error);
+            }
+
+            try {
+                const syncResult = await this.syncLicenseByEmail({ silent: true, force: shouldForceSync });
+                if (syncResult?.success) {
+                    hasFreshProfile = true;
+                }
+            } catch (error) {
+                console.warn('[LICENSE] syncLicenseByEmail degraded:', error);
+            }
+
+            if (!hasFreshProfile || !this.user?.license_tier) {
+                try {
+                    await this.loadUserLicense(authUser.id, authUser);
+                } catch (error) {
+                    console.warn('[LICENSE] loadUserLicense degraded:', error);
+                }
+            }
+        })().finally(() => {
+            this._lastHydrationAt = Date.now();
+            this._hydrationPromise = null;
+        });
+
+        return this._hydrationPromise;
+    }
+
+    _resetAuthState() {
+        this.authUser = null;
+        this.user = null;
+        localStorage.removeItem(this.cacheKey);
+        localStorage.removeItem(this.legacyCacheKey);
+        this.profileUsage.route_optimizations_count = this._readLocalTotalUsage(this.logisticsFeatureName);
+    }
+
+    async _readSessionWithRetry(maxAttempts = 3) {
+        if (!this.supabase?.auth?.getSession) return null;
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+            try {
+                const { data, error } = await this.supabase.auth.getSession();
+                if (!error) return data?.session || null;
+
+                if (attempt < maxAttempts && this._isRetryableAuthError(error)) {
+                    await this._delay(200 * attempt);
+                    continue;
+                }
+                console.warn('[LICENSE] getSession returned error:', error);
+                return null;
+            } catch (error) {
+                if (attempt < maxAttempts && this._isRetryableAuthError(error)) {
+                    await this._delay(200 * attempt);
+                    continue;
+                }
+                console.warn('[LICENSE] getSession exception:', error);
+                return null;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -155,27 +246,52 @@ export class LicenseManager {
         if (!licenseKey) return { valid: false, reason: 'Empty key' };
 
         const key = String(licenseKey).trim().toUpperCase();
-        let tier = 'basic';
+        const compactKey = key.replace(/[\s-]/g, '');
+        let tierHint = null;
 
-        if (key.startsWith('BASIC-') || key.startsWith('LITE-')) tier = 'basic';
-        else if (key.startsWith('ULTI-')) tier = 'ultimate';
-        else if (key.length <= 20) {
-            return { valid: false, reason: 'Invalid key format (Must be BASIC-, ULTI-, or valid license key)' };
+        if (!compactKey || compactKey.length < 8 || !/^[A-Z0-9]+$/.test(compactKey)) {
+            return {
+                valid: false,
+                reason: 'Invalid key format (Use BASIC-/ULTI- prefix or a valid key like XXXX-XXXX-XXXX-XXXX)'
+            };
+        }
+
+        if (key.startsWith('BASIC-') || key.startsWith('LITE-')) {
+            tierHint = 'basic';
+        } else if (key.startsWith('ULTI-') || key.startsWith('ULTIMATE-')) {
+            tierHint = 'ultimate';
         }
 
         try {
-            const { data, error } = await this.supabase
-                .rpc('verify_license_public', { key_input: key });
+            const attempts = [
+                { p_license_key: key }, // Current RPC signature
+                { key_input: key } // Legacy compatibility
+            ];
+            let data = null;
+            let error = null;
+
+            for (const payload of attempts) {
+                const result = await this._rpcWithTimeout('verify_license_public', payload, 8000);
+                data = result?.data ?? null;
+                error = result?.error ?? null;
+                if (!error) break;
+            }
 
             if (error) {
                 console.warn('[LICENSE] RPC verification failed, fallback to format:', error.message);
-                return { valid: true, tier, expiresAt: null };
+                if (tierHint) {
+                    return { valid: true, tier: tierHint, expiresAt: null };
+                }
+                return {
+                    valid: false,
+                    reason: 'License verification unavailable. Please retry in a moment.'
+                };
             }
 
             if (data && data.valid) {
                 return {
                     valid: true,
-                    tier: this._normalizeTier(data.tier || tier),
+                    tier: this._normalizeTier(data.tier || tierHint || 'basic'),
                     expiresAt: data.expires_at
                 };
             }
@@ -183,7 +299,13 @@ export class LicenseManager {
             return { valid: false, reason: 'Key invalid or already used' };
         } catch (err) {
             console.error('[LICENSE] Verification exception:', err);
-            return { valid: true, tier };
+            if (tierHint) {
+                return { valid: true, tier: tierHint, expiresAt: null };
+            }
+            return {
+                valid: false,
+                reason: 'License verification unavailable. Please retry in a moment.'
+            };
         }
     }
 
@@ -195,10 +317,53 @@ export class LicenseManager {
         const normalizedEmail = this._normalizeEmail(email);
         console.log(`[LICENSE] Activating key for ${normalizedEmail}`);
 
-        const verification = await this.verifyLicense(normalizedKey);
-        if (!verification.valid) {
-            return { success: false, error: verification.reason };
+        if (this.isAuthenticated() && this.authUser?.id) {
+            const authEmail = this._normalizeEmail(this.authUser.email);
+            if (!normalizedEmail || !authEmail || authEmail !== normalizedEmail) {
+                return {
+                    success: false,
+                    error: 'Purchase email must match signed-in account email'
+                };
+            }
+
+            try {
+                const { data, error } = await this._rpcWithTimeout('activate_license_for_current_user', {
+                    key_input: normalizedKey,
+                    purchase_email_input: normalizedEmail
+                }, 10000);
+
+                if (error) {
+                    return { success: false, error: error.message };
+                }
+                if (!data?.success) {
+                    return { success: false, error: data?.error || 'Activation failed' };
+                }
+
+                this._clearPendingActivation();
+                await this.loadUserLicense(this.authUser.id, this.authUser);
+                this._applyTierFallbackFromRpc(data?.tier, this.authUser.email);
+                return {
+                    success: true,
+                    tier: this.getCurrentTier(),
+                    requiresMagicLink: false
+                };
+            } catch (err) {
+                return { success: false, error: err.message };
+            }
         }
+
+        const verification = await this.verifyLicense(normalizedKey);
+        const verificationReason = String(verification?.reason || '');
+        const verificationUnavailable = !verification?.valid
+            && verificationReason.toLowerCase().includes('verification unavailable');
+
+        if (!verification?.valid && !verificationUnavailable) {
+            return { success: false, error: verificationReason || 'Activation failed' };
+        }
+
+        const tier = verification?.valid
+            ? verification.tier
+            : this._inferTierFromKey(normalizedKey);
 
         this._setPendingActivation({
             licenseKey: normalizedKey,
@@ -206,10 +371,9 @@ export class LicenseManager {
             createdAt: Date.now()
         });
 
-        const tier = verification.tier;
-
         try {
-            const { error } = await this.supabase.auth.signInWithOtp({
+            const timeoutMs = 15000;
+            const otpPromise = this.supabase.auth.signInWithOtp({
                 email: normalizedEmail,
                 options: {
                     emailRedirectTo: window.location.origin + '/index.html',
@@ -220,13 +384,19 @@ export class LicenseManager {
                     }
                 }
             });
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error('Activation request timed out. Please retry.'));
+                }, timeoutMs);
+            });
+            const { error } = await Promise.race([otpPromise, timeoutPromise]);
 
             if (error) {
                 this._clearPendingActivation();
                 return { success: false, error: error.message };
             }
 
-            return { success: true };
+            return { success: true, requiresMagicLink: true };
         } catch (err) {
             this._clearPendingActivation();
             return { success: false, error: err.message };
@@ -545,10 +715,10 @@ export class LicenseManager {
         }
 
         try {
-            const { data, error } = await this.supabase.rpc('activate_license_for_current_user', {
+            const { data, error } = await this._rpcWithTimeout('activate_license_for_current_user', {
                 key_input: pending.licenseKey,
                 purchase_email_input: pendingEmail
-            });
+            }, 10000);
 
             if (error) {
                 if (!silent) console.error('[LICENSE] Activation finalize RPC failed:', error);
@@ -562,9 +732,10 @@ export class LicenseManager {
 
             this._clearPendingActivation();
             await this.loadUserLicense(this.authUser.id, this.authUser);
+            this._applyTierFallbackFromRpc(data?.tier, this.authUser.email);
             return {
                 success: true,
-                tier: this._normalizeTier(data?.tier || this.user?.license_tier || 'basic')
+                tier: this.getCurrentTier()
             };
         } catch (err) {
             if (!silent) console.error('[LICENSE] Activation finalize exception:', err);
@@ -586,7 +757,7 @@ export class LicenseManager {
         }
 
         try {
-            const { data, error } = await this.supabase.rpc('sync_license_for_current_user_by_email');
+            const { data, error } = await this._rpcWithTimeout('sync_license_for_current_user_by_email', {}, 10000);
 
             if (error) {
                 if (!silent) console.error('[LICENSE] Email sync RPC failed:', error);
@@ -599,6 +770,7 @@ export class LicenseManager {
             }
 
             await this.loadUserLicense(this.authUser.id, this.authUser);
+            this._applyTierFallbackFromRpc(data?.tier, this.authUser.email);
             return {
                 success: true,
                 tier: this.getCurrentTier(),
@@ -621,13 +793,62 @@ export class LicenseManager {
 
     _updateGlobalState(tier) {
         const normalized = this._normalizeTier(tier).toUpperCase();
+        const previousTier = String(window.USER_TIER || '').toUpperCase();
         window.USER_TIER = normalized;
         window.currentUserPlan = normalized;
-        window.dispatchEvent(new CustomEvent('alidade:tier-change', {
-            detail: { tier: normalized }
-        }));
-        if (typeof window.updateTierDisplay === 'function') {
+        const shouldBroadcast = this._lastTierBroadcast !== normalized || previousTier !== normalized;
+        if (shouldBroadcast) {
+            this._lastTierBroadcast = normalized;
+            window.dispatchEvent(new CustomEvent('alidade:tier-change', {
+                detail: { tier: normalized }
+            }));
+        }
+        const shouldUpdateTierDisplay = this._lastTierDisplay !== normalized;
+        if (shouldUpdateTierDisplay && typeof window.updateTierDisplay === 'function') {
+            this._lastTierDisplay = normalized;
             window.updateTierDisplay();
+        }
+    }
+
+    _applyTierFallbackFromRpc(rpcTier, email = null) {
+        const targetTier = this._normalizeTier(rpcTier);
+        if (targetTier !== 'ultimate') return;
+
+        const currentTier = this._normalizeTier(this.user?.license_tier || this._readCachedTier() || 'basic');
+        if (currentTier === 'ultimate') return;
+
+        this.user = {
+            ...(this.user || {}),
+            id: this.authUser?.id || this.user?.id || null,
+            email: email || this.authUser?.email || this.user?.email || null,
+            license_tier: 'ultimate'
+        };
+        this._updateGlobalState('ultimate');
+        this._saveToCache('ultimate');
+    }
+
+    async _rpcWithTimeout(functionName, params = {}, timeoutMs = 10000) {
+        if (!this.supabase || typeof this.supabase.rpc !== 'function') {
+            return { data: null, error: { message: 'Supabase RPC unavailable' } };
+        }
+
+        let timeoutHandle = null;
+        try {
+            const rpcPromise = this.supabase.rpc(functionName, params);
+            const timeoutPromise = new Promise((resolve) => {
+                timeoutHandle = setTimeout(() => {
+                    resolve({
+                        data: null,
+                        error: { message: `RPC ${functionName} timed out. Please retry.` }
+                    });
+                }, timeoutMs);
+            });
+
+            return await Promise.race([rpcPromise, timeoutPromise]);
+        } catch (error) {
+            return { data: null, error: { message: error?.message || String(error) } };
+        } finally {
+            if (timeoutHandle) clearTimeout(timeoutHandle);
         }
     }
 
@@ -773,15 +994,36 @@ export class LicenseManager {
         if (error) throw error;
     }
 
-    _notifyAuthStateChange() {
+    _notifyAuthStateChange(force = false) {
         if (typeof window === 'undefined') return;
-        window.dispatchEvent(new CustomEvent('alidade:auth-change', {
-            detail: {
-                isAuthenticated: this.isAuthenticated(),
-                userId: this.authUser?.id || null,
-                email: this.authUser?.email || null
-            }
-        }));
+        const detail = {
+            isAuthenticated: this.isAuthenticated(),
+            userId: this.authUser?.id || null,
+            email: this.authUser?.email || null
+        };
+        const nextKey = `${detail.isAuthenticated ? 1 : 0}:${detail.userId || ''}:${detail.email || ''}`;
+        if (!force && this._lastAuthChangeKey === nextKey) {
+            return;
+        }
+        this._lastAuthChangeKey = nextKey;
+        window.dispatchEvent(new CustomEvent('alidade:auth-change', { detail }));
+    }
+
+    _isRetryableAuthError(error) {
+        const message = String(error?.message || error || '').toLowerCase();
+        return (
+            message.includes('abort') ||
+            message.includes('timed out') ||
+            message.includes('timeout') ||
+            message.includes('failed to fetch') ||
+            message.includes('network')
+        );
+    }
+
+    _delay(ms) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, Math.max(0, Number(ms) || 0));
+        });
     }
 
     _normalizeTier(rawTier) {
@@ -793,6 +1035,12 @@ export class LicenseManager {
 
     _normalizeEmail(email) {
         return String(email || '').trim().toLowerCase();
+    }
+
+    _inferTierFromKey(licenseKey) {
+        const key = String(licenseKey || '').trim().toUpperCase();
+        if (key.startsWith('ULTI-') || key.startsWith('ULTIMATE-')) return 'ultimate';
+        return 'basic';
     }
 
     _setPendingActivation(payload) {

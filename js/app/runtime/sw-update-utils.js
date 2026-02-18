@@ -97,8 +97,26 @@
                 : runtimeUtils.showUpdateNotification;
 
             targetWindow.addEventListener('load', () => {
+                const host = String(targetWindow.location?.hostname || '').toLowerCase();
+                if (host === '127.0.0.1' || host === 'localhost') {
+                    serviceWorker.getRegistrations()
+                        .then((registrations) => Promise.all(registrations.map((reg) => reg.unregister())))
+                        .then(() => log('[SW] Dev host detected: service worker unregistered'))
+                        .catch((err) => error('[SW] Dev unregister failed:', err));
+                    return;
+                }
+
                 serviceWorker.register('./sw.js').then((registration) => {
                     log('[SW] Registered');
+                    registration.update().catch(() => { });
+                    if (!targetWindow.__alidadeSwControllerChangeBound) {
+                        targetWindow.__alidadeSwControllerChangeBound = true;
+                        serviceWorker.addEventListener('controllerchange', () => {
+                            if (targetWindow.__alidadeSwReloading) return;
+                            targetWindow.__alidadeSwReloading = true;
+                            targetWindow.location.reload();
+                        });
+                    }
 
                     // Check for updates every 5 minutes
                     setInterval(() => {
@@ -113,11 +131,16 @@
                         newWorker.addEventListener('statechange', () => {
                             if (newWorker.state === 'installed' && serviceWorker.controller) {
                                 // New version waiting
-                                log('[SW] New version detected and waiting');
-                                if (showUpdate === runtimeUtils.showUpdateNotification) {
-                                    showUpdate(adapter);
-                                } else {
-                                    showUpdate();
+                                log('[SW] New version detected, auto-deploying');
+                                const waitingWorker = registration.waiting || newWorker;
+                                try {
+                                    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+                                } catch (_error) {
+                                    if (showUpdate === runtimeUtils.showUpdateNotification) {
+                                        showUpdate(adapter);
+                                    } else {
+                                        showUpdate();
+                                    }
                                 }
                             }
                         });
