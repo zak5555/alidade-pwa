@@ -1227,6 +1227,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:health script');
     assert(packageJson.includes('"ops:intel:verify"'),
         'package.json does not register ops:intel:verify script');
+    assert(packageJson.includes('"ops:intel:verify:quick"'),
+        'package.json does not register ops:intel:verify:quick script');
     assert(packageJson.includes('"ops:intel:health:strict"'),
         'package.json does not register ops:intel:health:strict script');
     assert(packageJson.includes('"ops:intel:verify:strict"'),
@@ -1241,8 +1243,13 @@ function testIntelIngestOpsPresence() {
         'package.json does not register security:scan:secrets script');
     const packageManifest = JSON.parse(packageJson);
     const strictHealthScript = String(packageManifest?.scripts?.['ops:intel:health:strict'] || '');
+    const quickVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:quick'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
+    assert(quickVerifyScript.includes('--count 3'),
+        'ops:intel:verify:quick does not enforce reduced probe count');
+    assert(quickVerifyScript.includes('--require-persistence 1'),
+        'ops:intel:verify:quick does not enforce persistence requirement');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
         'ops:intel:health:strict does not enforce source-reason allowlist');
     assert(strictVerifyScript.includes('--allowed-reject-source-reasons'),
@@ -1266,8 +1273,20 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not include scheduled monitoring trigger');
     assert(smokeWorkflow.includes("cron: '17 */6 * * *'"),
         'smoke-defense workflow schedule cron is missing or unexpected');
+    assert(smokeWorkflow.includes('verify_profile'),
+        'smoke-defense workflow does not expose manual verify profile input');
+    assert(smokeWorkflow.includes('intel-verify-fast'),
+        'smoke-defense workflow does not define intel fast verify lane');
+    assert(smokeWorkflow.includes('intel-verify-full'),
+        'smoke-defense workflow does not define intel full verify lane');
+    assert(smokeWorkflow.includes('npm run ops:intel:verify:quick'),
+        'smoke-defense workflow fast lane does not use quick verify profile');
     assert(smokeWorkflow.includes('npm run ops:intel:ci'),
-        'smoke-defense workflow intel verify does not use strict CI profile');
+        'smoke-defense workflow full lane does not use strict CI profile');
+    assert(smokeWorkflow.includes('branches:') && smokeWorkflow.includes('- main'),
+        'smoke-defense workflow push trigger is not limited to main branch');
+    assert(smokeWorkflow.includes('paths-ignore:'),
+        'smoke-defense workflow does not define trigger path ignore optimization');
 
     const ingestReadme = readText('supabase/functions/intel-ingest/README.md');
     assert(ingestReadme.includes('INTEL_INGEST_SOURCE_RATE_LIMITS'),
