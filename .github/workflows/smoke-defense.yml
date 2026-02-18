@@ -78,6 +78,9 @@ jobs:
   intel-sla-watchdog-fast:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    concurrency:
+      group: intel-sla-watchdog-${{ github.ref }}
+      cancel-in-progress: false
     needs: smoke-defense
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.verify_profile == 'fast') }}
     env:
@@ -197,6 +200,9 @@ jobs:
   intel-sla-watchdog-full:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    concurrency:
+      group: intel-sla-watchdog-${{ github.ref }}
+      cancel-in-progress: false
     needs:
       - smoke-defense
       - intel-verify-full

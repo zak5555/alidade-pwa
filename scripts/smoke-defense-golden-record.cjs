@@ -1357,6 +1357,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not define fast SLA watchdog lane');
     assert(smokeWorkflow.includes('intel-sla-watchdog-full'),
         'smoke-defense workflow does not define full SLA watchdog lane');
+    assert(smokeWorkflow.includes('group: intel-sla-watchdog-${{ github.ref }}'),
+        'smoke-defense workflow watchdog lanes do not define dedicated concurrency group');
+    assert(smokeWorkflow.includes('cancel-in-progress: false'),
+        'smoke-defense workflow watchdog lanes do not disable in-progress cancellation');
     assert(smokeWorkflow.includes("github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.verify_profile == 'fast')"),
         'smoke-defense workflow fast watchdog lane does not target push + workflow_dispatch fast events');
     assert(smokeWorkflow.includes('- intel-verify-full'),
