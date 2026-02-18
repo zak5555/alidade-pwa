@@ -1253,8 +1253,8 @@ function testIntelIngestOpsPresence() {
         'ops:intel:verify:quick does not enforce reduced probe count');
     assert(quickVerifyScript.includes('--require-persistence 1'),
         'ops:intel:verify:quick does not enforce persistence requirement');
-    assert(intelSlaScript.includes('--max-age-hours'),
-        'ops:intel:sla does not enforce maximum age threshold');
+    assert(intelSlaScript.includes('check-intel-verify-sla.cjs'),
+        'ops:intel:sla does not execute SLA checker script');
     assert(intelSlaScript.includes('--require-success-job intel-verify-full'),
         'ops:intel:sla does not enforce full-lane success job requirement');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
@@ -1282,6 +1282,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow schedule cron is missing or unexpected');
     assert(smokeWorkflow.includes('verify_profile'),
         'smoke-defense workflow does not expose manual verify profile input');
+    assert(smokeWorkflow.includes('sla_max_age_hours'),
+        'smoke-defense workflow does not expose manual SLA max age input');
     assert(smokeWorkflow.includes('intel-verify-fast'),
         'smoke-defense workflow does not define intel fast verify lane');
     assert(smokeWorkflow.includes('intel-verify-full'),
@@ -1294,6 +1296,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow full lane does not use strict CI profile');
     assert(smokeWorkflow.includes('npm run ops:intel:sla'),
         'smoke-defense workflow watchdog lane does not run SLA check');
+    assert(smokeWorkflow.includes('SLA_MAX_AGE_HOURS'),
+        'smoke-defense workflow watchdog lane does not resolve SLA max age input');
+    assert(smokeWorkflow.includes('npm run ops:intel:sla -- --max-age-hours'),
+        'smoke-defense workflow watchdog lane does not pass SLA max age override');
     assert(smokeWorkflow.includes('branches:') && smokeWorkflow.includes('- main'),
         'smoke-defense workflow push trigger is not limited to main branch');
     assert(smokeWorkflow.includes('paths-ignore:'),

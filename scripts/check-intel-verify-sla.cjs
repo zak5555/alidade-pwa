@@ -3,17 +3,28 @@
 
 const { spawnSync } = require('child_process');
 
+function findLastFlagValue(flagName) {
+    let valueIndex = -1;
+    for (let index = 2; index < process.argv.length; index += 1) {
+        if (process.argv[index] === flagName) {
+            valueIndex = index + 1;
+        }
+    }
+    if (valueIndex === -1) return undefined;
+    return process.argv[valueIndex];
+}
+
 function parseStringFlag(flagName, fallback) {
-    const index = process.argv.indexOf(flagName);
-    if (index === -1) return fallback;
-    const raw = String(process.argv[index + 1] || '').trim();
+    const value = findLastFlagValue(flagName);
+    if (value === undefined) return fallback;
+    const raw = String(value || '').trim();
     return raw || fallback;
 }
 
 function parseNumberFlag(flagName, fallback, min, max) {
-    const index = process.argv.indexOf(flagName);
-    if (index === -1) return fallback;
-    const raw = Number(process.argv[index + 1]);
+    const value = findLastFlagValue(flagName);
+    if (value === undefined) return fallback;
+    const raw = Number(value);
     if (!Number.isFinite(raw) || raw < min || raw > max) {
         throw new Error(`${flagName} must be a number in [${min}, ${max}]`);
     }
@@ -21,9 +32,9 @@ function parseNumberFlag(flagName, fallback, min, max) {
 }
 
 function parseIntegerFlag(flagName, fallback, min, max) {
-    const index = process.argv.indexOf(flagName);
-    if (index === -1) return fallback;
-    const raw = Number(process.argv[index + 1]);
+    const value = findLastFlagValue(flagName);
+    if (value === undefined) return fallback;
+    const raw = Number(value);
     if (!Number.isInteger(raw) || raw < min || raw > max) {
         throw new Error(`${flagName} must be an integer in [${min}, ${max}]`);
     }

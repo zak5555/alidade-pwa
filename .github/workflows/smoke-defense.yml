@@ -33,6 +33,11 @@ on:
           - fast
           - full
           - both
+      sla_max_age_hours:
+        description: "SLA max age (hours) for intel-verify-full success"
+        required: false
+        default: "12"
+        type: string
 
 concurrency:
   group: smoke-defense-${{ github.ref }}
@@ -73,6 +78,7 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
+      SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
 
     steps:
       - name: Checkout
@@ -84,7 +90,7 @@ jobs:
           node-version: 20
 
       - name: Check full intel verify SLA
-        run: npm run ops:intel:sla
+        run: npm run ops:intel:sla -- --max-age-hours "${SLA_MAX_AGE_HOURS}"
 
   intel-verify-fast:
     runs-on: ubuntu-latest
