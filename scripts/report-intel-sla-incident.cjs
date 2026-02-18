@@ -41,6 +41,28 @@ function parseModeFlag(flagName, fallback) {
     return normalized;
 }
 
+function parseCsvList(rawValue) {
+    const raw = String(rawValue || '').trim();
+    if (!raw) return [];
+    const values = raw.split(',')
+        .map((value) => String(value || '').trim())
+        .filter((value) => value.length > 0);
+    const seen = new Set();
+    const unique = [];
+    values.forEach((value) => {
+        if (seen.has(value)) return;
+        seen.add(value);
+        unique.push(value);
+    });
+    return unique;
+}
+
+function parseCsvFlag(flagName, fallbackRawValue = '') {
+    const value = findLastFlagValue(flagName);
+    if (value === undefined) return parseCsvList(fallbackRawValue);
+    return parseCsvList(value);
+}
+
 function parseRepo(repoValue) {
     const normalized = String(repoValue || '').trim();
     const parts = normalized.split('/');
@@ -116,6 +138,44 @@ function buildIncidentTitle(prefix, workflowRef, branch) {
     return `${prefix} ${workflowRef} stale on ${branch}`;
 }
 
+function mergeUniqueValues(...groups) {
+    const seen = new Set();
+    const merged = [];
+    groups.forEach((group) => {
+        const values = Array.isArray(group) ? group : [];
+        values.forEach((value) => {
+            const normalized = String(value || '').trim();
+            if (!normalized || seen.has(normalized)) return;
+            seen.add(normalized);
+            merged.push(normalized);
+        });
+    });
+    return merged;
+}
+
+function extractIssueLabelNames(issue) {
+    const labels = Array.isArray(issue?.labels) ? issue.labels : [];
+    return labels
+        .map((label) => {
+            if (typeof label === 'string') return label;
+            return String(label?.name || '');
+        })
+        .map((label) => label.trim())
+        .filter((label) => label.length > 0);
+}
+
+function extractIssueAssignees(issue) {
+    const assignees = Array.isArray(issue?.assignees) ? issue.assignees : [];
+    return assignees
+        .map((assignee) => String(assignee?.login || '').trim())
+        .filter((assignee) => assignee.length > 0);
+}
+
+function isHttpStatusError(error, statusCode) {
+    const message = String(error && error.message ? error.message : error || '');
+    return message.includes(`HTTP ${statusCode}`);
+}
+
 function buildIncidentBody({
     repo,
     workflowRef,
@@ -185,6 +245,88 @@ async function findOpenIssueByTitle(owner, repo, token, title) {
     return issues.find((issue) => !issue.pull_request && String(issue.title || '').trim() === title) || null;
 }
 
+async function createIncidentIssue({
+    owner,
+    repo,
+    token,
+    title,
+    body,
+    labels,
+    assignees
+}) {
+    const basePayload = { title, body, labels };
+    if (!Array.isArray(assignees) || assignees.length === 0) {
+        const createdIssue = await githubRequest(`/repos/${owner}/${repo}/issues`, token, 'POST', basePayload);
+        return { createdIssue, assigneeFallback: false };
+    }
+
+    try {
+        const createdIssue = await githubRequest(`/repos/${owner}/${repo}/issues`, token, 'POST', {
+            ...basePayload,
+            assignees
+        });
+        return { createdIssue, assigneeFallback: false };
+    } catch (error) {
+        if (!isHttpStatusError(error, 422)) {
+            throw error;
+        }
+        const createdIssue = await githubRequest(`/repos/${owner}/${repo}/issues`, token, 'POST', basePayload);
+        return {
+            createdIssue,
+            assigneeFallback: true,
+            assigneeFallbackReason: String(error && error.message ? error.message : error || '')
+        };
+    }
+}
+
+async function patchIncidentIssueMetadata({
+    owner,
+    repo,
+    token,
+    issueNumber,
+    labels,
+    assignees
+}) {
+    const basePayload = { labels };
+    if (!Array.isArray(assignees) || assignees.length === 0) {
+        const updatedIssue = await githubRequest(
+            `/repos/${owner}/${repo}/issues/${issueNumber}`,
+            token,
+            'PATCH',
+            basePayload
+        );
+        return { updatedIssue, assigneeFallback: false };
+    }
+
+    try {
+        const updatedIssue = await githubRequest(
+            `/repos/${owner}/${repo}/issues/${issueNumber}`,
+            token,
+            'PATCH',
+            {
+                ...basePayload,
+                assignees
+            }
+        );
+        return { updatedIssue, assigneeFallback: false };
+    } catch (error) {
+        if (!isHttpStatusError(error, 422)) {
+            throw error;
+        }
+        const updatedIssue = await githubRequest(
+            `/repos/${owner}/${repo}/issues/${issueNumber}`,
+            token,
+            'PATCH',
+            basePayload
+        );
+        return {
+            updatedIssue,
+            assigneeFallback: true,
+            assigneeFallbackReason: String(error && error.message ? error.message : error || '')
+        };
+    }
+}
+
 async function main() {
     const repoInput = parseStringFlag('--repo', resolveDefaultRepo());
     if (!repoInput) {
@@ -206,6 +348,8 @@ async function main() {
     const remediationRunConclusion = parseStringFlag('--remediation-run-conclusion', '');
     const titlePrefix = parseStringFlag('--title-prefix', '[INTEL_SLA_INCIDENT]');
     const dryRun = parseBooleanFlag('--dry-run', false);
+    const labels = parseCsvFlag('--labels', process.env.INTEL_SLA_INCIDENT_LABELS || 'ops,incident,intel,sla,priority:p1');
+    const assignees = parseCsvFlag('--assignees', process.env.INTEL_SLA_INCIDENT_ASSIGNEES || '');
 
     if (!token) {
         throw new Error('Missing GitHub token (use GITHUB_TOKEN, GH_TOKEN, or --token)');
@@ -245,6 +389,8 @@ async function main() {
                 mode,
                 action: existingIssue ? 'would_close' : 'would_noop',
                 title,
+                labels,
+                assignees,
                 existingIssue: existingIssue
                     ? { number: existingIssue.number, url: existingIssue.html_url || null }
                     : null
@@ -257,7 +403,9 @@ async function main() {
                 ok: true,
                 mode,
                 action: 'no_open_issue',
-                title
+                title,
+                labels,
+                assignees
             }, null, 2));
             return;
         }
@@ -282,7 +430,9 @@ async function main() {
             issueNumber: existingIssue.number,
             issueUrl: updatedIssue?.html_url || existingIssue.html_url || null,
             commentUrl: createdComment?.html_url || null,
-            title
+            title,
+            labels,
+            assignees
         }, null, 2));
         return;
     }
@@ -294,6 +444,8 @@ async function main() {
             mode,
             action: existingIssue ? 'would_comment' : 'would_create',
             title,
+            labels,
+            assignees,
             existingIssue: existingIssue
                 ? { number: existingIssue.number, url: existingIssue.html_url || null }
                 : null
@@ -314,6 +466,17 @@ async function main() {
             'POST',
             commentPayload
         );
+        const mergedLabels = mergeUniqueValues(extractIssueLabelNames(existingIssue), labels);
+        const mergedAssignees = mergeUniqueValues(extractIssueAssignees(existingIssue), assignees);
+        const metadataUpdate = await patchIncidentIssueMetadata({
+            owner,
+            repo,
+            token,
+            issueNumber: existingIssue.number,
+            labels: mergedLabels,
+            assignees: mergedAssignees
+        });
+
         console.log(JSON.stringify({
             ok: true,
             mode,
@@ -321,20 +484,36 @@ async function main() {
             issueNumber: existingIssue.number,
             issueUrl: existingIssue.html_url || null,
             commentUrl: createdComment?.html_url || null,
-            title
+            title,
+            labels: mergedLabels,
+            assignees: mergedAssignees,
+            assigneeFallback: Boolean(metadataUpdate.assigneeFallback),
+            assigneeFallbackReason: metadataUpdate.assigneeFallbackReason || null
         }, null, 2));
         return;
     }
 
-    const issuePayload = { title, body: incidentBody };
-    const createdIssue = await githubRequest(`/repos/${owner}/${repo}/issues`, token, 'POST', issuePayload);
+    const createResult = await createIncidentIssue({
+        owner,
+        repo,
+        token,
+        title,
+        body: incidentBody,
+        labels,
+        assignees
+    });
+    const createdIssue = createResult.createdIssue;
     console.log(JSON.stringify({
         ok: true,
         mode,
         action: 'created',
         issueNumber: createdIssue?.number || null,
         issueUrl: createdIssue?.html_url || null,
-        title
+        title,
+        labels,
+        assignees,
+        assigneeFallback: Boolean(createResult.assigneeFallback),
+        assigneeFallbackReason: createResult.assigneeFallbackReason || null
     }, null, 2));
 }
 

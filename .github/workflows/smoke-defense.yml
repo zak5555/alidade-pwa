@@ -84,6 +84,8 @@ jobs:
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
       SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
+      INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
+      INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
 
     steps:
       - name: Checkout

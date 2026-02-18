@@ -1274,10 +1274,18 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla:incident:dry does not execute incident reporter script');
     assert(intelSlaIncidentDryScript.includes('--mode open'),
         'ops:intel:sla:incident:dry does not enforce open mode');
+    assert(intelSlaIncidentDryScript.includes('--labels '),
+        'ops:intel:sla:incident:dry does not pass incident labels');
+    assert(intelSlaIncidentDryScript.includes('--assignees '),
+        'ops:intel:sla:incident:dry does not pass incident assignees');
     assert(intelSlaIncidentDryScript.includes('--dry-run true'),
         'ops:intel:sla:incident:dry does not enforce dry-run mode');
     assert(intelSlaIncidentResolveDryScript.includes('--mode resolve'),
         'ops:intel:sla:incident:resolve:dry does not enforce resolve mode');
+    assert(intelSlaIncidentResolveDryScript.includes('--labels '),
+        'ops:intel:sla:incident:resolve:dry does not pass incident labels');
+    assert(intelSlaIncidentResolveDryScript.includes('--assignees '),
+        'ops:intel:sla:incident:resolve:dry does not pass incident assignees');
     assert(intelSlaIncidentResolveDryScript.includes('--dry-run true'),
         'ops:intel:sla:incident:resolve:dry does not enforce dry-run mode');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
@@ -1311,6 +1319,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not grant actions: write for watchdog remediation');
     assert(smokeWorkflow.includes('issues: write'),
         'smoke-defense workflow does not grant issues: write for incident creation');
+    assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_LABELS'),
+        'smoke-defense workflow does not expose incident labels configuration');
+    assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_ASSIGNEES'),
+        'smoke-defense workflow does not expose incident assignees configuration');
     assert(smokeWorkflow.includes('verify_profile'),
         'smoke-defense workflow does not expose manual verify profile input');
     assert(smokeWorkflow.includes('sla_max_age_hours'),
@@ -1370,14 +1382,30 @@ function testIntelIngestOpsPresence() {
         'incident reporter script does not define incident title strategy');
     assert(incidentScript.includes('parseModeFlag'),
         'incident reporter script does not define incident mode parser');
+    assert(incidentScript.includes('parseCsvFlag'),
+        'incident reporter script does not define CSV flag parser for labels/assignees');
     assert(incidentScript.includes('--mode'),
         'incident reporter script does not support mode argument');
+    assert(incidentScript.includes('--labels'),
+        'incident reporter script does not support labels argument');
+    assert(incidentScript.includes('--assignees'),
+        'incident reporter script does not support assignees argument');
+    assert(incidentScript.includes('INTEL_SLA_INCIDENT_LABELS'),
+        'incident reporter script does not read incident labels from environment');
+    assert(incidentScript.includes('INTEL_SLA_INCIDENT_ASSIGNEES'),
+        'incident reporter script does not read incident assignees from environment');
     assert(incidentScript.includes('--dry-run'),
         'incident reporter script does not support dry-run guard');
     assert(incidentScript.includes('/issues?state=open'),
         'incident reporter script does not dedupe on open issue scan');
     assert(incidentScript.includes('/repos/${owner}/${repo}/issues'),
         'incident reporter script does not create incidents through issues API');
+    assert(incidentScript.includes('createIncidentIssue'),
+        'incident reporter script does not define incident creation helper with fallback');
+    assert(incidentScript.includes('patchIncidentIssueMetadata'),
+        'incident reporter script does not define incident metadata patch helper');
+    assert(incidentScript.includes('assigneeFallback'),
+        'incident reporter script does not expose assignee fallback diagnostics');
     assert(incidentScript.includes("{ state: 'closed' }"),
         'incident reporter script does not close open incident issues on resolve mode');
     assert(incidentScript.includes('would_close'),
