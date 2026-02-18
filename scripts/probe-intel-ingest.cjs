@@ -3,6 +3,12 @@
 
 const crypto = require('crypto');
 
+function getEnvValue(name) {
+    if (process.env[name]) return String(process.env[name]).trim();
+    const fallbackKey = Object.keys(process.env).find((key) => key.replace(/^\uFEFF/, '') === name);
+    return fallbackKey ? String(process.env[fallbackKey] || '').trim() : '';
+}
+
 function parseIntegerFlag(flagName, fallback, min, max) {
     const index = process.argv.indexOf(flagName);
     if (index === -1) return fallback;
@@ -31,6 +37,18 @@ function parseStringFlag(flagName, fallback) {
     return String(process.argv[index + 1] || '').trim() || fallback;
 }
 
+function normalizeSupabaseUrl(rawUrl) {
+    const normalized = String(rawUrl || '').trim();
+    if (!normalized) return '';
+    const withProtocol = /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
+    try {
+        const parsed = new URL(withProtocol);
+        return `${parsed.origin}`.replace(/\/+$/, '');
+    } catch (_error) {
+        return '';
+    }
+}
+
 function buildCanonicalForSignature(envelope) {
     return JSON.stringify({
         id: envelope.id,
@@ -48,12 +66,16 @@ function signEnvelope(envelope, signingSecret) {
 }
 
 async function main() {
-    const supabaseUrl = parseStringFlag('--supabase-url', String(process.env.SUPABASE_URL || '').trim());
-    const ingestApiKey = parseStringFlag('--api-key', String(process.env.INTEL_INGEST_API_KEY || '').trim());
-    const signingSecret = parseStringFlag('--signing-secret', String(process.env.INTEL_INGEST_SIGNING_SECRET || '').trim());
+    const supabaseUrl = normalizeSupabaseUrl(parseStringFlag('--supabase-url', getEnvValue('SUPABASE_URL')));
+    const ingestApiKey = parseStringFlag('--api-key', getEnvValue('INTEL_INGEST_API_KEY'));
+    const signingSecret = parseStringFlag('--signing-secret', getEnvValue('INTEL_INGEST_SIGNING_SECRET'));
 
-    if (!supabaseUrl || !ingestApiKey || !signingSecret) {
-        throw new Error('Missing SUPABASE_URL / INTEL_INGEST_API_KEY / INTEL_INGEST_SIGNING_SECRET in environment');
+    const missing = [];
+    if (!supabaseUrl) missing.push('SUPABASE_URL');
+    if (!ingestApiKey) missing.push('INTEL_INGEST_API_KEY');
+    if (!signingSecret) missing.push('INTEL_INGEST_SIGNING_SECRET');
+    if (missing.length > 0) {
+        throw new Error(`Missing required values: ${missing.join(', ')}. Set them in .env or pass CLI flags.`);
     }
 
     const count = parseIntegerFlag('--count', 5, 1, 200);
@@ -88,7 +110,7 @@ async function main() {
         events.push(envelope);
     }
 
-    const endpoint = `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/intel-ingest`;
+    const endpoint = `${supabaseUrl}/functions/v1/intel-ingest`;
     const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -108,6 +130,9 @@ async function main() {
     const acceptedCount = Number(payload?.acceptedCount || 0);
     const rejectedCount = Number(payload?.rejectedCount || 0);
     const persistedCount = payload?.persistedCount === undefined ? null : Number(payload.persistedCount);
+    const rejectedPersistedCount = payload?.rejectedPersistedCount === undefined
+        ? null
+        : Number(payload.rejectedPersistedCount);
     const ok = Boolean(response.ok) && acceptedCount >= count && rejectedCount === 0;
 
     const report = {
@@ -118,7 +143,9 @@ async function main() {
         acceptedCount,
         rejectedCount,
         persistedCount,
-        persistenceWarning: payload?.persistenceWarning ?? null
+        persistenceWarning: payload?.persistenceWarning ?? null,
+        rejectedPersistedCount,
+        rejectionPersistenceWarning: payload?.rejectionPersistenceWarning ?? null
     };
 
     console.log(JSON.stringify(report, null, 2));
