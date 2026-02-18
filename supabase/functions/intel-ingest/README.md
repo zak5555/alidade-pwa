@@ -77,20 +77,28 @@ npm run ops:intel:health -- --window-minutes 15 --min-events 1 --max-delayed 25
 Recommended strict profile:
 
 ```bash
-npm run ops:intel:health -- --window-minutes 15 --min-events 5 --min-distinct-sessions 1 --max-delayed 25 --max-p95-delay-ms 120000 --max-freshness-seconds 900 --require-source ops_verify --min-source-events 5 --reject-source ops_verify --max-reject-source-events 0 --max-reject-rate-pct 5 --ignore-reject-sources-in-rate ops_reject_probe --ignore-reject-source-prefixes ops_verify_reject_ --allowed-reject-reasons invalid_signature --allowed-reject-sources ops_reject_probe --allowed-reject-source-prefixes ops_verify_reject_ --allowed-reject-source-reasons ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature
+npm run ops:intel:health:strict
 ```
 
 Strict end-to-end verify (ingest + persistence + source-scoped health):
 
 ```bash
-npm run ops:intel:verify -- --count 5 --window-minutes 60 --min-events 5 --min-distinct-sessions 1 --max-delayed 25 --max-p95-delay-ms 120000 --max-freshness-seconds 900 --require-source ops_verify --min-source-events 5 --reject-source ops_verify --max-reject-source-events 0 --max-reject-rate-pct 5 --ignore-reject-sources-in-rate ops_reject_probe --ignore-reject-source-prefixes ops_verify_reject_ --allowed-reject-reasons invalid_signature --allowed-reject-sources ops_reject_probe --allowed-reject-source-prefixes ops_verify_reject_ --allowed-reject-source-reasons ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature --require-persistence 1
+npm run ops:intel:verify:strict
 ```
 
 Strict verify with automated rejection-path probe:
 
 ```bash
-npm run ops:intel:verify -- --count 5 --window-minutes 60 --min-events 5 --min-distinct-sessions 1 --max-delayed 25 --max-p95-delay-ms 120000 --max-freshness-seconds 900 --require-source ops_verify --min-source-events 5 --rejection-probe-count 1 --rejection-probe-source ops_verify_reject_probe --rejection-probe-expected-reason invalid_signature --reject-source ops_verify_reject_probe --min-reject-source-events 1 --max-reject-source-events 1 --max-reject-rate-pct 5 --ignore-reject-source-prefixes ops_verify_reject_ --allowed-reject-reasons invalid_signature --allowed-reject-sources ops_reject_probe --allowed-reject-source-prefixes ops_verify_reject_ --allowed-reject-source-reasons ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature --require-persistence 1 --require-rejection-persistence 1
+npm run ops:intel:verify:strict:rejection
 ```
+
+CI full gate profile:
+
+```bash
+npm run ops:intel:ci
+```
+
+`smoke-defense` workflow runs this profile on push/PR and every 6 hours (`cron: 17 */6 * * *`).
 
 If your `.env` is not loaded, you can override credentials directly:
 

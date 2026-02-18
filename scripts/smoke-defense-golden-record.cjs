@@ -1219,42 +1219,47 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:health script');
     assert(packageJson.includes('"ops:intel:verify"'),
         'package.json does not register ops:intel:verify script');
+    assert(packageJson.includes('"ops:intel:health:strict"'),
+        'package.json does not register ops:intel:health:strict script');
+    assert(packageJson.includes('"ops:intel:verify:strict"'),
+        'package.json does not register ops:intel:verify:strict script');
+    assert(packageJson.includes('"ops:intel:verify:strict:rejection"'),
+        'package.json does not register ops:intel:verify:strict:rejection script');
+    assert(packageJson.includes('"ops:intel:ci"'),
+        'package.json does not register ops:intel:ci script');
     assert(packageJson.includes('"ops:hooks:install"'),
         'package.json does not register ops:hooks:install script');
     assert(packageJson.includes('"security:scan:secrets"'),
         'package.json does not register security:scan:secrets script');
+    const packageManifest = JSON.parse(packageJson);
+    const strictHealthScript = String(packageManifest?.scripts?.['ops:intel:health:strict'] || '');
+    const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
+    const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
+    assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
+        'ops:intel:health:strict does not enforce source-reason allowlist');
+    assert(strictVerifyScript.includes('--allowed-reject-source-reasons'),
+        'ops:intel:verify:strict does not enforce source-reason allowlist');
+    assert(strictVerifyScript.includes('--require-persistence 1'),
+        'ops:intel:verify:strict does not enforce persistence requirement');
+    assert(strictVerifyRejectionScript.includes('--require-rejection-persistence 1'),
+        'ops:intel:verify:strict:rejection does not enforce rejection persistence requirement');
+    const strictCiScript = String(packageManifest?.scripts?.['ops:intel:ci'] || '');
+    assert(strictCiScript.includes('ops:intel:verify:strict'),
+        'ops:intel:ci does not run strict verify profile');
+    assert(strictCiScript.includes('ops:intel:verify:strict:rejection'),
+        'ops:intel:ci does not run strict rejection verify profile');
+    assert(strictCiScript.includes('ops:intel:health:strict'),
+        'ops:intel:ci does not run strict health profile');
 
     const smokeWorkflow = readText('.github/workflows/smoke-defense.yml');
     assert(smokeWorkflow.includes('Secret hygiene scan'),
         'smoke-defense workflow does not run Secret hygiene scan step');
-    assert(smokeWorkflow.includes('--max-p95-delay-ms'),
-        'smoke-defense workflow intel verify does not enforce max-p95-delay-ms threshold');
-    assert(smokeWorkflow.includes('--max-freshness-seconds'),
-        'smoke-defense workflow intel verify does not enforce max-freshness-seconds threshold');
-    assert(smokeWorkflow.includes('--require-source'),
-        'smoke-defense workflow intel verify does not enforce source-scoped threshold');
-    assert(smokeWorkflow.includes('--reject-source'),
-        'smoke-defense workflow intel verify does not enforce source-scoped reject threshold');
-    assert(smokeWorkflow.includes('--max-reject-source-events'),
-        'smoke-defense workflow intel verify does not enforce max reject events per source');
-    assert(smokeWorkflow.includes('--min-reject-source-events'),
-        'smoke-defense workflow intel verify does not enforce min reject events per source');
-    assert(smokeWorkflow.includes('--max-reject-rate-pct'),
-        'smoke-defense workflow intel verify does not enforce max reject rate threshold');
-    assert(smokeWorkflow.includes('--ignore-reject-sources-in-rate'),
-        'smoke-defense workflow intel verify does not exclude known synthetic reject sources');
-    assert(smokeWorkflow.includes('--ignore-reject-source-prefixes'),
-        'smoke-defense workflow intel verify does not exclude synthetic reject source prefixes');
-    assert(smokeWorkflow.includes('--allowed-reject-reasons'),
-        'smoke-defense workflow intel verify does not enforce allowed reject reasons gate');
-    assert(smokeWorkflow.includes('--allowed-reject-sources'),
-        'smoke-defense workflow intel verify does not enforce allowed reject sources gate');
-    assert(smokeWorkflow.includes('--allowed-reject-source-prefixes'),
-        'smoke-defense workflow intel verify does not enforce allowed reject source prefixes gate');
-    assert(smokeWorkflow.includes('--allowed-reject-source-reasons'),
-        'smoke-defense workflow intel verify does not enforce allowed reject source-reason gate');
-    assert(smokeWorkflow.includes('--require-persistence'),
-        'smoke-defense workflow intel verify does not enforce persistence requirement');
+    assert(smokeWorkflow.includes('schedule:'),
+        'smoke-defense workflow does not include scheduled monitoring trigger');
+    assert(smokeWorkflow.includes("cron: '17 */6 * * *'"),
+        'smoke-defense workflow schedule cron is missing or unexpected');
+    assert(smokeWorkflow.includes('npm run ops:intel:ci'),
+        'smoke-defense workflow intel verify does not use strict CI profile');
 
     const preCommitHook = readText('.githooks/pre-commit');
     assert(preCommitHook.includes('security:scan:secrets:staged'),
