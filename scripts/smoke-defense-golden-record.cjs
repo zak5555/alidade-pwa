@@ -1237,6 +1237,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:verify:strict:rejection script');
     assert(packageJson.includes('"ops:intel:sla"'),
         'package.json does not register ops:intel:sla script');
+    assert(packageJson.includes('"ops:intel:sla:remediate"'),
+        'package.json does not register ops:intel:sla:remediate script');
     assert(packageJson.includes('"ops:intel:ci"'),
         'package.json does not register ops:intel:ci script');
     assert(packageJson.includes('"ops:hooks:install"'),
@@ -1247,6 +1249,7 @@ function testIntelIngestOpsPresence() {
     const strictHealthScript = String(packageManifest?.scripts?.['ops:intel:health:strict'] || '');
     const quickVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:quick'] || '');
     const intelSlaScript = String(packageManifest?.scripts?.['ops:intel:sla'] || '');
+    const intelSlaRemediationScript = String(packageManifest?.scripts?.['ops:intel:sla:remediate'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
     assert(quickVerifyScript.includes('--count 3'),
@@ -1257,6 +1260,10 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla does not execute SLA checker script');
     assert(intelSlaScript.includes('--require-success-job intel-verify-full'),
         'ops:intel:sla does not enforce full-lane success job requirement');
+    assert(intelSlaRemediationScript.includes('dispatch-intel-verify-remediation.cjs'),
+        'ops:intel:sla:remediate does not execute remediation dispatcher script');
+    assert(intelSlaRemediationScript.includes('--cooldown-minutes'),
+        'ops:intel:sla:remediate does not configure cooldown window');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
         'ops:intel:health:strict does not enforce source-reason allowlist');
     assert(strictVerifyScript.includes('--allowed-reject-source-reasons'),
@@ -1310,12 +1317,22 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow watchdog lane does not tolerate stale SLA check before remediation');
     assert(smokeWorkflow.includes('Trigger full intel verify remediation'),
         'smoke-defense workflow watchdog lane does not define full verify remediation step');
-    assert(smokeWorkflow.includes('gh workflow run smoke-defense.yml'),
-        'smoke-defense workflow watchdog remediation does not dispatch workflow run');
-    assert(smokeWorkflow.includes('-f verify_profile=full'),
+    assert(smokeWorkflow.includes('dispatch-intel-verify-remediation.cjs'),
+        'smoke-defense workflow watchdog remediation does not call remediation dispatcher');
+    assert(smokeWorkflow.includes('--verify-profile full'),
         'smoke-defense workflow watchdog remediation does not force full verify profile');
+    assert(smokeWorkflow.includes('--cooldown-minutes 30'),
+        'smoke-defense workflow watchdog remediation does not enforce cooldown window');
     assert(smokeWorkflow.includes('branches:') && smokeWorkflow.includes('- main'),
         'smoke-defense workflow push trigger is not limited to main branch');
+
+    const remediationScript = readText('scripts/dispatch-intel-verify-remediation.cjs');
+    assert(remediationScript.includes('--cooldown-minutes'),
+        'remediation dispatcher script does not support cooldown argument');
+    assert(remediationScript.includes("reason: 'cooldown_active'"),
+        'remediation dispatcher script does not expose cooldown active outcome');
+    assert(remediationScript.includes('actions/workflows/'),
+        'remediation dispatcher script does not call workflow dispatch API');
     assert(smokeWorkflow.includes('paths-ignore:'),
         'smoke-defense workflow does not define trigger path ignore optimization');
 
@@ -1380,6 +1397,8 @@ async function main() {
         'js/app/vector/vector-hud-utils.js',
         'js/app/defense/defense-runtime.js',
         'scripts/check-intel-ingest-health.cjs',
+        'scripts/check-intel-verify-sla.cjs',
+        'scripts/dispatch-intel-verify-remediation.cjs',
         'scripts/probe-intel-ingest.cjs',
         'scripts/verify-intel-ingest.cjs'
     ];

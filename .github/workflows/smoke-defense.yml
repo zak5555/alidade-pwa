@@ -101,10 +101,16 @@ jobs:
       - name: Trigger full intel verify remediation
         if: ${{ steps.sla_check.outcome == 'failure' }}
         env:
-          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
-          gh workflow run smoke-defense.yml --ref "${{ github.ref_name }}" -f verify_profile=full -f sla_max_age_hours="${SLA_MAX_AGE_HOURS}"
-          echo "SLA stale: remediation dispatch submitted (verify_profile=full)."
+          node scripts/dispatch-intel-verify-remediation.cjs \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --require-job intel-verify-full \
+            --verify-profile full \
+            --sla-max-age-hours "${SLA_MAX_AGE_HOURS}" \
+            --cooldown-minutes 30
 
   intel-verify-fast:
     runs-on: ubuntu-latest
