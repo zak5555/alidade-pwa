@@ -1341,6 +1341,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not expose incident escalation hours configuration');
     assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_ESCALATION_LABEL'),
         'smoke-defense workflow does not expose incident escalation label configuration');
+    assert(smokeWorkflow.includes('Intel SLA watchdog skipped: intel_verify_disabled'),
+        'smoke-defense workflow watchdog lanes do not expose explicit verify-disabled gate message');
     assert(smokeWorkflow.includes('verify_profile'),
         'smoke-defense workflow does not expose manual verify profile input');
     assert(smokeWorkflow.includes('sla_max_age_hours'),
@@ -1387,6 +1389,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow SLA incident steps do not pass escalation label');
     assert(smokeWorkflow.includes('continue-on-error: true'),
         'smoke-defense workflow watchdog lane does not tolerate stale SLA check before remediation');
+    assert(smokeWorkflow.includes('id: watchdog_gate'),
+        'smoke-defense workflow watchdog lanes do not define watchdog gate step');
+    assert(smokeWorkflow.includes("steps.watchdog_gate.outputs.ready == 'true'"),
+        'smoke-defense workflow watchdog lanes do not guard downstream actions with watchdog gate output');
     assert(smokeWorkflow.includes('Trigger full intel verify remediation'),
         'smoke-defense workflow watchdog lane does not define full verify remediation step');
     assert(smokeWorkflow.includes('id: remediation'),

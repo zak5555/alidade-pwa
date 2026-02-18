@@ -84,6 +84,7 @@ jobs:
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
       SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
+      INTEL_VERIFY_ENABLED: ${{ secrets.INTEL_VERIFY_ENABLED }}
       INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
       INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
       INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
@@ -91,21 +92,41 @@ jobs:
       INTEL_SLA_INCIDENT_ESCALATION_LABEL: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_LABEL }}
 
     steps:
+      - name: Watchdog gate
+        id: watchdog_gate
+        run: |
+          if [ "${INTEL_VERIFY_ENABLED:-0}" != "1" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=intel_verify_disabled" >> "$GITHUB_OUTPUT"
+            echo "Intel SLA watchdog skipped: intel_verify_disabled"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Watchdog gate note
+        if: ${{ steps.watchdog_gate.outputs.ready != 'true' }}
+        run: |
+          echo "intel-sla-watchdog-fast skipped due to gate: ${{ steps.watchdog_gate.outputs.reason }}"
+
       - name: Checkout
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' }}
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Check full intel verify SLA
         id: sla_check
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' }}
         continue-on-error: true
         run: npm run ops:intel:sla -- --max-age-hours "${SLA_MAX_AGE_HOURS}"
 
       - name: Resolve SLA incident issue
-        if: ${{ steps.sla_check.outcome == 'success' }}
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' && steps.sla_check.outcome == 'success' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -123,7 +144,7 @@ jobs:
 
       - name: Trigger full intel verify remediation
         id: remediation
-        if: ${{ steps.sla_check.outcome == 'failure' }}
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' && steps.sla_check.outcome == 'failure' }}
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -151,7 +172,7 @@ jobs:
           exit "${remediation_status}"
 
       - name: Open SLA incident issue
-        if: ${{ steps.sla_check.outcome == 'failure' && (steps.remediation.outcome == 'failure' || steps.remediation.outputs.dispatched != 'true') }}
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' && steps.sla_check.outcome == 'failure' && (steps.remediation.outcome == 'failure' || steps.remediation.outputs.dispatched != 'true') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -184,6 +205,7 @@ jobs:
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
       SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
+      INTEL_VERIFY_ENABLED: ${{ secrets.INTEL_VERIFY_ENABLED }}
       INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
       INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
       INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
@@ -191,21 +213,41 @@ jobs:
       INTEL_SLA_INCIDENT_ESCALATION_LABEL: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_LABEL }}
 
     steps:
+      - name: Watchdog gate
+        id: watchdog_gate
+        run: |
+          if [ "${INTEL_VERIFY_ENABLED:-0}" != "1" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=intel_verify_disabled" >> "$GITHUB_OUTPUT"
+            echo "Intel SLA watchdog skipped: intel_verify_disabled"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Watchdog gate note
+        if: ${{ steps.watchdog_gate.outputs.ready != 'true' }}
+        run: |
+          echo "intel-sla-watchdog-full skipped due to gate: ${{ steps.watchdog_gate.outputs.reason }}"
+
       - name: Checkout
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' }}
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' }}
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Check full intel verify SLA
         id: sla_check
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' }}
         continue-on-error: true
         run: npm run ops:intel:sla -- --max-age-hours "${SLA_MAX_AGE_HOURS}"
 
       - name: Resolve SLA incident issue
-        if: ${{ steps.sla_check.outcome == 'success' }}
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' && steps.sla_check.outcome == 'success' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -223,7 +265,7 @@ jobs:
 
       - name: Trigger full intel verify remediation
         id: remediation
-        if: ${{ steps.sla_check.outcome == 'failure' }}
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' && steps.sla_check.outcome == 'failure' }}
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -251,7 +293,7 @@ jobs:
           exit "${remediation_status}"
 
       - name: Open SLA incident issue
-        if: ${{ steps.sla_check.outcome == 'failure' && (steps.remediation.outcome == 'failure' || steps.remediation.outputs.dispatched != 'true') }}
+        if: ${{ steps.watchdog_gate.outputs.ready == 'true' && steps.sla_check.outcome == 'failure' && (steps.remediation.outcome == 'failure' || steps.remediation.outputs.dispatched != 'true') }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
