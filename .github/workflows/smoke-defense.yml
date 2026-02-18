@@ -5,7 +5,19 @@ on:
   pull_request:
   schedule:
     - cron: '17 */6 * * *'
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      verify_profile:
+        description: "Intel verify profile"
+        required: false
+        default: fast
+        type: choice
+        options:
+          - fast
+          - full
+          - both
 
 concurrency:
   group: smoke-defense-${{ github.ref }}
@@ -38,11 +50,11 @@ jobs:
       - name: Run defense smoke test
         run: npm run test:smoke:defense
 
-  intel-verify:
+  intel-verify-fast:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     needs: smoke-defense
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'fast' || inputs.verify_profile == 'both'))) }}
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -94,7 +106,7 @@ jobs:
       - name: Intel verify gate
         if: ${{ steps.secrets_ready.outputs.ready != 'true' }}
         run: |
-          echo "intel-verify skipped due to secret gate: ${{ steps.secrets_ready.outputs.reason }}"
+          echo "intel-verify-fast skipped due to secret gate: ${{ steps.secrets_ready.outputs.reason }}"
 
       - name: Checkout
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
@@ -121,6 +133,93 @@ jobs:
           INTEL_INGEST_SIGNING_SECRET=${INTEL_INGEST_SIGNING_SECRET}
           EOF
 
-      - name: Verify intel ingest pipeline
+      - name: Verify intel ingest pipeline (fast)
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
+        run: npm run ops:intel:verify:quick
+
+  intel-verify-full:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    needs: smoke-defense
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'schedule' || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'full' || inputs.verify_profile == 'both'))) }}
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      INTEL_INGEST_API_KEY: ${{ secrets.INTEL_INGEST_API_KEY }}
+      INTEL_INGEST_SIGNING_SECRET: ${{ secrets.INTEL_INGEST_SIGNING_SECRET }}
+      INTEL_VERIFY_ENABLED: ${{ secrets.INTEL_VERIFY_ENABLED }}
+
+    steps:
+      - name: Check required secrets
+        id: secrets_ready
+        run: |
+          reasons=()
+
+          if [ "${INTEL_VERIFY_ENABLED:-0}" != "1" ]; then
+            reasons+=("intel_verify_disabled")
+          fi
+
+          if [ -z "${SUPABASE_URL}" ]; then
+            reasons+=("missing_SUPABASE_URL")
+          elif [[ ! "${SUPABASE_URL}" =~ ^https?:// ]]; then
+            reasons+=("invalid_SUPABASE_URL_format")
+          fi
+
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            reasons+=("missing_SUPABASE_SERVICE_ROLE_KEY")
+          elif [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^sb_secret_[A-Za-z0-9_-]{20,}$ ]] && [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^[^.]+\.[^.]+\.[^.]+$ ]]; then
+            reasons+=("invalid_SUPABASE_SERVICE_ROLE_KEY_format")
+          fi
+
+          if [ -z "${INTEL_INGEST_API_KEY}" ]; then
+            reasons+=("missing_INTEL_INGEST_API_KEY")
+          fi
+
+          if [ -z "${INTEL_INGEST_SIGNING_SECRET}" ]; then
+            reasons+=("missing_INTEL_INGEST_SIGNING_SECRET")
+          elif [ "${#INTEL_INGEST_SIGNING_SECRET}" -lt 32 ]; then
+            reasons+=("invalid_INTEL_INGEST_SIGNING_SECRET_length")
+          fi
+
+          if [ "${#reasons[@]}" -gt 0 ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "reason=${reasons[*]}" >> "$GITHUB_OUTPUT"
+            echo "Intel verify skipped: ${reasons[*]}"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Intel verify gate
+        if: ${{ steps.secrets_ready.outputs.ready != 'true' }}
+        run: |
+          echo "intel-verify-full skipped due to secret gate: ${{ steps.secrets_ready.outputs.reason }}"
+
+      - name: Checkout
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
+        run: npm ci
+
+      - name: Prepare intel env file
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          cat > .env <<EOF
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+          INTEL_INGEST_API_KEY=${INTEL_INGEST_API_KEY}
+          INTEL_INGEST_SIGNING_SECRET=${INTEL_INGEST_SIGNING_SECRET}
+          EOF
+
+      - name: Verify intel ingest pipeline (full)
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         run: npm run ops:intel:ci
