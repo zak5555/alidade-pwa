@@ -1235,6 +1235,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:verify:strict script');
     assert(packageJson.includes('"ops:intel:verify:strict:rejection"'),
         'package.json does not register ops:intel:verify:strict:rejection script');
+    assert(packageJson.includes('"ops:intel:sla"'),
+        'package.json does not register ops:intel:sla script');
     assert(packageJson.includes('"ops:intel:ci"'),
         'package.json does not register ops:intel:ci script');
     assert(packageJson.includes('"ops:hooks:install"'),
@@ -1244,12 +1246,17 @@ function testIntelIngestOpsPresence() {
     const packageManifest = JSON.parse(packageJson);
     const strictHealthScript = String(packageManifest?.scripts?.['ops:intel:health:strict'] || '');
     const quickVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:quick'] || '');
+    const intelSlaScript = String(packageManifest?.scripts?.['ops:intel:sla'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
     assert(quickVerifyScript.includes('--count 3'),
         'ops:intel:verify:quick does not enforce reduced probe count');
     assert(quickVerifyScript.includes('--require-persistence 1'),
         'ops:intel:verify:quick does not enforce persistence requirement');
+    assert(intelSlaScript.includes('--max-age-hours'),
+        'ops:intel:sla does not enforce maximum age threshold');
+    assert(intelSlaScript.includes('--require-success-job intel-verify-full'),
+        'ops:intel:sla does not enforce full-lane success job requirement');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
         'ops:intel:health:strict does not enforce source-reason allowlist');
     assert(strictVerifyScript.includes('--allowed-reject-source-reasons'),
@@ -1279,10 +1286,14 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not define intel fast verify lane');
     assert(smokeWorkflow.includes('intel-verify-full'),
         'smoke-defense workflow does not define intel full verify lane');
+    assert(smokeWorkflow.includes('intel-sla-watchdog'),
+        'smoke-defense workflow does not define intel SLA watchdog lane');
     assert(smokeWorkflow.includes('npm run ops:intel:verify:quick'),
         'smoke-defense workflow fast lane does not use quick verify profile');
     assert(smokeWorkflow.includes('npm run ops:intel:ci'),
         'smoke-defense workflow full lane does not use strict CI profile');
+    assert(smokeWorkflow.includes('npm run ops:intel:sla'),
+        'smoke-defense workflow watchdog lane does not run SLA check');
     assert(smokeWorkflow.includes('branches:') && smokeWorkflow.includes('- main'),
         'smoke-defense workflow push trigger is not limited to main branch');
     assert(smokeWorkflow.includes('paths-ignore:'),

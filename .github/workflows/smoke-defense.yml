@@ -65,6 +65,27 @@ jobs:
       - name: Run defense smoke test
         run: npm run test:smoke:defense
 
+  intel-sla-watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: smoke-defense
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.verify_profile == 'fast') }}
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check full intel verify SLA
+        run: npm run ops:intel:sla
+
   intel-verify-fast:
     runs-on: ubuntu-latest
     timeout-minutes: 8
