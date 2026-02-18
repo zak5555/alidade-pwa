@@ -1018,8 +1018,30 @@ function testIntelIngestEdgeFunctionPresence() {
     const source = readText('supabase/functions/intel-ingest/index.ts');
     assert(source.includes('CANONICAL_EVENTS'),
         'intel-ingest edge function does not define canonical event whitelist');
+    assert(source.includes('MAX_REQUEST_BODY_BYTES'),
+        'intel-ingest edge function does not define request-body limit');
+    assert(source.includes('request_body_too_large'),
+        'intel-ingest edge function does not enforce request-body limit');
+    assert(source.includes('parseRequestJsonBody'),
+        'intel-ingest edge function does not use guarded JSON body parser');
+    assert(source.includes('readRequestBodyBytes'),
+        'intel-ingest edge function does not stream-read body with byte limits');
+    assert(source.includes('unsupported_media_type'),
+        'intel-ingest edge function does not enforce application/json content type');
+    assert(source.includes('invalid_body_stream'),
+        'intel-ingest edge function does not handle invalid body stream errors');
     assert(source.includes('verifyEnvelopeSignature'),
         'intel-ingest edge function does not verify event signature');
+    assert(source.includes('invalid_signature_alg'),
+        'intel-ingest edge function does not enforce signature_alg validation');
+    assert(source.includes('payload_too_large'),
+        'intel-ingest edge function does not enforce payload size limit');
+    assert(source.includes('meta_too_large'),
+        'intel-ingest edge function does not enforce meta size limit');
+    assert(source.includes('event_too_large'),
+        'intel-ingest edge function does not enforce event size limit');
+    assert(source.includes('SESSION_MAP_MAX_ENTRIES'),
+        'intel-ingest edge function does not cap session-memory map growth');
     assert(source.includes('checkReplayNonce'),
         'intel-ingest edge function does not enforce replay nonce guard');
     assert(source.includes('checkSessionRateLimit'),
@@ -1036,6 +1058,14 @@ function testIntelIngestEdgeFunctionPresence() {
         'intel-ingest edge function does not use idempotent event_id upsert');
     assert(source.includes('ignoreDuplicates: true'),
         'intel-ingest edge function does not ignore duplicate event_id rows');
+    assert(source.includes('persistRejectedEvents'),
+        'intel-ingest edge function does not persist rejection telemetry');
+    assert(source.includes('intel_event_rejections'),
+        'intel-ingest edge function does not write rejected events to intel_event_rejections table');
+    assert(source.includes('rejectedPersistedCount'),
+        'intel-ingest edge function does not expose rejectedPersistedCount in response');
+    assert(source.includes('rejectionPersistenceWarning'),
+        'intel-ingest edge function does not expose rejectionPersistenceWarning in response');
     return {
         name: 'intel-ingest-edge-function-presence',
         ok: true
@@ -1070,6 +1100,29 @@ function testIntelIngestOpsPresence() {
         'intel ingest health migration does not define health RPC');
     assert(healthMigration.includes('GRANT EXECUTE ON FUNCTION public.get_intel_ingest_health(integer) TO service_role'),
         'intel ingest health migration does not grant execute to service_role');
+    const healthKpiMigration = readText('supabase/migrations/20260218050000_enhance_intel_ingest_health_rpc_kpis.sql');
+    assert(healthKpiMigration.includes('ingestDelayMsP95'),
+        'intel ingest KPI migration does not expose ingestDelayMsP95');
+    assert(healthKpiMigration.includes('freshnessSeconds'),
+        'intel ingest KPI migration does not expose freshnessSeconds');
+    assert(healthKpiMigration.includes('eventsBySource'),
+        'intel ingest KPI migration does not expose eventsBySource');
+    const rejectionTelemetryMigration = readText('supabase/migrations/20260218052018_add_intel_ingest_rejection_telemetry.sql');
+    assert(rejectionTelemetryMigration.includes('CREATE TABLE IF NOT EXISTS public.intel_event_rejections'),
+        'intel rejection telemetry migration does not create intel_event_rejections table');
+    assert(rejectionTelemetryMigration.includes('purge_intel_event_rejections'),
+        'intel rejection telemetry migration does not define rejection retention purge');
+    assert(rejectionTelemetryMigration.includes('rejectRatePercent'),
+        'intel rejection telemetry migration does not expose rejectRatePercent in health RPC');
+    assert(rejectionTelemetryMigration.includes('rejectedBySource'),
+        'intel rejection telemetry migration does not expose rejectedBySource in health RPC');
+    assert(rejectionTelemetryMigration.includes('rejectedByReason'),
+        'intel rejection telemetry migration does not expose rejectedByReason in health RPC');
+    const rejectionSourceReasonMigration = readText('supabase/migrations/20260218063000_add_intel_ingest_rejected_by_source_reason_kpi.sql');
+    assert(rejectionSourceReasonMigration.includes('CREATE OR REPLACE FUNCTION public.get_intel_ingest_health'),
+        'intel source-reason KPI migration does not redefine health RPC');
+    assert(rejectionSourceReasonMigration.includes('rejectedBySourceReason'),
+        'intel source-reason KPI migration does not expose rejectedBySourceReason in health RPC');
 
     const healthScript = readText('scripts/check-intel-ingest-health.cjs');
     assert(healthScript.includes("rpc('get_intel_ingest_health'"),
@@ -1078,6 +1131,82 @@ function testIntelIngestOpsPresence() {
         'intel ingest health script does not support --window-minutes flag');
     assert(healthScript.includes('--max-delayed'),
         'intel ingest health script does not support --max-delayed flag');
+    assert(healthScript.includes('--min-distinct-sessions'),
+        'intel ingest health script does not support --min-distinct-sessions flag');
+    assert(healthScript.includes('--max-p95-delay-ms'),
+        'intel ingest health script does not support --max-p95-delay-ms flag');
+    assert(healthScript.includes('--max-freshness-seconds'),
+        'intel ingest health script does not support --max-freshness-seconds flag');
+    assert(healthScript.includes('--require-source'),
+        'intel ingest health script does not support --require-source flag');
+    assert(healthScript.includes('--min-source-events'),
+        'intel ingest health script does not support --min-source-events flag');
+    assert(healthScript.includes('--max-rejected'),
+        'intel ingest health script does not support --max-rejected flag');
+    assert(healthScript.includes('--max-reject-rate-pct'),
+        'intel ingest health script does not support --max-reject-rate-pct flag');
+    assert(healthScript.includes('--ignore-reject-source-in-rate'),
+        'intel ingest health script does not support --ignore-reject-source-in-rate flag');
+    assert(healthScript.includes('--ignore-reject-sources-in-rate'),
+        'intel ingest health script does not support --ignore-reject-sources-in-rate flag');
+    assert(healthScript.includes('--ignore-reject-source-prefixes'),
+        'intel ingest health script does not support --ignore-reject-source-prefixes flag');
+    assert(healthScript.includes('--allowed-reject-reasons'),
+        'intel ingest health script does not support --allowed-reject-reasons flag');
+    assert(healthScript.includes('--allowed-reject-sources'),
+        'intel ingest health script does not support --allowed-reject-sources flag');
+    assert(healthScript.includes('--allowed-reject-source-prefixes'),
+        'intel ingest health script does not support --allowed-reject-source-prefixes flag');
+    assert(healthScript.includes('--reject-source'),
+        'intel ingest health script does not support --reject-source flag');
+    assert(healthScript.includes('--min-reject-source-events'),
+        'intel ingest health script does not support --min-reject-source-events flag');
+    assert(healthScript.includes('--max-reject-source-events'),
+        'intel ingest health script does not support --max-reject-source-events flag');
+
+    const verifyScript = readText('scripts/verify-intel-ingest.cjs');
+    assert(verifyScript.includes('--min-distinct-sessions'),
+        'intel ingest verify script does not support --min-distinct-sessions flag');
+    assert(verifyScript.includes('--max-p95-delay-ms'),
+        'intel ingest verify script does not support --max-p95-delay-ms flag');
+    assert(verifyScript.includes('--max-freshness-seconds'),
+        'intel ingest verify script does not support --max-freshness-seconds flag');
+    assert(verifyScript.includes('--require-source'),
+        'intel ingest verify script does not support --require-source flag');
+    assert(verifyScript.includes('--min-source-events'),
+        'intel ingest verify script does not support --min-source-events flag');
+    assert(verifyScript.includes('--require-persistence'),
+        'intel ingest verify script does not support --require-persistence flag');
+    assert(verifyScript.includes('--max-rejected'),
+        'intel ingest verify script does not support --max-rejected flag');
+    assert(verifyScript.includes('--max-reject-rate-pct'),
+        'intel ingest verify script does not support --max-reject-rate-pct flag');
+    assert(verifyScript.includes('--ignore-reject-source-in-rate'),
+        'intel ingest verify script does not support --ignore-reject-source-in-rate flag');
+    assert(verifyScript.includes('--ignore-reject-sources-in-rate'),
+        'intel ingest verify script does not support --ignore-reject-sources-in-rate flag');
+    assert(verifyScript.includes('--ignore-reject-source-prefixes'),
+        'intel ingest verify script does not support --ignore-reject-source-prefixes flag');
+    assert(verifyScript.includes('--allowed-reject-reasons'),
+        'intel ingest verify script does not support --allowed-reject-reasons flag');
+    assert(verifyScript.includes('--allowed-reject-sources'),
+        'intel ingest verify script does not support --allowed-reject-sources flag');
+    assert(verifyScript.includes('--allowed-reject-source-prefixes'),
+        'intel ingest verify script does not support --allowed-reject-source-prefixes flag');
+    assert(verifyScript.includes('--reject-source'),
+        'intel ingest verify script does not support --reject-source flag');
+    assert(verifyScript.includes('--min-reject-source-events'),
+        'intel ingest verify script does not support --min-reject-source-events flag');
+    assert(verifyScript.includes('--max-reject-source-events'),
+        'intel ingest verify script does not support --max-reject-source-events flag');
+    assert(verifyScript.includes('--rejection-probe-count'),
+        'intel ingest verify script does not support --rejection-probe-count flag');
+    assert(verifyScript.includes('--rejection-probe-source'),
+        'intel ingest verify script does not support --rejection-probe-source flag');
+    assert(verifyScript.includes('--require-rejection-persistence'),
+        'intel ingest verify script does not support --require-rejection-persistence flag');
+    assert(verifyScript.includes('--rejection-probe-expected-reason'),
+        'intel ingest verify script does not support --rejection-probe-expected-reason flag');
 
     const packageJson = readText('package.json');
     assert(packageJson.includes('"ops:intel:probe"'),
@@ -1086,6 +1215,44 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:health script');
     assert(packageJson.includes('"ops:intel:verify"'),
         'package.json does not register ops:intel:verify script');
+    assert(packageJson.includes('"ops:hooks:install"'),
+        'package.json does not register ops:hooks:install script');
+    assert(packageJson.includes('"security:scan:secrets"'),
+        'package.json does not register security:scan:secrets script');
+
+    const smokeWorkflow = readText('.github/workflows/smoke-defense.yml');
+    assert(smokeWorkflow.includes('Secret hygiene scan'),
+        'smoke-defense workflow does not run Secret hygiene scan step');
+    assert(smokeWorkflow.includes('--max-p95-delay-ms'),
+        'smoke-defense workflow intel verify does not enforce max-p95-delay-ms threshold');
+    assert(smokeWorkflow.includes('--max-freshness-seconds'),
+        'smoke-defense workflow intel verify does not enforce max-freshness-seconds threshold');
+    assert(smokeWorkflow.includes('--require-source'),
+        'smoke-defense workflow intel verify does not enforce source-scoped threshold');
+    assert(smokeWorkflow.includes('--reject-source'),
+        'smoke-defense workflow intel verify does not enforce source-scoped reject threshold');
+    assert(smokeWorkflow.includes('--max-reject-source-events'),
+        'smoke-defense workflow intel verify does not enforce max reject events per source');
+    assert(smokeWorkflow.includes('--min-reject-source-events'),
+        'smoke-defense workflow intel verify does not enforce min reject events per source');
+    assert(smokeWorkflow.includes('--max-reject-rate-pct'),
+        'smoke-defense workflow intel verify does not enforce max reject rate threshold');
+    assert(smokeWorkflow.includes('--ignore-reject-sources-in-rate'),
+        'smoke-defense workflow intel verify does not exclude known synthetic reject sources');
+    assert(smokeWorkflow.includes('--ignore-reject-source-prefixes'),
+        'smoke-defense workflow intel verify does not exclude synthetic reject source prefixes');
+    assert(smokeWorkflow.includes('--allowed-reject-reasons'),
+        'smoke-defense workflow intel verify does not enforce allowed reject reasons gate');
+    assert(smokeWorkflow.includes('--allowed-reject-sources'),
+        'smoke-defense workflow intel verify does not enforce allowed reject sources gate');
+    assert(smokeWorkflow.includes('--allowed-reject-source-prefixes'),
+        'smoke-defense workflow intel verify does not enforce allowed reject source prefixes gate');
+    assert(smokeWorkflow.includes('--require-persistence'),
+        'smoke-defense workflow intel verify does not enforce persistence requirement');
+
+    const preCommitHook = readText('.githooks/pre-commit');
+    assert(preCommitHook.includes('security:scan:secrets:staged'),
+        'pre-commit hook does not run staged secret hygiene scan');
 
     return {
         name: 'intel-ingest-ops-presence',

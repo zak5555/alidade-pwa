@@ -26,10 +26,12 @@ supabase secrets set \
 Apply migration before function deploy:
 
 - `supabase/migrations/20260217220500_create_intel_event_stream.sql`
+- `supabase/migrations/20260218052018_add_intel_ingest_rejection_telemetry.sql`
 
 This migration creates:
 
 - `public.intel_event_stream`
+- `public.intel_event_rejections`
 - strict service-role-only RLS policies
 - dedupe unique index on `event_id`
 - retention function `public.purge_intel_event_stream(retain_days integer)`
@@ -45,18 +47,55 @@ supabase functions deploy intel-ingest --no-verify-jwt
 - envelope signature (`INTEL_INGEST_SIGNING_SECRET`)
 - optional ingest API key (`INTEL_INGEST_API_KEY`)
 
+## Defensive Limits (default)
+
+- request body max: `512 KB`
+- content type required: `application/json`
+- events per request max: `200`
+- event age window: `<= 5 min` and future skew `<= 60 sec`
+- replay nonce required (length + charset validation)
+- `signature_alg` must be `sha256`
+- payload/meta/event byte-size caps to block oversized envelopes
+- in-memory nonce/session caches are bounded and pruned
+
 ## Post-Deploy Smoke
 
 Run:
 
 ```bash
 npm run test:smoke:defense:full
+npm run security:scan:secrets
+npm run ops:hooks:install
 ```
 
 Operational health check (requires service-role env vars):
 
 ```bash
 npm run ops:intel:health -- --window-minutes 15 --min-events 1 --max-delayed 25
+```
+
+Recommended strict profile:
+
+```bash
+npm run ops:intel:health -- --window-minutes 15 --min-events 5 --min-distinct-sessions 1 --max-delayed 25 --max-p95-delay-ms 120000 --max-freshness-seconds 900 --require-source ops_verify --min-source-events 5 --reject-source ops_verify --max-reject-source-events 0 --max-reject-rate-pct 5 --ignore-reject-sources-in-rate ops_reject_probe --ignore-reject-source-prefixes ops_verify_reject_ --allowed-reject-reasons invalid_signature --allowed-reject-sources ops_reject_probe --allowed-reject-source-prefixes ops_verify_reject_
+```
+
+Strict end-to-end verify (ingest + persistence + source-scoped health):
+
+```bash
+npm run ops:intel:verify -- --count 5 --window-minutes 60 --min-events 5 --min-distinct-sessions 1 --max-delayed 25 --max-p95-delay-ms 120000 --max-freshness-seconds 900 --require-source ops_verify --min-source-events 5 --reject-source ops_verify --max-reject-source-events 0 --max-reject-rate-pct 5 --ignore-reject-sources-in-rate ops_reject_probe --ignore-reject-source-prefixes ops_verify_reject_ --allowed-reject-reasons invalid_signature --allowed-reject-sources ops_reject_probe --allowed-reject-source-prefixes ops_verify_reject_ --require-persistence 1
+```
+
+Strict verify with automated rejection-path probe:
+
+```bash
+npm run ops:intel:verify -- --count 5 --window-minutes 60 --min-events 5 --min-distinct-sessions 1 --max-delayed 25 --max-p95-delay-ms 120000 --max-freshness-seconds 900 --require-source ops_verify --min-source-events 5 --rejection-probe-count 1 --rejection-probe-source ops_verify_reject_probe --rejection-probe-expected-reason invalid_signature --reject-source ops_verify_reject_probe --min-reject-source-events 1 --max-reject-source-events 1 --max-reject-rate-pct 5 --ignore-reject-source-prefixes ops_verify_reject_ --allowed-reject-reasons invalid_signature --allowed-reject-sources ops_reject_probe --allowed-reject-source-prefixes ops_verify_reject_ --require-persistence 1 --require-rejection-persistence 1
+```
+
+If your `.env` is not loaded, you can override credentials directly:
+
+```bash
+npm run ops:intel:health -- --supabase-url https://<project>.supabase.co --service-role-key <service_role_or_sb_secret>
 ```
 
 ## Browser Runtime Setup (required for local smoke)
