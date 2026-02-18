@@ -111,6 +111,16 @@ jobs:
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         run: npm ci
 
+      - name: Prepare intel env file
+        if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          cat > .env <<EOF
+          SUPABASE_URL=${SUPABASE_URL}
+          SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+          INTEL_INGEST_API_KEY=${INTEL_INGEST_API_KEY}
+          INTEL_INGEST_SIGNING_SECRET=${INTEL_INGEST_SIGNING_SECRET}
+          EOF
+
       - name: Verify intel ingest pipeline
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         run: npm run ops:intel:ci
