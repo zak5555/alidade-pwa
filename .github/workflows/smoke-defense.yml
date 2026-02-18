@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: smoke-defense
-    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.verify_profile == 'fast') }}
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'fast' || inputs.verify_profile == 'both')) }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
