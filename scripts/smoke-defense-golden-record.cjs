@@ -1351,6 +1351,12 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not define intel full verify lane');
     assert(smokeWorkflow.includes('intel-sla-watchdog'),
         'smoke-defense workflow does not define intel SLA watchdog lane');
+    assert(smokeWorkflow.includes('intel-sla-watchdog-fast'),
+        'smoke-defense workflow does not define fast SLA watchdog lane');
+    assert(smokeWorkflow.includes('intel-sla-watchdog-full'),
+        'smoke-defense workflow does not define full SLA watchdog lane');
+    assert(smokeWorkflow.includes("github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.verify_profile == 'fast')"),
+        'smoke-defense workflow fast watchdog lane does not target push + workflow_dispatch fast events');
     assert(smokeWorkflow.includes('- intel-verify-full'),
         'smoke-defense workflow watchdog lane does not depend on intel-verify-full job');
     assert(smokeWorkflow.includes("github.event_name == 'schedule'"),

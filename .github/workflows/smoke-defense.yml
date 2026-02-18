@@ -75,13 +75,111 @@ jobs:
       - name: Run defense smoke test
         run: npm run test:smoke:defense
 
-  intel-sla-watchdog:
+  intel-sla-watchdog-fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: smoke-defense
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.verify_profile == 'fast') }}
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
+      INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
+      INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
+      INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
+      INTEL_SLA_INCIDENT_ESCALATION_HOURS: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_HOURS }}
+      INTEL_SLA_INCIDENT_ESCALATION_LABEL: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_LABEL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check full intel verify SLA
+        id: sla_check
+        continue-on-error: true
+        run: npm run ops:intel:sla -- --max-age-hours "${SLA_MAX_AGE_HOURS}"
+
+      - name: Resolve SLA incident issue
+        if: ${{ steps.sla_check.outcome == 'success' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          node scripts/report-intel-sla-incident.cjs \
+            --mode resolve \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --required-job intel-verify-full \
+            --sla-max-age-hours "${SLA_MAX_AGE_HOURS}" \
+            --sla-outcome "${{ steps.sla_check.outcome }}" \
+            --escalation-hours "${INTEL_SLA_INCIDENT_ESCALATION_HOURS:-6}" \
+            --escalation-label "${INTEL_SLA_INCIDENT_ESCALATION_LABEL:-priority:p0}" \
+            --comment-cooldown-minutes "${INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES:-60}"
+
+      - name: Trigger full intel verify remediation
+        id: remediation
+        if: ${{ steps.sla_check.outcome == 'failure' }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set +e
+          node scripts/dispatch-intel-verify-remediation.cjs \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --require-job intel-verify-full \
+            --verify-profile full \
+            --sla-max-age-hours "${SLA_MAX_AGE_HOURS}" \
+            --cooldown-minutes 30 > remediation.json
+          remediation_status=$?
+          set -e
+
+          if [ "${remediation_status}" -ne 0 ]; then
+            echo '{"ok":false,"dispatched":false,"reason":"dispatch_failed"}' > remediation.json
+          fi
+
+          cat remediation.json
+
+          node -e "const fs=require('fs');const data=JSON.parse(fs.readFileSync('remediation.json','utf8'));const out=process.env.GITHUB_OUTPUT;const asLine=(value)=>String(value??'').replace(/[\r\n]+/g,' ').trim();const map={dispatched:data.dispatched===true?'true':'false',reason:asLine(data.reason||''),latest_run_id:asLine(data.latestRun?.runId||''),latest_run_url:asLine(data.latestRun?.runUrl||''),latest_run_conclusion:asLine(data.latestRun?.runConclusion||'')};for(const [key,val] of Object.entries(map)){fs.appendFileSync(out,`${key}=${val}\n`);}"
+
+          exit "${remediation_status}"
+
+      - name: Open SLA incident issue
+        if: ${{ steps.sla_check.outcome == 'failure' && (steps.remediation.outcome == 'failure' || steps.remediation.outputs.dispatched != 'true') }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          node scripts/report-intel-sla-incident.cjs \
+            --mode open \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --required-job intel-verify-full \
+            --sla-max-age-hours "${SLA_MAX_AGE_HOURS}" \
+            --sla-outcome "${{ steps.sla_check.outcome }}" \
+            --remediation-outcome "${{ steps.remediation.outcome }}" \
+            --remediation-dispatched "${{ steps.remediation.outputs.dispatched }}" \
+            --remediation-reason "${{ steps.remediation.outputs.reason }}" \
+            --remediation-run-id "${{ steps.remediation.outputs.latest_run_id }}" \
+            --remediation-run-url "${{ steps.remediation.outputs.latest_run_url }}" \
+            --remediation-run-conclusion "${{ steps.remediation.outputs.latest_run_conclusion }}" \
+            --escalation-hours "${INTEL_SLA_INCIDENT_ESCALATION_HOURS:-6}" \
+            --escalation-label "${INTEL_SLA_INCIDENT_ESCALATION_LABEL:-priority:p0}" \
+            --comment-cooldown-minutes "${INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES:-60}"
+
+  intel-sla-watchdog-full:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs:
       - smoke-defense
       - intel-verify-full
-    if: ${{ github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'fast' || inputs.verify_profile == 'full' || inputs.verify_profile == 'both')) }}
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'full' || inputs.verify_profile == 'both')) }}
     env:
       GITHUB_TOKEN: ${{ github.token }}
       GITHUB_REPOSITORY: ${{ github.repository }}
