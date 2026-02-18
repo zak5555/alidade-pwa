@@ -1280,6 +1280,10 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla:incident:dry does not pass incident assignees');
     assert(intelSlaIncidentDryScript.includes('--comment-cooldown-minutes'),
         'ops:intel:sla:incident:dry does not pass incident comment cooldown');
+    assert(intelSlaIncidentDryScript.includes('--escalation-hours'),
+        'ops:intel:sla:incident:dry does not pass incident escalation hours');
+    assert(intelSlaIncidentDryScript.includes('--escalation-label'),
+        'ops:intel:sla:incident:dry does not pass incident escalation label');
     assert(intelSlaIncidentDryScript.includes('--dry-run true'),
         'ops:intel:sla:incident:dry does not enforce dry-run mode');
     assert(intelSlaIncidentResolveDryScript.includes('--mode resolve'),
@@ -1290,6 +1294,10 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla:incident:resolve:dry does not pass incident assignees');
     assert(intelSlaIncidentResolveDryScript.includes('--comment-cooldown-minutes'),
         'ops:intel:sla:incident:resolve:dry does not pass incident comment cooldown');
+    assert(intelSlaIncidentResolveDryScript.includes('--escalation-hours'),
+        'ops:intel:sla:incident:resolve:dry does not pass incident escalation hours');
+    assert(intelSlaIncidentResolveDryScript.includes('--escalation-label'),
+        'ops:intel:sla:incident:resolve:dry does not pass incident escalation label');
     assert(intelSlaIncidentResolveDryScript.includes('--dry-run true'),
         'ops:intel:sla:incident:resolve:dry does not enforce dry-run mode');
     assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
@@ -1329,6 +1337,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not expose incident assignees configuration');
     assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES'),
         'smoke-defense workflow does not expose incident comment cooldown configuration');
+    assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_ESCALATION_HOURS'),
+        'smoke-defense workflow does not expose incident escalation hours configuration');
+    assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_ESCALATION_LABEL'),
+        'smoke-defense workflow does not expose incident escalation label configuration');
     assert(smokeWorkflow.includes('verify_profile'),
         'smoke-defense workflow does not expose manual verify profile input');
     assert(smokeWorkflow.includes('sla_max_age_hours'),
@@ -1355,6 +1367,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow SLA incident resolve step does not use resolve mode');
     assert(smokeWorkflow.includes('--comment-cooldown-minutes'),
         'smoke-defense workflow SLA incident steps do not pass comment cooldown');
+    assert(smokeWorkflow.includes('--escalation-hours'),
+        'smoke-defense workflow SLA incident steps do not pass escalation hours');
+    assert(smokeWorkflow.includes('--escalation-label'),
+        'smoke-defense workflow SLA incident steps do not pass escalation label');
     assert(smokeWorkflow.includes('continue-on-error: true'),
         'smoke-defense workflow watchdog lane does not tolerate stale SLA check before remediation');
     assert(smokeWorkflow.includes('Trigger full intel verify remediation'),
@@ -1398,6 +1414,10 @@ function testIntelIngestOpsPresence() {
         'incident reporter script does not support mode argument');
     assert(incidentScript.includes('--comment-cooldown-minutes'),
         'incident reporter script does not support comment cooldown argument');
+    assert(incidentScript.includes('--escalation-hours'),
+        'incident reporter script does not support escalation hours argument');
+    assert(incidentScript.includes('--escalation-label'),
+        'incident reporter script does not support escalation label argument');
     assert(incidentScript.includes('--labels'),
         'incident reporter script does not support labels argument');
     assert(incidentScript.includes('--assignees'),
@@ -1408,6 +1428,10 @@ function testIntelIngestOpsPresence() {
         'incident reporter script does not read incident assignees from environment');
     assert(incidentScript.includes('INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES'),
         'incident reporter script does not read incident comment cooldown from environment');
+    assert(incidentScript.includes('INTEL_SLA_INCIDENT_ESCALATION_HOURS'),
+        'incident reporter script does not read incident escalation hours from environment');
+    assert(incidentScript.includes('INTEL_SLA_INCIDENT_ESCALATION_LABEL'),
+        'incident reporter script does not read incident escalation label from environment');
     assert(incidentScript.includes('--dry-run'),
         'incident reporter script does not support dry-run guard');
     assert(incidentScript.includes('/issues?state=open'),
@@ -1420,6 +1444,10 @@ function testIntelIngestOpsPresence() {
         'incident reporter script does not define incident metadata patch helper');
     assert(incidentScript.includes('evaluateCommentCooldown'),
         'incident reporter script does not define comment cooldown evaluator');
+    assert(incidentScript.includes('calculateIssueAgeHours'),
+        'incident reporter script does not define issue age calculator for escalation');
+    assert(incidentScript.includes('applyEscalationLabel'),
+        'incident reporter script does not define escalation label helper');
     assert(incidentScript.includes('findLatestIssueComment'),
         'incident reporter script does not inspect latest issue comment for cooldown');
     assert(incidentScript.includes('comment_skipped_cooldown'),

@@ -87,6 +87,8 @@ jobs:
       INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
       INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
       INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
+      INTEL_SLA_INCIDENT_ESCALATION_HOURS: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_HOURS }}
+      INTEL_SLA_INCIDENT_ESCALATION_LABEL: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_LABEL }}
 
     steps:
       - name: Checkout
@@ -115,6 +117,8 @@ jobs:
             --required-job intel-verify-full \
             --sla-max-age-hours "${SLA_MAX_AGE_HOURS}" \
             --sla-outcome "${{ steps.sla_check.outcome }}" \
+            --escalation-hours "${INTEL_SLA_INCIDENT_ESCALATION_HOURS:-6}" \
+            --escalation-label "${INTEL_SLA_INCIDENT_ESCALATION_LABEL:-priority:p0}" \
             --comment-cooldown-minutes "${INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES:-60}"
 
       - name: Trigger full intel verify remediation
@@ -165,6 +169,8 @@ jobs:
             --remediation-run-id "${{ steps.remediation.outputs.latest_run_id }}" \
             --remediation-run-url "${{ steps.remediation.outputs.latest_run_url }}" \
             --remediation-run-conclusion "${{ steps.remediation.outputs.latest_run_conclusion }}" \
+            --escalation-hours "${INTEL_SLA_INCIDENT_ESCALATION_HOURS:-6}" \
+            --escalation-label "${INTEL_SLA_INCIDENT_ESCALATION_LABEL:-priority:p0}" \
             --comment-cooldown-minutes "${INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES:-60}"
 
   intel-verify-fast:

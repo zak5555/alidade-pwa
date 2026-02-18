@@ -186,6 +186,37 @@ function isHttpStatusError(error, statusCode) {
     return message.includes(`HTTP ${statusCode}`);
 }
 
+function calculateIssueAgeHours(issueCreatedAt) {
+    const createdAtMs = Date.parse(String(issueCreatedAt || ''));
+    if (!Number.isFinite(createdAtMs)) return null;
+    const ageMs = Date.now() - createdAtMs;
+    if (!Number.isFinite(ageMs) || ageMs < 0) return 0;
+    return Number((ageMs / (60 * 60 * 1000)).toFixed(3));
+}
+
+function applyEscalationLabel(labels, escalationLabel) {
+    const normalizedEscalationLabel = String(escalationLabel || '').trim();
+    const mergedLabels = mergeUniqueValues(labels, normalizedEscalationLabel ? [normalizedEscalationLabel] : []);
+    if (!normalizedEscalationLabel) return mergedLabels;
+    if (!/^priority:/i.test(normalizedEscalationLabel)) return mergedLabels;
+
+    return mergedLabels.filter((label) => {
+        if (/^priority:/i.test(label)) {
+            return label.toLowerCase() === normalizedEscalationLabel.toLowerCase();
+        }
+        return true;
+    });
+}
+
+function areArraysEqual(left, right) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    for (let index = 0; index < left.length; index += 1) {
+        if (left[index] !== right[index]) return false;
+    }
+    return true;
+}
+
 function evaluateCommentCooldown(lastCommentCreatedAt, cooldownMinutes) {
     if (!lastCommentCreatedAt || !Number.isFinite(cooldownMinutes) || cooldownMinutes <= 0) {
         return {
@@ -425,6 +456,23 @@ async function main() {
         0,
         10080
     );
+    const envEscalationHoursRaw = Number(String(process.env.INTEL_SLA_INCIDENT_ESCALATION_HOURS || '').trim());
+    const envEscalationHours = Number.isInteger(envEscalationHoursRaw) &&
+        envEscalationHoursRaw >= 0 &&
+        envEscalationHoursRaw <= 720
+        ? envEscalationHoursRaw
+        : 6;
+    const escalationHours = parseIntegerFlag(
+        '--escalation-hours',
+        envEscalationHours,
+        0,
+        720
+    );
+    const escalationLabel = parseStringFlag(
+        '--escalation-label',
+        process.env.INTEL_SLA_INCIDENT_ESCALATION_LABEL || 'priority:p0'
+    );
+    const normalizedEscalationLabel = String(escalationLabel || '').trim();
 
     if (!token) {
         throw new Error('Missing GitHub token (use GITHUB_TOKEN, GH_TOKEN, or --token)');
@@ -455,6 +503,9 @@ async function main() {
     });
 
     const existingIssue = await findOpenIssueByTitle(owner, repo, token, title);
+    const existingIssueAgeHours = existingIssue
+        ? calculateIssueAgeHours(existingIssue.created_at)
+        : null;
 
     if (mode === 'resolve') {
         if (dryRun) {
@@ -467,6 +518,9 @@ async function main() {
                 labels,
                 assignees,
                 commentCooldownMinutes,
+                escalationHours,
+                escalationLabel: normalizedEscalationLabel || null,
+                issueAgeHours: existingIssueAgeHours,
                 existingIssue: existingIssue
                     ? { number: existingIssue.number, url: existingIssue.html_url || null }
                     : null
@@ -482,7 +536,10 @@ async function main() {
                 title,
                 labels,
                 assignees,
-                commentCooldownMinutes
+                commentCooldownMinutes,
+                escalationHours,
+                escalationLabel: normalizedEscalationLabel || null,
+                issueAgeHours: null
             }, null, 2));
             return;
         }
@@ -510,21 +567,46 @@ async function main() {
             title,
             labels,
             assignees,
-            commentCooldownMinutes
+            commentCooldownMinutes,
+            escalationHours,
+            escalationLabel: normalizedEscalationLabel || null,
+            issueAgeHours: existingIssueAgeHours
         }, null, 2));
         return;
     }
 
     if (dryRun) {
+        const baseDryRunLabels = existingIssue
+            ? mergeUniqueValues(extractIssueLabelNames(existingIssue), labels)
+            : labels;
+        const dryRunIssueAgeHours = existingIssue
+            ? existingIssueAgeHours
+            : 0;
+        const dryRunEscalationEligible = Boolean(
+            normalizedEscalationLabel &&
+            dryRunIssueAgeHours !== null &&
+            dryRunIssueAgeHours >= escalationHours
+        );
+        const dryRunEffectiveLabels = dryRunEscalationEligible
+            ? applyEscalationLabel(baseDryRunLabels, normalizedEscalationLabel)
+            : baseDryRunLabels;
+        const dryRunEscalationApplied = dryRunEscalationEligible &&
+            !areArraysEqual(dryRunEffectiveLabels, baseDryRunLabels);
         console.log(JSON.stringify({
             ok: true,
             dryRun: true,
             mode,
             action: existingIssue ? 'would_comment' : 'would_create',
             title,
-            labels,
+            labels: dryRunEffectiveLabels,
+            requestedLabels: labels,
             assignees,
             commentCooldownMinutes,
+            issueAgeHours: dryRunIssueAgeHours,
+            escalationHours,
+            escalationLabel: normalizedEscalationLabel || null,
+            escalationEligible: dryRunEscalationEligible,
+            escalationApplied: dryRunEscalationApplied,
             existingIssue: existingIssue
                 ? { number: existingIssue.number, url: existingIssue.html_url || null }
                 : null
@@ -533,7 +615,18 @@ async function main() {
     }
 
     if (existingIssue) {
-        const mergedLabels = mergeUniqueValues(extractIssueLabelNames(existingIssue), labels);
+        const issueAgeHours = existingIssueAgeHours;
+        const escalationEligible = Boolean(
+            normalizedEscalationLabel &&
+            issueAgeHours !== null &&
+            issueAgeHours >= escalationHours
+        );
+        const baseMergedLabels = mergeUniqueValues(extractIssueLabelNames(existingIssue), labels);
+        const mergedLabels = escalationEligible
+            ? applyEscalationLabel(baseMergedLabels, normalizedEscalationLabel)
+            : baseMergedLabels;
+        const escalationApplied = escalationEligible &&
+            !areArraysEqual(mergedLabels, baseMergedLabels);
         const mergedAssignees = mergeUniqueValues(extractIssueAssignees(existingIssue), assignees);
         const metadataUpdate = await patchIncidentIssueMetadata({
             owner,
@@ -562,6 +655,11 @@ async function main() {
                 labels: mergedLabels,
                 assignees: mergedAssignees,
                 commentCooldownMinutes,
+                issueAgeHours,
+                escalationHours,
+                escalationLabel: normalizedEscalationLabel || null,
+                escalationEligible,
+                escalationApplied,
                 cooldown,
                 assigneeFallback: Boolean(metadataUpdate.assigneeFallback),
                 assigneeFallbackReason: metadataUpdate.assigneeFallbackReason || null
@@ -593,19 +691,34 @@ async function main() {
             labels: mergedLabels,
             assignees: mergedAssignees,
             commentCooldownMinutes,
+            issueAgeHours,
+            escalationHours,
+            escalationLabel: normalizedEscalationLabel || null,
+            escalationEligible,
+            escalationApplied,
             assigneeFallback: Boolean(metadataUpdate.assigneeFallback),
             assigneeFallbackReason: metadataUpdate.assigneeFallbackReason || null
         }, null, 2));
         return;
     }
 
+    const createdIssueAgeHours = 0;
+    const escalationEligible = Boolean(
+        normalizedEscalationLabel &&
+        createdIssueAgeHours >= escalationHours
+    );
+    const createLabels = escalationEligible
+        ? applyEscalationLabel(labels, normalizedEscalationLabel)
+        : labels;
+    const escalationApplied = escalationEligible &&
+        !areArraysEqual(createLabels, labels);
     const createResult = await createIncidentIssue({
         owner,
         repo,
         token,
         title,
         body: incidentBody,
-        labels,
+        labels: createLabels,
         assignees
     });
     const createdIssue = createResult.createdIssue;
@@ -616,9 +729,15 @@ async function main() {
         issueNumber: createdIssue?.number || null,
         issueUrl: createdIssue?.html_url || null,
         title,
-        labels,
+        labels: createLabels,
+        requestedLabels: labels,
         assignees,
         commentCooldownMinutes,
+        issueAgeHours: createdIssueAgeHours,
+        escalationHours,
+        escalationLabel: normalizedEscalationLabel || null,
+        escalationEligible,
+        escalationApplied,
         assigneeFallback: Boolean(createResult.assigneeFallback),
         assigneeFallbackReason: createResult.assigneeFallbackReason || null
     }, null, 2));
