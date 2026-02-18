@@ -1219,6 +1219,9 @@ function testIntelIngestOpsPresence() {
         'intel ingest verify script does not support --require-rejection-persistence flag');
     assert(verifyScript.includes('--rejection-probe-expected-reason'),
         'intel ingest verify script does not support --rejection-probe-expected-reason flag');
+    const probeScript = readText('scripts/probe-intel-ingest.cjs');
+    assert(probeScript.includes('findLastFlagValue'),
+        'intel ingest probe script does not support last-wins CLI flag parsing');
 
     const packageJson = readText('package.json');
     assert(packageJson.includes('"ops:intel:probe"'),
