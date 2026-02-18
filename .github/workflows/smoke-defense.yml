@@ -53,12 +53,43 @@ jobs:
       - name: Check required secrets
         id: secrets_ready
         run: |
-          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ] || [ -z "${INTEL_INGEST_API_KEY}" ] || [ -z "${INTEL_INGEST_SIGNING_SECRET}" ]; then
+          reasons=()
+
+          if [ -z "${SUPABASE_URL}" ]; then
+            reasons+=("missing_SUPABASE_URL")
+          elif [[ ! "${SUPABASE_URL}" =~ ^https?:// ]]; then
+            reasons+=("invalid_SUPABASE_URL_format")
+          fi
+
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            reasons+=("missing_SUPABASE_SERVICE_ROLE_KEY")
+          elif [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^sb_secret_[A-Za-z0-9_-]{20,}$ ]] && [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^[^.]+\.[^.]+\.[^.]+$ ]]; then
+            reasons+=("invalid_SUPABASE_SERVICE_ROLE_KEY_format")
+          fi
+
+          if [ -z "${INTEL_INGEST_API_KEY}" ]; then
+            reasons+=("missing_INTEL_INGEST_API_KEY")
+          fi
+
+          if [ -z "${INTEL_INGEST_SIGNING_SECRET}" ]; then
+            reasons+=("missing_INTEL_INGEST_SIGNING_SECRET")
+          elif [ "${#INTEL_INGEST_SIGNING_SECRET}" -lt 32 ]; then
+            reasons+=("invalid_INTEL_INGEST_SIGNING_SECRET_length")
+          fi
+
+          if [ "${#reasons[@]}" -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "Missing one or more intel verify secrets. Skipping intel-verify job steps."
+            echo "reason=${reasons[*]}" >> "$GITHUB_OUTPUT"
+            echo "Intel verify skipped: ${reasons[*]}"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Intel verify gate
+        if: ${{ steps.secrets_ready.outputs.ready != 'true' }}
+        run: |
+          echo "intel-verify skipped due to secret gate: ${{ steps.secrets_ready.outputs.reason }}"
 
       - name: Checkout
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
