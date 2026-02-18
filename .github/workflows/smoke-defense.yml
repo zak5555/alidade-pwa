@@ -48,12 +48,17 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       INTEL_INGEST_API_KEY: ${{ secrets.INTEL_INGEST_API_KEY }}
       INTEL_INGEST_SIGNING_SECRET: ${{ secrets.INTEL_INGEST_SIGNING_SECRET }}
+      INTEL_VERIFY_ENABLED: ${{ secrets.INTEL_VERIFY_ENABLED }}
 
     steps:
       - name: Check required secrets
         id: secrets_ready
         run: |
           reasons=()
+
+          if [ "${INTEL_VERIFY_ENABLED:-0}" != "1" ]; then
+            reasons+=("intel_verify_disabled")
+          fi
 
           if [ -z "${SUPABASE_URL}" ]; then
             reasons+=("missing_SUPABASE_URL")
