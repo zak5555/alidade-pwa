@@ -159,7 +159,10 @@ function getVerifyProfileDefaults(profileName) {
             rejectionProbeCount: 0,
             requireRejectionPersistence: false,
             rejectionProbeSource: 'ops_verify_reject_probe',
-            rejectionProbeExpectedReason: ''
+            rejectionProbeExpectedReason: '',
+            probeRetries: 1,
+            healthRetries: 1,
+            retryDelayMs: 250
         },
         strict: {
             count: 5,
@@ -188,7 +191,10 @@ function getVerifyProfileDefaults(profileName) {
             rejectionProbeCount: 0,
             requireRejectionPersistence: false,
             rejectionProbeSource: 'ops_verify_reject_probe',
-            rejectionProbeExpectedReason: ''
+            rejectionProbeExpectedReason: '',
+            probeRetries: 2,
+            healthRetries: 2,
+            retryDelayMs: 300
         },
         strict_rejection: {
             count: 5,
@@ -217,7 +223,10 @@ function getVerifyProfileDefaults(profileName) {
             rejectionProbeCount: 1,
             requireRejectionPersistence: true,
             rejectionProbeSource: 'ops_verify_reject_probe',
-            rejectionProbeExpectedReason: 'invalid_signature'
+            rejectionProbeExpectedReason: 'invalid_signature',
+            probeRetries: 2,
+            healthRetries: 2,
+            retryDelayMs: 300
         }
     };
     const selected = profiles[profileName];
@@ -237,6 +246,54 @@ function normalizeSupabaseUrl(rawUrl) {
     } catch (_error) {
         return '';
     }
+}
+
+const TRANSIENT_HTTP_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+function isTransientHttpStatus(statusCode) {
+    const normalized = Number(statusCode);
+    if (!Number.isInteger(normalized)) return false;
+    return TRANSIENT_HTTP_STATUS_CODES.has(normalized);
+}
+
+function isLikelyTransientRpcError(error) {
+    if (!error) return false;
+    const code = String(error.code || '').trim().toUpperCase();
+    if (['ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN'].includes(code)) {
+        return true;
+    }
+
+    const message = String(error.message || '').toLowerCase();
+    if (!message) return false;
+
+    const transientTokens = [
+        'fetch failed',
+        'network',
+        'socket hang up',
+        'timeout',
+        'timed out',
+        'temporar',
+        'too many requests',
+        'rate limit'
+    ];
+    if (transientTokens.some((token) => message.includes(token))) {
+        return true;
+    }
+
+    return /\b429\b/.test(message) || /\b5\d\d\b/.test(message);
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
+}
+
+function computeRetryDelayMs(baseDelayMs, attemptNumber) {
+    const normalizedBaseDelay = Math.max(0, Number(baseDelayMs) || 0);
+    const normalizedAttempt = Math.max(1, Number(attemptNumber) || 1);
+    const backoffFactor = 2 ** Math.max(0, normalizedAttempt - 1);
+    return Math.min(normalizedBaseDelay * backoffFactor, 5000);
 }
 
 function decodeBase64UrlJson(segment) {
@@ -342,7 +399,9 @@ async function runProbe(options) {
         eventIdPrefix = 'verify',
         sessionPrefix = 'ops_verify',
         tamperSignature = false,
-        expectRejects = false
+        expectRejects = false,
+        maxRetries = 0,
+        retryDelayMs = 250
     } = options;
 
     const endpoint = `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/intel-ingest`;
@@ -358,51 +417,80 @@ async function runProbe(options) {
         tamperSignature
     });
 
-    const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-intel-ingest-key': ingestApiKey
-        },
-        body: JSON.stringify({ events })
-    });
+    const totalAttempts = Math.max(0, Number(maxRetries) || 0) + 1;
+    let attempt = 0;
+    let lastError = null;
 
-    let body = null;
-    try {
-        body = await response.json();
-    } catch (_error) {
-        body = null;
+    while (attempt < totalAttempts) {
+        attempt += 1;
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    'x-intel-ingest-key': ingestApiKey
+                },
+                body: JSON.stringify({ events })
+            });
+
+            let body = null;
+            try {
+                body = await response.json();
+            } catch (_error) {
+                body = null;
+            }
+
+            const acceptedCount = Number(body?.acceptedCount || 0);
+            const rejectedCount = Number(body?.rejectedCount || 0);
+            const rejectedReasons = Array.isArray(body?.rejected)
+                ? body.rejected
+                    .map((item) => String(item?.reason || '').trim())
+                    .filter(Boolean)
+                : [];
+            const persistedCount = body?.persistedCount === undefined ? null : Number(body.persistedCount);
+            const rejectedPersistedCount = body?.rejectedPersistedCount === undefined
+                ? null
+                : Number(body.rejectedPersistedCount);
+            const ok = expectRejects
+                ? Boolean(response.ok) && acceptedCount === 0 && rejectedCount >= count
+                : Boolean(response.ok) && acceptedCount >= count && rejectedCount === 0;
+            const transientStatus = isTransientHttpStatus(response.status);
+            const shouldRetry = !ok && transientStatus && attempt < totalAttempts;
+
+            if (shouldRetry) {
+                await sleep(computeRetryDelayMs(retryDelayMs, attempt));
+                continue;
+            }
+
+            return {
+                ok,
+                endpoint,
+                requestedCount: count,
+                responseStatus: response.status,
+                expectedMode: expectRejects ? 'reject' : 'accept',
+                acceptedCount,
+                rejectedCount,
+                rejectedReasons,
+                persistedCount,
+                persistenceWarning: body?.persistenceWarning ?? null,
+                rejectedPersistedCount,
+                rejectionPersistenceWarning: body?.rejectionPersistenceWarning ?? null,
+                attempts: attempt,
+                retriesUsed: Math.max(0, attempt - 1),
+                retried: attempt > 1
+            };
+        } catch (error) {
+            lastError = error;
+            if (attempt < totalAttempts) {
+                await sleep(computeRetryDelayMs(retryDelayMs, attempt));
+                continue;
+            }
+            throw error;
+        }
     }
 
-    const acceptedCount = Number(body?.acceptedCount || 0);
-    const rejectedCount = Number(body?.rejectedCount || 0);
-    const rejectedReasons = Array.isArray(body?.rejected)
-        ? body.rejected
-            .map((item) => String(item?.reason || '').trim())
-            .filter(Boolean)
-        : [];
-    const persistedCount = body?.persistedCount === undefined ? null : Number(body.persistedCount);
-    const rejectedPersistedCount = body?.rejectedPersistedCount === undefined
-        ? null
-        : Number(body.rejectedPersistedCount);
-    const ok = expectRejects
-        ? Boolean(response.ok) && acceptedCount === 0 && rejectedCount >= count
-        : Boolean(response.ok) && acceptedCount >= count && rejectedCount === 0;
-
-    return {
-        ok,
-        endpoint,
-        requestedCount: count,
-        responseStatus: response.status,
-        expectedMode: expectRejects ? 'reject' : 'accept',
-        acceptedCount,
-        rejectedCount,
-        rejectedReasons,
-        persistedCount,
-        persistenceWarning: body?.persistenceWarning ?? null,
-        rejectedPersistedCount,
-        rejectionPersistenceWarning: body?.rejectionPersistenceWarning ?? null
-    };
+    throw lastError || new Error('Probe failed after retries');
 }
 
 function buildHealthChecks(metrics, minEvents, maxDelayed) {
@@ -677,7 +765,9 @@ async function runHealth(options) {
         allowedRejectSourceReasonRules,
         rejectSource,
         minRejectSourceEvents,
-        maxRejectSourceEvents
+        maxRejectSourceEvents,
+        maxRetries = 0,
+        retryDelayMs = 250
     } = options;
 
     const client = createClient(supabaseUrl, serviceRoleKey, {
@@ -687,42 +777,64 @@ async function runHealth(options) {
         }
     });
 
-    const { data, error } = await client.rpc('get_intel_ingest_health', {
-        window_minutes: windowMinutes
-    });
-    if (error) {
-        throw new Error(`RPC get_intel_ingest_health failed: ${error.message}`);
+    const totalAttempts = Math.max(0, Number(maxRetries) || 0) + 1;
+    let attempt = 0;
+    let lastError = null;
+
+    while (attempt < totalAttempts) {
+        attempt += 1;
+
+        const { data, error } = await client.rpc('get_intel_ingest_health', {
+            window_minutes: windowMinutes
+        });
+
+        if (error) {
+            lastError = error;
+            const transient = isLikelyTransientRpcError(error);
+            if (transient && attempt < totalAttempts) {
+                await sleep(computeRetryDelayMs(retryDelayMs, attempt));
+                continue;
+            }
+            throw new Error(`RPC get_intel_ingest_health failed: ${error.message}`);
+        }
+
+        const metrics = data && typeof data === 'object' ? data : {};
+        const checks = buildHealthChecks({
+            ...metrics,
+            __minDistinctSessionsThreshold: minDistinctSessions,
+            __maxP95DelayMsThreshold: maxP95DelayMs,
+            __maxFreshnessSecondsThreshold: maxFreshnessSeconds,
+            __requireSource: requireSource,
+            __minSourceEventsThreshold: minSourceEvents,
+            __maxRejectedThreshold: maxRejected,
+            __maxRejectRatePctThreshold: maxRejectRatePct,
+            __ignoreRejectSourceInRate: ignoreRejectSourceInRate,
+            __ignoreRejectSourcesInRate: ignoreRejectSourcesInRate,
+            __ignoreRejectSourcePrefixes: ignoreRejectSourcePrefixes,
+            __allowedRejectReasons: allowedRejectReasons,
+            __allowedRejectSources: allowedRejectSources,
+            __allowedRejectSourcePrefixes: allowedRejectSourcePrefixes,
+            __allowedRejectSourceReasonRules: allowedRejectSourceReasonRules,
+            __rejectSource: rejectSource,
+            __minRejectSourceEventsThreshold: minRejectSourceEvents,
+            __maxRejectSourceEventsThreshold: maxRejectSourceEvents
+        }, minEvents, maxDelayed);
+        const ok = checks.every((check) => check.ok);
+
+        return {
+            ok,
+            windowMinutes,
+            checks,
+            metrics,
+            retry: {
+                attempts: attempt,
+                retriesUsed: Math.max(0, attempt - 1),
+                retried: attempt > 1
+            }
+        };
     }
 
-    const metrics = data && typeof data === 'object' ? data : {};
-    const checks = buildHealthChecks({
-        ...metrics,
-        __minDistinctSessionsThreshold: minDistinctSessions,
-        __maxP95DelayMsThreshold: maxP95DelayMs,
-        __maxFreshnessSecondsThreshold: maxFreshnessSeconds,
-        __requireSource: requireSource,
-        __minSourceEventsThreshold: minSourceEvents,
-        __maxRejectedThreshold: maxRejected,
-        __maxRejectRatePctThreshold: maxRejectRatePct,
-        __ignoreRejectSourceInRate: ignoreRejectSourceInRate,
-        __ignoreRejectSourcesInRate: ignoreRejectSourcesInRate,
-        __ignoreRejectSourcePrefixes: ignoreRejectSourcePrefixes,
-        __allowedRejectReasons: allowedRejectReasons,
-        __allowedRejectSources: allowedRejectSources,
-        __allowedRejectSourcePrefixes: allowedRejectSourcePrefixes,
-        __allowedRejectSourceReasonRules: allowedRejectSourceReasonRules,
-        __rejectSource: rejectSource,
-        __minRejectSourceEventsThreshold: minRejectSourceEvents,
-        __maxRejectSourceEventsThreshold: maxRejectSourceEvents
-    }, minEvents, maxDelayed);
-    const ok = checks.every((check) => check.ok);
-
-    return {
-        ok,
-        windowMinutes,
-        checks,
-        metrics
-    };
+    throw new Error(`RPC get_intel_ingest_health failed after retries: ${lastError ? lastError.message : 'unknown_error'}`);
 }
 
 async function main() {
@@ -749,6 +861,9 @@ async function main() {
 
     const count = parseIntegerFlag('--count', profileDefaults?.count ?? 5, 1, 200);
     const windowMinutes = parseIntegerFlag('--window-minutes', profileDefaults?.windowMinutes ?? 60, 1, 1440);
+    const probeRetries = parseIntegerFlag('--probe-retries', profileDefaults?.probeRetries ?? 1, 0, 5);
+    const healthRetries = parseIntegerFlag('--health-retries', profileDefaults?.healthRetries ?? 1, 0, 5);
+    const retryDelayMs = parseIntegerFlag('--retry-delay-ms', profileDefaults?.retryDelayMs ?? 250, 50, 10000);
     const minEvents = parseIntegerFlag('--min-events', profileDefaults?.minEvents ?? count, 0, 1000000);
     const maxDelayed = parseIntegerFlag('--max-delayed', profileDefaults?.maxDelayed ?? 25, 0, 1000000);
     const minDistinctSessions = parseIntegerFlag('--min-distinct-sessions', profileDefaults?.minDistinctSessions ?? 1, 0, 1000000);
@@ -853,7 +968,9 @@ async function main() {
         lat,
         lng,
         dangerLevel,
-        source
+        source,
+        maxRetries: probeRetries,
+        retryDelayMs
     });
 
     const rejectionProbe = rejectionProbeCount > 0
@@ -869,7 +986,9 @@ async function main() {
             eventIdPrefix: 'verify_reject',
             sessionPrefix: 'ops_verify_reject',
             tamperSignature: true,
-            expectRejects: true
+            expectRejects: true,
+            maxRetries: probeRetries,
+            retryDelayMs
         })
         : null;
 
@@ -895,7 +1014,9 @@ async function main() {
         allowedRejectSourceReasonRules,
         rejectSource,
         minRejectSourceEvents,
-        maxRejectSourceEvents
+        maxRejectSourceEvents,
+        maxRetries: healthRetries,
+        retryDelayMs
     });
 
     const persistenceOk = (() => {
@@ -939,6 +1060,11 @@ async function main() {
                 ? rejectionProbe.rejectedReasons
                 : [],
             ok: rejectionReasonOk
+        },
+        retryPolicy: {
+            probeRetries,
+            healthRetries,
+            retryDelayMs
         }
     };
 

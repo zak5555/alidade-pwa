@@ -151,7 +151,9 @@ function getHealthProfileDefaults(profileName) {
             allowedRejectReasons: ['invalid_signature'],
             allowedRejectSources: ['ops_reject_probe'],
             allowedRejectSourcePrefixes: ['ops_verify_reject_'],
-            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature'
+            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature',
+            healthRetries: 1,
+            retryDelayMs: 250
         },
         strict: {
             windowMinutes: 15,
@@ -173,7 +175,9 @@ function getHealthProfileDefaults(profileName) {
             allowedRejectReasons: ['invalid_signature'],
             allowedRejectSources: ['ops_reject_probe'],
             allowedRejectSourcePrefixes: ['ops_verify_reject_'],
-            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature'
+            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature',
+            healthRetries: 2,
+            retryDelayMs: 300
         }
     };
     const selected = profiles[profileName];
@@ -225,6 +229,46 @@ function normalizeSupabaseUrl(rawUrl) {
     }
 }
 
+function isLikelyTransientRpcError(error) {
+    if (!error) return false;
+    const code = String(error.code || '').trim().toUpperCase();
+    if (['ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN'].includes(code)) {
+        return true;
+    }
+
+    const message = String(error.message || '').toLowerCase();
+    if (!message) return false;
+
+    const transientTokens = [
+        'fetch failed',
+        'network',
+        'socket hang up',
+        'timeout',
+        'timed out',
+        'temporar',
+        'too many requests',
+        'rate limit'
+    ];
+    if (transientTokens.some((token) => message.includes(token))) {
+        return true;
+    }
+
+    return /\b429\b/.test(message) || /\b5\d\d\b/.test(message);
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, Math.max(0, Number(ms) || 0));
+    });
+}
+
+function computeRetryDelayMs(baseDelayMs, attemptNumber) {
+    const normalizedBaseDelay = Math.max(0, Number(baseDelayMs) || 0);
+    const normalizedAttempt = Math.max(1, Number(attemptNumber) || 1);
+    const backoffFactor = 2 ** Math.max(0, normalizedAttempt - 1);
+    return Math.min(normalizedBaseDelay * backoffFactor, 5000);
+}
+
 async function main() {
     const profile = normalizeHealthProfileName(parseStringFlag('--profile', ''));
     const profileDefaults = getHealthProfileDefaults(profile);
@@ -244,6 +288,8 @@ async function main() {
     }
 
     const windowMinutes = parseIntegerFlag('--window-minutes', profileDefaults?.windowMinutes ?? 15, 1, 1440);
+    const healthRetries = parseIntegerFlag('--health-retries', profileDefaults?.healthRetries ?? 1, 0, 5);
+    const retryDelayMs = parseIntegerFlag('--retry-delay-ms', profileDefaults?.retryDelayMs ?? 250, 50, 10000);
     const minEvents = parseIntegerFlag('--min-events', profileDefaults?.minEvents ?? 0, 0, 1000000);
     const maxDelayed = parseIntegerFlag('--max-delayed', profileDefaults?.maxDelayed ?? 25, 0, 1000000);
     const minDistinctSessions = parseIntegerFlag('--min-distinct-sessions', profileDefaults?.minDistinctSessions ?? 0, 0, 1000000);
@@ -319,12 +365,34 @@ async function main() {
         }
     });
 
-    const { data, error } = await client.rpc('get_intel_ingest_health', {
-        window_minutes: windowMinutes
-    });
+    const totalAttempts = Math.max(0, Number(healthRetries) || 0) + 1;
+    let attempt = 0;
+    let data = null;
+    let error = null;
+
+    while (attempt < totalAttempts) {
+        attempt += 1;
+        const result = await client.rpc('get_intel_ingest_health', {
+            window_minutes: windowMinutes
+        });
+        data = result.data;
+        error = result.error;
+
+        if (!error) {
+            break;
+        }
+
+        const transient = isLikelyTransientRpcError(error);
+        if (transient && attempt < totalAttempts) {
+            await sleep(computeRetryDelayMs(retryDelayMs, attempt));
+            continue;
+        }
+
+        throw new Error(`RPC get_intel_ingest_health failed: ${error.message}`);
+    }
 
     if (error) {
-        throw new Error(`RPC get_intel_ingest_health failed: ${error.message}`);
+        throw new Error(`RPC get_intel_ingest_health failed after retries: ${error.message}`);
     }
 
     const metrics = data && typeof data === 'object' ? data : {};
@@ -532,7 +600,14 @@ async function main() {
         ok,
         windowMinutes,
         checks,
-        metrics
+        metrics,
+        retryPolicy: {
+            healthRetries,
+            retryDelayMs,
+            attempts: attempt,
+            retriesUsed: Math.max(0, attempt - 1),
+            retried: attempt > 1
+        }
     };
 
     console.log(JSON.stringify(report, null, 2));

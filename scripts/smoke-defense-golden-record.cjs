@@ -1178,6 +1178,10 @@ function testIntelIngestOpsPresence() {
         'intel ingest health script does not call get_intel_ingest_health RPC');
     assert(healthScript.includes('--window-minutes'),
         'intel ingest health script does not support --window-minutes flag');
+    assert(healthScript.includes('--health-retries'),
+        'intel ingest health script does not support --health-retries flag');
+    assert(healthScript.includes('--retry-delay-ms'),
+        'intel ingest health script does not support --retry-delay-ms flag');
     assert(healthScript.includes('--max-delayed'),
         'intel ingest health script does not support --max-delayed flag');
     assert(healthScript.includes('--min-distinct-sessions'),
@@ -1220,6 +1224,12 @@ function testIntelIngestOpsPresence() {
     const verifyScript = readText('scripts/verify-intel-ingest.cjs');
     assert(verifyScript.includes('--min-distinct-sessions'),
         'intel ingest verify script does not support --min-distinct-sessions flag');
+    assert(verifyScript.includes('--probe-retries'),
+        'intel ingest verify script does not support --probe-retries flag');
+    assert(verifyScript.includes('--health-retries'),
+        'intel ingest verify script does not support --health-retries flag');
+    assert(verifyScript.includes('--retry-delay-ms'),
+        'intel ingest verify script does not support --retry-delay-ms flag');
     assert(verifyScript.includes('--max-p95-delay-ms'),
         'intel ingest verify script does not support --max-p95-delay-ms flag');
     assert(verifyScript.includes('--max-freshness-seconds'),
