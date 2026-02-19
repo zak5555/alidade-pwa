@@ -18,7 +18,14 @@ function findLastFlagValue(flagName) {
         }
     }
     if (valueIndex === -1) return undefined;
-    return process.argv[valueIndex];
+    if (valueIndex >= process.argv.length) {
+        throw new Error(`${flagName} requires a value`);
+    }
+    const value = process.argv[valueIndex];
+    if (String(value).startsWith('--')) {
+        throw new Error(`${flagName} requires a value`);
+    }
+    return value;
 }
 
 function parseIntegerFlag(flagName, fallback, min, max) {

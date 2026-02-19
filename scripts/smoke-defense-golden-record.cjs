@@ -1173,6 +1173,8 @@ function testIntelIngestOpsPresence() {
         'intel ingest health script does not support --min-reject-source-events flag');
     assert(healthScript.includes('--max-reject-source-events'),
         'intel ingest health script does not support --max-reject-source-events flag');
+    assert(healthScript.includes('requires a value'),
+        'intel ingest health script does not fail closed on missing CLI flag values');
 
     const verifyScript = readText('scripts/verify-intel-ingest.cjs');
     assert(verifyScript.includes('--min-distinct-sessions'),
@@ -1219,9 +1221,13 @@ function testIntelIngestOpsPresence() {
         'intel ingest verify script does not support --require-rejection-persistence flag');
     assert(verifyScript.includes('--rejection-probe-expected-reason'),
         'intel ingest verify script does not support --rejection-probe-expected-reason flag');
+    assert(verifyScript.includes('requires a value'),
+        'intel ingest verify script does not fail closed on missing CLI flag values');
     const probeScript = readText('scripts/probe-intel-ingest.cjs');
     assert(probeScript.includes('findLastFlagValue'),
         'intel ingest probe script does not support last-wins CLI flag parsing');
+    assert(probeScript.includes('requires a value'),
+        'intel ingest probe script does not fail closed on missing CLI flag values');
 
     const packageJson = readText('package.json');
     assert(packageJson.includes('"ops:intel:probe"'),
@@ -1424,6 +1430,11 @@ function testIntelIngestOpsPresence() {
     const remediationScript = readText('scripts/dispatch-intel-verify-remediation.cjs');
     assert(remediationScript.includes('--cooldown-minutes'),
         'remediation dispatcher script does not support cooldown argument');
+    assert(remediationScript.includes('requires a value'),
+        'remediation dispatcher script does not fail closed on missing CLI flag values');
+    const slaCheckScript = readText('scripts/check-intel-verify-sla.cjs');
+    assert(slaCheckScript.includes('requires a value'),
+        'SLA checker script does not fail closed on missing CLI flag values');
     assert(remediationScript.includes("reason: 'cooldown_active'"),
         'remediation dispatcher script does not expose cooldown active outcome');
     assert(remediationScript.includes('actions/workflows/'),
@@ -1485,6 +1496,8 @@ function testIntelIngestOpsPresence() {
         'incident reporter script does not close open incident issues on resolve mode');
     assert(incidentScript.includes('would_close'),
         'incident reporter script does not expose resolve dry-run close outcome');
+    assert(incidentScript.includes('requires a value'),
+        'incident reporter script does not fail closed on missing CLI flag values');
     assert(healthScript.includes('findLastFlagValue'),
         'health checker script does not support last-wins CLI flag parsing');
     assert(verifyScript.includes('findLastFlagValue'),
