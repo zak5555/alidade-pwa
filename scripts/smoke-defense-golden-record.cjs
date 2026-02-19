@@ -1297,6 +1297,10 @@ function testIntelIngestOpsPresence() {
     const packageJson = readText('package.json');
     assert(packageJson.includes('"ops:intel:probe"'),
         'package.json does not register ops:intel:probe script');
+    assert(packageJson.includes('"ops:intel:secrets:check"'),
+        'package.json does not register ops:intel:secrets:check script');
+    assert(packageJson.includes('"ops:intel:secrets:check:strict"'),
+        'package.json does not register ops:intel:secrets:check:strict script');
     assert(packageJson.includes('"ops:intel:health"'),
         'package.json does not register ops:intel:health script');
     assert(packageJson.includes('"ops:intel:verify"'),
@@ -1330,6 +1334,8 @@ function testIntelIngestOpsPresence() {
     const packageManifest = JSON.parse(packageJson);
     const strictHealthScript = String(packageManifest?.scripts?.['ops:intel:health:strict'] || '');
     const quickVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:quick'] || '');
+    const intelSecretsCheckScript = String(packageManifest?.scripts?.['ops:intel:secrets:check'] || '');
+    const intelSecretsCheckStrictScript = String(packageManifest?.scripts?.['ops:intel:secrets:check:strict'] || '');
     const intelSlaScript = String(packageManifest?.scripts?.['ops:intel:sla'] || '');
     const intelBurninScript = String(packageManifest?.scripts?.['ops:intel:burnin'] || '');
     const intelBurninTrendScript = String(packageManifest?.scripts?.['ops:intel:burnin:trend'] || '');
@@ -1340,6 +1346,12 @@ function testIntelIngestOpsPresence() {
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
     assert(quickVerifyScript.includes('--profile quick'),
         'ops:intel:verify:quick does not use quick profile preset');
+    assert(intelSecretsCheckScript.includes('check-intel-verify-secrets.cjs'),
+        'ops:intel:secrets:check does not execute shared intel secrets checker script');
+    assert(intelSecretsCheckScript.includes('--require-enabled 0'),
+        'ops:intel:secrets:check does not default to config-only validation mode');
+    assert(intelSecretsCheckStrictScript.includes('--require-enabled 1'),
+        'ops:intel:secrets:check:strict does not enforce INTEL_VERIFY_ENABLED gate');
     assert(intelSlaScript.includes('check-intel-verify-sla.cjs'),
         'ops:intel:sla does not execute SLA checker script');
     assert(intelSlaScript.includes('--require-success-job intel-verify-full'),
@@ -1449,14 +1461,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not expose incident escalation label configuration');
     assert(smokeWorkflow.includes('Intel SLA watchdog skipped:'),
         'smoke-defense workflow watchdog lanes do not expose explicit gate skip message');
-    assert(smokeWorkflow.includes('missing_SUPABASE_URL'),
-        'smoke-defense workflow watchdog lanes do not gate on missing SUPABASE_URL');
-    assert(smokeWorkflow.includes('invalid_SUPABASE_SERVICE_ROLE_KEY_format'),
-        'smoke-defense workflow watchdog lanes do not gate on invalid SUPABASE_SERVICE_ROLE_KEY format');
-    assert(smokeWorkflow.includes('missing_INTEL_INGEST_API_KEY'),
-        'smoke-defense workflow watchdog lanes do not gate on missing INTEL_INGEST_API_KEY');
-    assert(smokeWorkflow.includes('invalid_INTEL_INGEST_SIGNING_SECRET_length'),
-        'smoke-defense workflow watchdog lanes do not gate on invalid INTEL_INGEST_SIGNING_SECRET length');
+    assert(smokeWorkflow.includes('check-intel-verify-secrets.cjs'),
+        'smoke-defense workflow watchdog lanes do not delegate secret gates to shared checker script');
+    assert(smokeWorkflow.includes('--soft-fail 1'),
+        'smoke-defense workflow watchdog lanes do not run shared secret checker in soft-fail mode');
     assert(smokeWorkflow.includes('verify_profile'),
         'smoke-defense workflow does not expose manual verify profile input');
     assert(smokeWorkflow.includes('sla_max_age_hours'),
@@ -1570,6 +1578,17 @@ function testIntelIngestOpsPresence() {
         'remediation dispatcher script does not support cooldown argument');
     assert(remediationScript.includes('requires a value'),
         'remediation dispatcher script does not fail closed on missing CLI flag values');
+    const intelSecretsScript = readText('scripts/check-intel-verify-secrets.cjs');
+    assert(intelSecretsScript.includes('missing_SUPABASE_URL'),
+        'intel secrets checker script does not gate on missing SUPABASE_URL');
+    assert(intelSecretsScript.includes('invalid_SUPABASE_SERVICE_ROLE_KEY_format'),
+        'intel secrets checker script does not gate on invalid SUPABASE_SERVICE_ROLE_KEY format');
+    assert(intelSecretsScript.includes('missing_INTEL_INGEST_API_KEY'),
+        'intel secrets checker script does not gate on missing INTEL_INGEST_API_KEY');
+    assert(intelSecretsScript.includes('invalid_INTEL_INGEST_SIGNING_SECRET_length'),
+        'intel secrets checker script does not gate on invalid INTEL_INGEST_SIGNING_SECRET length');
+    assert(intelSecretsScript.includes('requires a value'),
+        'intel secrets checker script does not fail closed on missing CLI flag values');
     const slaCheckScript = readText('scripts/check-intel-verify-sla.cjs');
     assert(slaCheckScript.includes('requires a value'),
         'SLA checker script does not fail closed on missing CLI flag values');
@@ -1699,6 +1718,10 @@ function testIntelCliMissingValueGuards() {
             args: ['--supabase-url']
         },
         {
+            script: 'scripts/check-intel-verify-secrets.cjs',
+            args: ['--supabase-url']
+        },
+        {
             script: 'scripts/verify-intel-ingest.cjs',
             args: ['--supabase-url']
         },
@@ -1763,6 +1786,7 @@ async function main() {
         'js/app/vector/vector-hud-utils.js',
         'js/app/defense/defense-runtime.js',
         'scripts/check-intel-ingest-health.cjs',
+        'scripts/check-intel-verify-secrets.cjs',
         'scripts/check-intel-verify-sla.cjs',
         'scripts/check-intel-burnin.cjs',
         'scripts/report-intel-burnin-trend.cjs',
