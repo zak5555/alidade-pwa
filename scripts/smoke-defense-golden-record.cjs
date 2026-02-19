@@ -1236,6 +1236,19 @@ function testIntelIngestOpsPresence() {
         'intel ingest probe script does not support last-wins CLI flag parsing');
     assert(probeScript.includes('requires a value'),
         'intel ingest probe script does not fail closed on missing CLI flag values');
+    const burninScript = readText('scripts/check-intel-burnin.cjs');
+    assert(burninScript.includes('findLastFlagValue'),
+        'intel burn-in checker script does not support last-wins CLI flag parsing');
+    assert(burninScript.includes('--min-success-streak'),
+        'intel burn-in checker script does not support --min-success-streak flag');
+    assert(burninScript.includes('--max-open-incidents'),
+        'intel burn-in checker script does not support --max-open-incidents flag');
+    assert(burninScript.includes('--require-success-events'),
+        'intel burn-in checker script does not support --require-success-events flag');
+    assert(burninScript.includes('--incident-labels'),
+        'intel burn-in checker script does not support --incident-labels flag');
+    assert(burninScript.includes('requires a value'),
+        'intel burn-in checker script does not fail closed on missing CLI flag values');
 
     const packageJson = readText('package.json');
     assert(packageJson.includes('"ops:intel:probe"'),
@@ -1254,6 +1267,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:verify:strict:rejection script');
     assert(packageJson.includes('"ops:intel:sla"'),
         'package.json does not register ops:intel:sla script');
+    assert(packageJson.includes('"ops:intel:burnin"'),
+        'package.json does not register ops:intel:burnin script');
     assert(packageJson.includes('"ops:intel:sla:remediate"'),
         'package.json does not register ops:intel:sla:remediate script');
     assert(packageJson.includes('"ops:intel:sla:incident:dry"'),
@@ -1270,6 +1285,7 @@ function testIntelIngestOpsPresence() {
     const strictHealthScript = String(packageManifest?.scripts?.['ops:intel:health:strict'] || '');
     const quickVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:quick'] || '');
     const intelSlaScript = String(packageManifest?.scripts?.['ops:intel:sla'] || '');
+    const intelBurninScript = String(packageManifest?.scripts?.['ops:intel:burnin'] || '');
     const intelSlaRemediationScript = String(packageManifest?.scripts?.['ops:intel:sla:remediate'] || '');
     const intelSlaIncidentDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:dry'] || '');
     const intelSlaIncidentResolveDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:resolve:dry'] || '');
@@ -1283,6 +1299,16 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla does not execute SLA checker script');
     assert(intelSlaScript.includes('--require-success-job intel-verify-full'),
         'ops:intel:sla does not enforce full-lane success job requirement');
+    assert(intelBurninScript.includes('check-intel-burnin.cjs'),
+        'ops:intel:burnin does not execute burn-in checker script');
+    assert(intelBurninScript.includes('--min-success-streak 8'),
+        'ops:intel:burnin does not enforce minimum success streak');
+    assert(intelBurninScript.includes('--lookback-limit 30'),
+        'ops:intel:burnin does not enforce lookback window');
+    assert(intelBurninScript.includes('--max-open-incidents 0'),
+        'ops:intel:burnin does not enforce zero open incidents');
+    assert(intelBurninScript.includes('--incident-labels ops,intel,sla'),
+        'ops:intel:burnin does not enforce incident label filter');
     assert(intelSlaRemediationScript.includes('dispatch-intel-verify-remediation.cjs'),
         'ops:intel:sla:remediate does not execute remediation dispatcher script');
     assert(intelSlaRemediationScript.includes('--cooldown-minutes'),
@@ -1595,6 +1621,10 @@ function testIntelCliMissingValueGuards() {
         {
             script: 'scripts/report-intel-sla-incident.cjs',
             args: ['--repo']
+        },
+        {
+            script: 'scripts/check-intel-burnin.cjs',
+            args: ['--repo']
         }
     ];
 
@@ -1634,6 +1664,7 @@ async function main() {
         'js/app/defense/defense-runtime.js',
         'scripts/check-intel-ingest-health.cjs',
         'scripts/check-intel-verify-sla.cjs',
+        'scripts/check-intel-burnin.cjs',
         'scripts/dispatch-intel-verify-remediation.cjs',
         'scripts/report-intel-sla-incident.cjs',
         'scripts/probe-intel-ingest.cjs',
