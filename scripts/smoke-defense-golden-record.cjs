@@ -1473,6 +1473,12 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not expose triage auto-incident toggle variable');
     assert(smokeWorkflow.includes('INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN'),
         'smoke-defense workflow does not expose triage auto-incident dry-run variable');
+    assert(smokeWorkflow.includes('INTEL_TRIAGE_DRY_RUN_EXPIRES_AT'),
+        'smoke-defense workflow does not expose triage dry-run expiry variable');
+    assert(smokeWorkflow.includes('INTEL_TRIAGE_DRY_RUN_WARNING_HOURS'),
+        'smoke-defense workflow does not expose triage dry-run warning-hours variable');
+    assert(smokeWorkflow.includes('INTEL_TRIAGE_DRY_RUN_STRICT'),
+        'smoke-defense workflow does not expose triage dry-run strict variable');
     assert(smokeWorkflow.includes('Intel SLA watchdog skipped:'),
         'smoke-defense workflow watchdog lanes do not expose explicit gate skip message');
     assert(smokeWorkflow.includes('check-intel-verify-secrets.cjs'),
@@ -1565,6 +1571,24 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow triage-critical incident routing step does not pass triage reason codes');
     assert(smokeWorkflow.includes('--remediation-run-conclusion "${{ steps.verify_summary_full.outputs.triage_severity }}"'),
         'smoke-defense workflow triage-critical incident routing step does not pass triage severity conclusion');
+    assert(smokeWorkflow.includes('Guard triage dry-run horizon (full lane)'),
+        'smoke-defense workflow full lane does not define triage dry-run horizon guard step');
+    assert(smokeWorkflow.includes('id: triage_dry_run_guard'),
+        'smoke-defense workflow triage dry-run guard step does not expose step id');
+    assert(smokeWorkflow.includes('check-intel-triage-dry-run-guard.cjs'),
+        'smoke-defense workflow triage dry-run guard step does not execute dry-run guard script');
+    assert(smokeWorkflow.includes('--expires-at "${INTEL_TRIAGE_DRY_RUN_EXPIRES_AT:-}"'),
+        'smoke-defense workflow triage dry-run guard step does not pass expiry variable');
+    assert(smokeWorkflow.includes('--warning-hours "${INTEL_TRIAGE_DRY_RUN_WARNING_HOURS:-48}"'),
+        'smoke-defense workflow triage dry-run guard step does not pass warning-hours variable');
+    assert(smokeWorkflow.includes('--strict "${INTEL_TRIAGE_DRY_RUN_STRICT:-0}"'),
+        'smoke-defense workflow triage dry-run guard step does not pass strict variable');
+    assert(smokeWorkflow.includes('Triage dry-run reminder signal (full lane)'),
+        'smoke-defense workflow full lane does not define triage dry-run reminder signal step');
+    assert(smokeWorkflow.includes('steps.triage_dry_run_guard.outputs.triage_dry_run_severity'),
+        'smoke-defense workflow triage dry-run reminder step does not consume guard severity output');
+    assert(smokeWorkflow.includes('triage_dry_run_reminder'),
+        'smoke-defense workflow triage dry-run reminder step does not consume guard reminder output');
     assert(smokeWorkflow.includes('npm run ops:intel:sla'),
         'smoke-defense workflow watchdog lane does not run SLA check');
     assert(smokeWorkflow.includes('SLA_MAX_AGE_HOURS'),
@@ -1657,6 +1681,25 @@ function testIntelIngestOpsPresence() {
         'intel verify summary publisher does not expose actionable recommendations');
     assert(verifySummaryScript.includes('requires a value'),
         'intel verify summary publisher does not fail closed on missing CLI flag values');
+    const triageDryRunGuardScript = readText('scripts/check-intel-triage-dry-run-guard.cjs');
+    assert(triageDryRunGuardScript.includes('--dry-run'),
+        'triage dry-run guard script does not support --dry-run argument');
+    assert(triageDryRunGuardScript.includes('--expires-at'),
+        'triage dry-run guard script does not support --expires-at argument');
+    assert(triageDryRunGuardScript.includes('--warning-hours'),
+        'triage dry-run guard script does not support --warning-hours argument');
+    assert(triageDryRunGuardScript.includes('--strict'),
+        'triage dry-run guard script does not support --strict argument');
+    assert(triageDryRunGuardScript.includes('--write-github-output'),
+        'triage dry-run guard script does not support --write-github-output argument');
+    assert(triageDryRunGuardScript.includes('GITHUB_STEP_SUMMARY'),
+        'triage dry-run guard script does not append to GITHUB_STEP_SUMMARY');
+    assert(triageDryRunGuardScript.includes('GITHUB_OUTPUT'),
+        'triage dry-run guard script does not emit GitHub outputs');
+    assert(triageDryRunGuardScript.includes('triage_dry_run_severity'),
+        'triage dry-run guard script does not emit triage severity output');
+    assert(triageDryRunGuardScript.includes('requires a value'),
+        'triage dry-run guard script does not fail closed on missing CLI flag values');
     const intelSecretsScript = readText('scripts/check-intel-verify-secrets.cjs');
     assert(intelSecretsScript.includes('missing_SUPABASE_URL'),
         'intel secrets checker script does not gate on missing SUPABASE_URL');
@@ -1740,6 +1783,8 @@ function testIntelIngestOpsPresence() {
         'verify checker script does not support last-wins CLI flag parsing');
     assert(verifySummaryScript.includes('findLastFlagValue'),
         'intel verify summary publisher does not support last-wins CLI flag parsing');
+    assert(triageDryRunGuardScript.includes('findLastFlagValue'),
+        'triage dry-run guard script does not support last-wins CLI flag parsing');
     assert(smokeWorkflow.includes('paths-ignore:'),
         'smoke-defense workflow does not define trigger path ignore optimization');
 
@@ -1801,6 +1846,10 @@ function testIntelCliMissingValueGuards() {
         {
             script: 'scripts/publish-intel-verify-summary.cjs',
             args: ['--log-file']
+        },
+        {
+            script: 'scripts/check-intel-triage-dry-run-guard.cjs',
+            args: ['--dry-run']
         },
         {
             script: 'scripts/check-intel-verify-secrets.cjs',
@@ -1871,6 +1920,7 @@ async function main() {
         'js/app/vector/vector-hud-utils.js',
         'js/app/defense/defense-runtime.js',
         'scripts/check-intel-ingest-health.cjs',
+        'scripts/check-intel-triage-dry-run-guard.cjs',
         'scripts/publish-intel-verify-summary.cjs',
         'scripts/check-intel-verify-secrets.cjs',
         'scripts/check-intel-verify-sla.cjs',

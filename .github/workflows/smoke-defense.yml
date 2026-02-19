@@ -399,6 +399,9 @@ jobs:
       INTEL_SLA_INCIDENT_ESCALATION_LABEL: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_LABEL }}
       INTEL_TRIAGE_AUTO_INCIDENT: ${{ vars.INTEL_TRIAGE_AUTO_INCIDENT }}
       INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN: ${{ vars.INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN }}
+      INTEL_TRIAGE_DRY_RUN_EXPIRES_AT: ${{ vars.INTEL_TRIAGE_DRY_RUN_EXPIRES_AT }}
+      INTEL_TRIAGE_DRY_RUN_WARNING_HOURS: ${{ vars.INTEL_TRIAGE_DRY_RUN_WARNING_HOURS }}
+      INTEL_TRIAGE_DRY_RUN_STRICT: ${{ vars.INTEL_TRIAGE_DRY_RUN_STRICT }}
 
     steps:
       - name: Checkout
@@ -452,6 +455,28 @@ jobs:
           echo "Intel verify triage (full): severity=${{ steps.verify_summary_full.outputs.triage_severity }} failed_reports=${{ steps.verify_summary_full.outputs.triage_failed_report_count }}/${{ steps.verify_summary_full.outputs.triage_total_reports }} retries_probe=${{ steps.verify_summary_full.outputs.triage_max_probe_retries_used }} retries_health=${{ steps.verify_summary_full.outputs.triage_max_health_retries_used }}"
           if [ "${{ steps.verify_summary_full.outputs.triage_has_critical }}" = "true" ]; then
             echo "::warning::Intel verify full triage reported CRITICAL state. Review Step Summary recommendations."
+          fi
+
+      - name: Guard triage dry-run horizon (full lane)
+        id: triage_dry_run_guard
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          node scripts/check-intel-triage-dry-run-guard.cjs \
+            --dry-run "${INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN:-false}" \
+            --expires-at "${INTEL_TRIAGE_DRY_RUN_EXPIRES_AT:-}" \
+            --warning-hours "${INTEL_TRIAGE_DRY_RUN_WARNING_HOURS:-48}" \
+            --strict "${INTEL_TRIAGE_DRY_RUN_STRICT:-0}" \
+            --write-github-output 1 | tee triage-dry-run-guard.json
+
+      - name: Triage dry-run reminder signal (full lane)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          echo "Triage dry-run guard (full): severity=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_severity }} enabled=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_enabled }} expires_at=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_expires_at }} remaining_hours=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_remaining_hours }}"
+          reminder="${{ steps.triage_dry_run_guard.outputs.triage_dry_run_reminder }}"
+          if [ "${{ steps.triage_dry_run_guard.outputs.triage_dry_run_severity }}" = "critical" ]; then
+            echo "::warning::Triage dry-run expiry guard is CRITICAL. ${reminder}"
+          elif [ "${{ steps.triage_dry_run_guard.outputs.triage_dry_run_severity }}" = "warning" ]; then
+            echo "::notice::Triage dry-run reminder: ${reminder}"
           fi
 
       - name: Route triage-critical incident (full lane)
