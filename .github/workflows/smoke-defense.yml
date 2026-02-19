@@ -64,7 +64,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Secret hygiene scan
         run: npm run security:scan:secrets
@@ -388,7 +388,6 @@ jobs:
   intel-verify-fast:
     runs-on: ubuntu-latest
     timeout-minutes: 8
-    needs: smoke-defense
     if: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'fast' || inputs.verify_profile == 'both'))) }}
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -456,7 +455,7 @@ jobs:
 
       - name: Install dependencies
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Prepare intel env file
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
@@ -475,7 +474,6 @@ jobs:
   intel-verify-full:
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    needs: smoke-defense
     if: ${{ github.event_name != 'pull_request' && (github.event_name == 'schedule' || github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && (inputs.verify_profile == 'full' || inputs.verify_profile == 'both'))) }}
     env:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -543,7 +541,7 @@ jobs:
 
       - name: Install dependencies
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
-        run: npm ci
+        run: npm ci --prefer-offline --no-audit --fund=false
 
       - name: Prepare intel env file
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
@@ -562,7 +560,6 @@ jobs:
   intel-burnin-report:
     runs-on: ubuntu-latest
     timeout-minutes: 6
-    needs: smoke-defense
     if: ${{ github.event_name != 'pull_request' }}
     env:
       GITHUB_REPOSITORY: ${{ github.repository }}
