@@ -1338,10 +1338,8 @@ function testIntelIngestOpsPresence() {
     const intelSlaIncidentResolveDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:resolve:dry'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
-    assert(quickVerifyScript.includes('--count 3'),
-        'ops:intel:verify:quick does not enforce reduced probe count');
-    assert(quickVerifyScript.includes('--require-persistence 1'),
-        'ops:intel:verify:quick does not enforce persistence requirement');
+    assert(quickVerifyScript.includes('--profile quick'),
+        'ops:intel:verify:quick does not use quick profile preset');
     assert(intelSlaScript.includes('check-intel-verify-sla.cjs'),
         'ops:intel:sla does not execute SLA checker script');
     assert(intelSlaScript.includes('--require-success-job intel-verify-full'),
@@ -1398,14 +1396,24 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla:incident:resolve:dry does not pass incident escalation label');
     assert(intelSlaIncidentResolveDryScript.includes('--dry-run true'),
         'ops:intel:sla:incident:resolve:dry does not enforce dry-run mode');
-    assert(strictHealthScript.includes('--allowed-reject-source-reasons'),
-        'ops:intel:health:strict does not enforce source-reason allowlist');
-    assert(strictVerifyScript.includes('--allowed-reject-source-reasons'),
-        'ops:intel:verify:strict does not enforce source-reason allowlist');
-    assert(strictVerifyScript.includes('--require-persistence 1'),
-        'ops:intel:verify:strict does not enforce persistence requirement');
-    assert(strictVerifyRejectionScript.includes('--require-rejection-persistence 1'),
-        'ops:intel:verify:strict:rejection does not enforce rejection persistence requirement');
+    assert(strictHealthScript.includes('--profile strict'),
+        'ops:intel:health:strict does not use strict profile preset');
+    assert(strictVerifyScript.includes('--profile strict'),
+        'ops:intel:verify:strict does not use strict profile preset');
+    assert(strictVerifyRejectionScript.includes('--profile strict_rejection'),
+        'ops:intel:verify:strict:rejection does not use strict_rejection profile preset');
+    const healthProfileSource = readText('scripts/check-intel-ingest-health.cjs');
+    assert(healthProfileSource.includes('getHealthProfileDefaults'),
+        'health checker does not define profile defaults resolver');
+    assert(healthProfileSource.includes('allowedRejectSourceReasons'),
+        'health checker profiles do not encode source-reason allowlist defaults');
+    const verifyProfileSource = readText('scripts/verify-intel-ingest.cjs');
+    assert(verifyProfileSource.includes('getVerifyProfileDefaults'),
+        'verify checker does not define profile defaults resolver');
+    assert(verifyProfileSource.includes('strict_rejection'),
+        'verify checker does not define strict_rejection profile');
+    assert(verifyProfileSource.includes('requireRejectionPersistence: true'),
+        'verify checker strict_rejection profile does not enforce rejection persistence');
     const strictCiScript = String(packageManifest?.scripts?.['ops:intel:ci'] || '');
     assert(strictCiScript.includes('ops:intel:verify:strict'),
         'ops:intel:ci does not run strict verify profile');

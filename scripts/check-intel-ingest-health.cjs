@@ -53,6 +53,10 @@ function parseStringFlag(flagName, fallback) {
     return String(value || '').trim() || fallback;
 }
 
+function hasFlag(flagName) {
+    return process.argv.includes(flagName);
+}
+
 function parseCsvFlag(flagName) {
     const raw = parseStringFlag(flagName, '').trim();
     if (!raw) return [];
@@ -70,8 +74,8 @@ function sourcePatternMatches(sourceName, sourcePattern) {
     return sourceName === sourcePattern;
 }
 
-function parseAllowedRejectSourceReasonRules(flagName) {
-    const raw = parseStringFlag(flagName, '').trim();
+function parseAllowedRejectSourceReasonRulesRaw(rawValue, flagName) {
+    const raw = String(rawValue || '').trim();
     if (!raw) return [];
 
     return raw
@@ -106,6 +110,77 @@ function parseAllowedRejectSourceReasonRules(flagName) {
                 reasons: Array.from(new Set(reasons))
             };
         });
+}
+
+function parseAllowedRejectSourceReasonRules(flagName) {
+    const raw = parseStringFlag(flagName, '').trim();
+    return parseAllowedRejectSourceReasonRulesRaw(raw, flagName);
+}
+
+function normalizeHealthProfileName(rawName) {
+    const normalized = String(rawName || '').trim().toLowerCase().replace(/-/g, '_');
+    if (!normalized) return '';
+    const aliases = {
+        fast: 'quick',
+        standard: 'quick',
+        full: 'strict'
+    };
+    return aliases[normalized] || normalized;
+}
+
+function getHealthProfileDefaults(profileName) {
+    if (!profileName) return null;
+    const profiles = {
+        quick: {
+            windowMinutes: 20,
+            minEvents: 3,
+            maxDelayed: 25,
+            minDistinctSessions: 1,
+            maxP95DelayMs: 120000,
+            maxFreshnessSeconds: 900,
+            maxRejected: 1000000,
+            maxRejectRatePct: 5,
+            requireSource: 'ops_verify',
+            minSourceEvents: 3,
+            rejectSource: 'ops_verify',
+            minRejectSourceEvents: 0,
+            maxRejectSourceEvents: 0,
+            ignoreRejectSourceInRate: '',
+            ignoreRejectSourcesInRate: ['ops_reject_probe'],
+            ignoreRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectReasons: ['invalid_signature'],
+            allowedRejectSources: ['ops_reject_probe'],
+            allowedRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature'
+        },
+        strict: {
+            windowMinutes: 15,
+            minEvents: 5,
+            maxDelayed: 25,
+            minDistinctSessions: 1,
+            maxP95DelayMs: 120000,
+            maxFreshnessSeconds: 900,
+            maxRejected: 1000000,
+            maxRejectRatePct: 5,
+            requireSource: 'ops_verify',
+            minSourceEvents: 5,
+            rejectSource: 'ops_verify',
+            minRejectSourceEvents: 0,
+            maxRejectSourceEvents: 0,
+            ignoreRejectSourceInRate: '',
+            ignoreRejectSourcesInRate: ['ops_reject_probe'],
+            ignoreRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectReasons: ['invalid_signature'],
+            allowedRejectSources: ['ops_reject_probe'],
+            allowedRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature'
+        }
+    };
+    const selected = profiles[profileName];
+    if (!selected) {
+        throw new Error(`Unknown --profile value "${profileName}". Allowed: quick, strict`);
+    }
+    return selected;
 }
 
 function decodeBase64UrlJson(segment) {
@@ -151,6 +226,8 @@ function normalizeSupabaseUrl(rawUrl) {
 }
 
 async function main() {
+    const profile = normalizeHealthProfileName(parseStringFlag('--profile', ''));
+    const profileDefaults = getHealthProfileDefaults(profile);
     const supabaseUrl = normalizeSupabaseUrl(parseStringFlag('--supabase-url', getEnvValue('SUPABASE_URL')));
     const serviceRoleKey = parseStringFlag('--service-role-key', getEnvValue('SUPABASE_SERVICE_ROLE_KEY'));
 
@@ -166,26 +243,74 @@ async function main() {
         );
     }
 
-    const windowMinutes = parseIntegerFlag('--window-minutes', 15, 1, 1440);
-    const minEvents = parseIntegerFlag('--min-events', 0, 0, 1000000);
-    const maxDelayed = parseIntegerFlag('--max-delayed', 25, 0, 1000000);
-    const minDistinctSessions = parseIntegerFlag('--min-distinct-sessions', 0, 0, 1000000);
-    const maxP95DelayMs = parseIntegerFlag('--max-p95-delay-ms', 120000, 0, 3600000);
-    const maxFreshnessSeconds = parseIntegerFlag('--max-freshness-seconds', 900, 0, 86400);
-    const maxRejected = parseIntegerFlag('--max-rejected', 1000000, 0, 1000000);
-    const maxRejectRatePct = parseNumberFlag('--max-reject-rate-pct', 100, 0, 100);
-    const ignoreRejectSourceInRate = parseStringFlag('--ignore-reject-source-in-rate', '').trim();
+    const windowMinutes = parseIntegerFlag('--window-minutes', profileDefaults?.windowMinutes ?? 15, 1, 1440);
+    const minEvents = parseIntegerFlag('--min-events', profileDefaults?.minEvents ?? 0, 0, 1000000);
+    const maxDelayed = parseIntegerFlag('--max-delayed', profileDefaults?.maxDelayed ?? 25, 0, 1000000);
+    const minDistinctSessions = parseIntegerFlag('--min-distinct-sessions', profileDefaults?.minDistinctSessions ?? 0, 0, 1000000);
+    const maxP95DelayMs = parseIntegerFlag('--max-p95-delay-ms', profileDefaults?.maxP95DelayMs ?? 120000, 0, 3600000);
+    const maxFreshnessSeconds = parseIntegerFlag('--max-freshness-seconds', profileDefaults?.maxFreshnessSeconds ?? 900, 0, 86400);
+    const maxRejected = parseIntegerFlag('--max-rejected', profileDefaults?.maxRejected ?? 1000000, 0, 1000000);
+    const maxRejectRatePct = parseNumberFlag('--max-reject-rate-pct', profileDefaults?.maxRejectRatePct ?? 100, 0, 100);
+    const ignoreRejectSourceInRate = parseStringFlag(
+        '--ignore-reject-source-in-rate',
+        profileDefaults?.ignoreRejectSourceInRate ?? ''
+    ).trim();
     const ignoreRejectSourcesInRate = parseCsvFlag('--ignore-reject-sources-in-rate');
     const ignoreRejectSourcePrefixes = parseCsvFlag('--ignore-reject-source-prefixes');
     const allowedRejectReasons = parseCsvFlag('--allowed-reject-reasons');
     const allowedRejectSources = parseCsvFlag('--allowed-reject-sources');
     const allowedRejectSourcePrefixes = parseCsvFlag('--allowed-reject-source-prefixes');
     const allowedRejectSourceReasonRules = parseAllowedRejectSourceReasonRules('--allowed-reject-source-reasons');
-    const requireSource = parseStringFlag('--require-source', '').trim();
-    const minSourceEvents = parseIntegerFlag('--min-source-events', 0, 0, 1000000);
-    const rejectSource = parseStringFlag('--reject-source', '').trim();
-    const minRejectSourceEvents = parseIntegerFlag('--min-reject-source-events', 0, 0, 1000000);
-    const maxRejectSourceEvents = parseIntegerFlag('--max-reject-source-events', 0, 0, 1000000);
+    const requireSource = parseStringFlag('--require-source', profileDefaults?.requireSource ?? '').trim();
+    const minSourceEvents = parseIntegerFlag('--min-source-events', profileDefaults?.minSourceEvents ?? 0, 0, 1000000);
+    const rejectSource = parseStringFlag('--reject-source', profileDefaults?.rejectSource ?? '').trim();
+    const minRejectSourceEvents = parseIntegerFlag(
+        '--min-reject-source-events',
+        profileDefaults?.minRejectSourceEvents ?? 0,
+        0,
+        1000000
+    );
+    const maxRejectSourceEvents = parseIntegerFlag(
+        '--max-reject-source-events',
+        profileDefaults?.maxRejectSourceEvents ?? 0,
+        0,
+        1000000
+    );
+
+    if (!hasFlag('--ignore-reject-sources-in-rate') &&
+        ignoreRejectSourcesInRate.length === 0 &&
+        Array.isArray(profileDefaults?.ignoreRejectSourcesInRate)) {
+        ignoreRejectSourcesInRate.push(...profileDefaults.ignoreRejectSourcesInRate);
+    }
+    if (!hasFlag('--ignore-reject-source-prefixes') &&
+        ignoreRejectSourcePrefixes.length === 0 &&
+        Array.isArray(profileDefaults?.ignoreRejectSourcePrefixes)) {
+        ignoreRejectSourcePrefixes.push(...profileDefaults.ignoreRejectSourcePrefixes);
+    }
+    if (!hasFlag('--allowed-reject-reasons') &&
+        allowedRejectReasons.length === 0 &&
+        Array.isArray(profileDefaults?.allowedRejectReasons)) {
+        allowedRejectReasons.push(...profileDefaults.allowedRejectReasons);
+    }
+    if (!hasFlag('--allowed-reject-sources') &&
+        allowedRejectSources.length === 0 &&
+        Array.isArray(profileDefaults?.allowedRejectSources)) {
+        allowedRejectSources.push(...profileDefaults.allowedRejectSources);
+    }
+    if (!hasFlag('--allowed-reject-source-prefixes') &&
+        allowedRejectSourcePrefixes.length === 0 &&
+        Array.isArray(profileDefaults?.allowedRejectSourcePrefixes)) {
+        allowedRejectSourcePrefixes.push(...profileDefaults.allowedRejectSourcePrefixes);
+    }
+    if (!hasFlag('--allowed-reject-source-reasons') &&
+        allowedRejectSourceReasonRules.length === 0 &&
+        profileDefaults?.allowedRejectSourceReasons) {
+        const derived = parseAllowedRejectSourceReasonRulesRaw(
+            profileDefaults.allowedRejectSourceReasons,
+            '--allowed-reject-source-reasons'
+        );
+        allowedRejectSourceReasonRules.push(...derived);
+    }
 
     const client = createClient(supabaseUrl, serviceRoleKey, {
         auth: {

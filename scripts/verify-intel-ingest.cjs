@@ -54,6 +54,10 @@ function parseStringFlag(flagName, fallback) {
     return String(value || '').trim() || fallback;
 }
 
+function hasFlag(flagName) {
+    return process.argv.includes(flagName);
+}
+
 function parseCsvFlag(flagName) {
     const raw = parseStringFlag(flagName, '').trim();
     if (!raw) return [];
@@ -71,8 +75,8 @@ function sourcePatternMatches(sourceName, sourcePattern) {
     return sourceName === sourcePattern;
 }
 
-function parseAllowedRejectSourceReasonRules(flagName) {
-    const raw = parseStringFlag(flagName, '').trim();
+function parseAllowedRejectSourceReasonRulesRaw(rawValue, flagName) {
+    const raw = String(rawValue || '').trim();
     if (!raw) return [];
 
     return raw
@@ -107,6 +111,120 @@ function parseAllowedRejectSourceReasonRules(flagName) {
                 reasons: Array.from(new Set(reasons))
             };
         });
+}
+
+function parseAllowedRejectSourceReasonRules(flagName) {
+    const raw = parseStringFlag(flagName, '').trim();
+    return parseAllowedRejectSourceReasonRulesRaw(raw, flagName);
+}
+
+function normalizeVerifyProfileName(rawName) {
+    const normalized = String(rawName || '').trim().toLowerCase().replace(/-/g, '_');
+    if (!normalized) return '';
+    const aliases = {
+        fast: 'quick',
+        standard: 'quick',
+        full: 'strict'
+    };
+    return aliases[normalized] || normalized;
+}
+
+function getVerifyProfileDefaults(profileName) {
+    if (!profileName) return null;
+    const profiles = {
+        quick: {
+            count: 3,
+            windowMinutes: 20,
+            minEvents: 3,
+            maxDelayed: 25,
+            minDistinctSessions: 1,
+            maxP95DelayMs: 120000,
+            maxFreshnessSeconds: 900,
+            maxRejected: 1000000,
+            maxRejectRatePct: 5,
+            requirePersistence: true,
+            source: 'ops_verify',
+            requireSource: 'ops_verify',
+            minSourceEvents: 3,
+            rejectSource: 'ops_verify',
+            minRejectSourceEvents: 0,
+            maxRejectSourceEvents: 0,
+            ignoreRejectSourceInRate: '',
+            ignoreRejectSourcesInRate: ['ops_reject_probe'],
+            ignoreRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectReasons: ['invalid_signature'],
+            allowedRejectSources: ['ops_reject_probe'],
+            allowedRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature',
+            rejectionProbeCount: 0,
+            requireRejectionPersistence: false,
+            rejectionProbeSource: 'ops_verify_reject_probe',
+            rejectionProbeExpectedReason: ''
+        },
+        strict: {
+            count: 5,
+            windowMinutes: 60,
+            minEvents: 5,
+            maxDelayed: 25,
+            minDistinctSessions: 1,
+            maxP95DelayMs: 120000,
+            maxFreshnessSeconds: 900,
+            maxRejected: 1000000,
+            maxRejectRatePct: 5,
+            requirePersistence: true,
+            source: 'ops_verify',
+            requireSource: 'ops_verify',
+            minSourceEvents: 5,
+            rejectSource: 'ops_verify',
+            minRejectSourceEvents: 0,
+            maxRejectSourceEvents: 0,
+            ignoreRejectSourceInRate: '',
+            ignoreRejectSourcesInRate: ['ops_reject_probe'],
+            ignoreRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectReasons: ['invalid_signature'],
+            allowedRejectSources: ['ops_reject_probe'],
+            allowedRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature',
+            rejectionProbeCount: 0,
+            requireRejectionPersistence: false,
+            rejectionProbeSource: 'ops_verify_reject_probe',
+            rejectionProbeExpectedReason: ''
+        },
+        strict_rejection: {
+            count: 5,
+            windowMinutes: 60,
+            minEvents: 5,
+            maxDelayed: 25,
+            minDistinctSessions: 1,
+            maxP95DelayMs: 120000,
+            maxFreshnessSeconds: 900,
+            maxRejected: 1000000,
+            maxRejectRatePct: 5,
+            requirePersistence: true,
+            source: 'ops_verify',
+            requireSource: 'ops_verify',
+            minSourceEvents: 5,
+            rejectSource: 'ops_verify_reject_probe',
+            minRejectSourceEvents: 1,
+            maxRejectSourceEvents: 1000000,
+            ignoreRejectSourceInRate: '',
+            ignoreRejectSourcesInRate: [],
+            ignoreRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectReasons: ['invalid_signature'],
+            allowedRejectSources: ['ops_reject_probe'],
+            allowedRejectSourcePrefixes: ['ops_verify_reject_'],
+            allowedRejectSourceReasons: 'ops_reject_probe:invalid_signature,ops_verify_reject_*:invalid_signature',
+            rejectionProbeCount: 1,
+            requireRejectionPersistence: true,
+            rejectionProbeSource: 'ops_verify_reject_probe',
+            rejectionProbeExpectedReason: 'invalid_signature'
+        }
+    };
+    const selected = profiles[profileName];
+    if (!selected) {
+        throw new Error('Unknown --profile value "' + profileName + '". Allowed: quick, strict, strict_rejection');
+    }
+    return selected;
 }
 
 function normalizeSupabaseUrl(rawUrl) {
@@ -608,6 +726,8 @@ async function runHealth(options) {
 }
 
 async function main() {
+    const profile = normalizeVerifyProfileName(parseStringFlag('--profile', ''));
+    const profileDefaults = getVerifyProfileDefaults(profile);
     const supabaseUrl = normalizeSupabaseUrl(parseStringFlag('--supabase-url', getEnvValue('SUPABASE_URL')));
     const serviceRoleKey = parseStringFlag('--service-role-key', getEnvValue('SUPABASE_SERVICE_ROLE_KEY'));
     const ingestApiKey = parseStringFlag('--api-key', getEnvValue('INTEL_INGEST_API_KEY'));
@@ -627,50 +747,97 @@ async function main() {
         );
     }
 
-    const count = parseIntegerFlag('--count', 5, 1, 200);
-    const windowMinutes = parseIntegerFlag('--window-minutes', 60, 1, 1440);
-    const minEvents = parseIntegerFlag('--min-events', count, 0, 1000000);
-    const maxDelayed = parseIntegerFlag('--max-delayed', 25, 0, 1000000);
-    const minDistinctSessions = parseIntegerFlag('--min-distinct-sessions', 1, 0, 1000000);
-    const maxP95DelayMs = parseIntegerFlag('--max-p95-delay-ms', 120000, 0, 3600000);
-    const maxFreshnessSeconds = parseIntegerFlag('--max-freshness-seconds', 900, 0, 86400);
-    const maxRejected = parseIntegerFlag('--max-rejected', 1000000, 0, 1000000);
-    const maxRejectRatePct = parseNumberFlag('--max-reject-rate-pct', 100, 0, 100);
+    const count = parseIntegerFlag('--count', profileDefaults?.count ?? 5, 1, 200);
+    const windowMinutes = parseIntegerFlag('--window-minutes', profileDefaults?.windowMinutes ?? 60, 1, 1440);
+    const minEvents = parseIntegerFlag('--min-events', profileDefaults?.minEvents ?? count, 0, 1000000);
+    const maxDelayed = parseIntegerFlag('--max-delayed', profileDefaults?.maxDelayed ?? 25, 0, 1000000);
+    const minDistinctSessions = parseIntegerFlag('--min-distinct-sessions', profileDefaults?.minDistinctSessions ?? 1, 0, 1000000);
+    const maxP95DelayMs = parseIntegerFlag('--max-p95-delay-ms', profileDefaults?.maxP95DelayMs ?? 120000, 0, 3600000);
+    const maxFreshnessSeconds = parseIntegerFlag('--max-freshness-seconds', profileDefaults?.maxFreshnessSeconds ?? 900, 0, 86400);
+    const maxRejected = parseIntegerFlag('--max-rejected', profileDefaults?.maxRejected ?? 1000000, 0, 1000000);
+    const maxRejectRatePct = parseNumberFlag('--max-reject-rate-pct', profileDefaults?.maxRejectRatePct ?? 100, 0, 100);
     const allowedRejectReasons = parseCsvFlag('--allowed-reject-reasons');
     const allowedRejectSources = parseCsvFlag('--allowed-reject-sources');
     const allowedRejectSourcePrefixes = parseCsvFlag('--allowed-reject-source-prefixes');
     const allowedRejectSourceReasonRules = parseAllowedRejectSourceReasonRules('--allowed-reject-source-reasons');
-    const requirePersistence = parseIntegerFlag('--require-persistence', 1, 0, 1) === 1;
-    const rejectionProbeCount = parseIntegerFlag('--rejection-probe-count', 0, 0, 200);
-    const rejectionProbeSource = parseStringFlag('--rejection-probe-source', 'ops_verify_reject_probe').trim();
-    const requireRejectionPersistence = parseIntegerFlag('--require-rejection-persistence', 0, 0, 1) === 1;
+    const requirePersistence = parseIntegerFlag(
+        '--require-persistence',
+        profileDefaults?.requirePersistence === false ? 0 : 1,
+        0,
+        1
+    ) === 1;
+    const rejectionProbeCount = parseIntegerFlag('--rejection-probe-count', profileDefaults?.rejectionProbeCount ?? 0, 0, 200);
+    const rejectionProbeSource = parseStringFlag(
+        '--rejection-probe-source',
+        profileDefaults?.rejectionProbeSource || 'ops_verify_reject_probe'
+    ).trim();
+    const requireRejectionPersistence = parseIntegerFlag(
+        '--require-rejection-persistence',
+        profileDefaults?.requireRejectionPersistence ? 1 : 0,
+        0,
+        1
+    ) === 1;
     const rejectionProbeExpectedReason = parseStringFlag(
         '--rejection-probe-expected-reason',
-        rejectionProbeCount > 0 ? 'invalid_signature' : ''
+        profileDefaults?.rejectionProbeExpectedReason ?? (rejectionProbeCount > 0 ? 'invalid_signature' : '')
     ).trim();
     const lat = parseNumberFlag('--lat', 31.6259, -90, 90);
     const lng = parseNumberFlag('--lng', -7.9890, -180, 180);
-    const source = parseStringFlag('--source', 'ops_verify');
-    const requireSource = parseStringFlag('--require-source', source).trim();
-    const minSourceEvents = parseIntegerFlag('--min-source-events', count, 0, 1000000);
-    const rejectSourceDefault = rejectionProbeCount > 0 ? rejectionProbeSource : source;
+    const source = parseStringFlag('--source', profileDefaults?.source || 'ops_verify');
+    const requireSource = parseStringFlag('--require-source', profileDefaults?.requireSource || source).trim();
+    const minSourceEvents = parseIntegerFlag('--min-source-events', profileDefaults?.minSourceEvents ?? count, 0, 1000000);
+    const rejectSourceDefault = profileDefaults?.rejectSource || (rejectionProbeCount > 0 ? rejectionProbeSource : source);
     const rejectSource = parseStringFlag('--reject-source', rejectSourceDefault).trim();
-    const minRejectSourceEventsDefault = rejectionProbeCount > 0 && rejectSource === rejectionProbeSource
-        ? rejectionProbeCount
-        : 0;
-    const maxRejectSourceEventsDefault = rejectionProbeCount > 0 && rejectSource === rejectionProbeSource
-        ? rejectionProbeCount
-        : 0;
+    const minRejectSourceEventsDefault = profileDefaults?.minRejectSourceEvents ?? (
+        rejectionProbeCount > 0 && rejectSource === rejectionProbeSource ? rejectionProbeCount : 0
+    );
+    const maxRejectSourceEventsDefault = profileDefaults?.maxRejectSourceEvents ?? (
+        rejectionProbeCount > 0 && rejectSource === rejectionProbeSource ? rejectionProbeCount : 0
+    );
     const minRejectSourceEvents = parseIntegerFlag('--min-reject-source-events', minRejectSourceEventsDefault, 0, 1000000);
     const maxRejectSourceEvents = parseIntegerFlag('--max-reject-source-events', maxRejectSourceEventsDefault, 0, 1000000);
     const ignoreRejectSourceInRate = parseStringFlag(
         '--ignore-reject-source-in-rate',
-        rejectionProbeCount > 0 ? rejectionProbeSource : ''
+        profileDefaults?.ignoreRejectSourceInRate ?? (rejectionProbeCount > 0 ? rejectionProbeSource : '')
     ).trim();
     const ignoreRejectSourcesInRate = parseCsvFlag('--ignore-reject-sources-in-rate');
     const ignoreRejectSourcePrefixes = parseCsvFlag('--ignore-reject-source-prefixes');
+    if (!hasFlag('--ignore-reject-sources-in-rate') &&
+        ignoreRejectSourcesInRate.length === 0 &&
+        Array.isArray(profileDefaults?.ignoreRejectSourcesInRate)) {
+        ignoreRejectSourcesInRate.push(...profileDefaults.ignoreRejectSourcesInRate);
+    }
+    if (!hasFlag('--ignore-reject-source-prefixes') &&
+        ignoreRejectSourcePrefixes.length === 0 &&
+        Array.isArray(profileDefaults?.ignoreRejectSourcePrefixes)) {
+        ignoreRejectSourcePrefixes.push(...profileDefaults.ignoreRejectSourcePrefixes);
+    }
     if (rejectionProbeCount > 0 && ignoreRejectSourcePrefixes.length === 0) {
         ignoreRejectSourcePrefixes.push('ops_verify_reject_');
+    }
+    if (!hasFlag('--allowed-reject-reasons') &&
+        allowedRejectReasons.length === 0 &&
+        Array.isArray(profileDefaults?.allowedRejectReasons)) {
+        allowedRejectReasons.push(...profileDefaults.allowedRejectReasons);
+    }
+    if (!hasFlag('--allowed-reject-sources') &&
+        allowedRejectSources.length === 0 &&
+        Array.isArray(profileDefaults?.allowedRejectSources)) {
+        allowedRejectSources.push(...profileDefaults.allowedRejectSources);
+    }
+    if (!hasFlag('--allowed-reject-source-prefixes') &&
+        allowedRejectSourcePrefixes.length === 0 &&
+        Array.isArray(profileDefaults?.allowedRejectSourcePrefixes)) {
+        allowedRejectSourcePrefixes.push(...profileDefaults.allowedRejectSourcePrefixes);
+    }
+    if (!hasFlag('--allowed-reject-source-reasons') &&
+        allowedRejectSourceReasonRules.length === 0 &&
+        profileDefaults?.allowedRejectSourceReasons) {
+        const derived = parseAllowedRejectSourceReasonRulesRaw(
+            profileDefaults.allowedRejectSourceReasons,
+            '--allowed-reject-source-reasons'
+        );
+        allowedRejectSourceReasonRules.push(...derived);
     }
     const dangerLevel = parseStringFlag('--danger-level', 'medium');
 
