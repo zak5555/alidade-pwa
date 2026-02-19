@@ -370,8 +370,17 @@ jobs:
         run: npm run ops:intel:verify:quick | tee intel-verify-fast.log
 
       - name: Publish intel verify summary (fast)
+        id: verify_summary_fast
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
-        run: node scripts/publish-intel-verify-summary.cjs --lane fast --log-file intel-verify-fast.log
+        run: node scripts/publish-intel-verify-summary.cjs --lane fast --log-file intel-verify-fast.log --write-github-output 1
+
+      - name: Intel verify triage signal (fast)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          echo "Intel verify triage (fast): severity=${{ steps.verify_summary_fast.outputs.triage_severity }} failed_reports=${{ steps.verify_summary_fast.outputs.triage_failed_report_count }}/${{ steps.verify_summary_fast.outputs.triage_total_reports }} retries_probe=${{ steps.verify_summary_fast.outputs.triage_max_probe_retries_used }} retries_health=${{ steps.verify_summary_fast.outputs.triage_max_health_retries_used }}"
+          if [ "${{ steps.verify_summary_fast.outputs.triage_has_critical }}" = "true" ]; then
+            echo "::warning::Intel verify fast triage reported CRITICAL state. Review Step Summary recommendations."
+          fi
 
   intel-verify-full:
     runs-on: ubuntu-latest
@@ -426,8 +435,17 @@ jobs:
         run: npm run ops:intel:ci | tee intel-verify-full.log
 
       - name: Publish intel verify summary (full)
+        id: verify_summary_full
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
-        run: node scripts/publish-intel-verify-summary.cjs --lane full --log-file intel-verify-full.log
+        run: node scripts/publish-intel-verify-summary.cjs --lane full --log-file intel-verify-full.log --write-github-output 1
+
+      - name: Intel verify triage signal (full)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          echo "Intel verify triage (full): severity=${{ steps.verify_summary_full.outputs.triage_severity }} failed_reports=${{ steps.verify_summary_full.outputs.triage_failed_report_count }}/${{ steps.verify_summary_full.outputs.triage_total_reports }} retries_probe=${{ steps.verify_summary_full.outputs.triage_max_probe_retries_used }} retries_health=${{ steps.verify_summary_full.outputs.triage_max_health_retries_used }}"
+          if [ "${{ steps.verify_summary_full.outputs.triage_has_critical }}" = "true" ]; then
+            echo "::warning::Intel verify full triage reported CRITICAL state. Review Step Summary recommendations."
+          fi
 
   intel-burnin-report:
     runs-on: ubuntu-latest

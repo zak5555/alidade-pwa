@@ -1519,16 +1519,34 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow fast lane does not capture verify log artifact');
     assert(smokeWorkflow.includes('Publish intel verify summary (fast)'),
         'smoke-defense workflow fast lane does not publish intel verify summary');
+    assert(smokeWorkflow.includes('id: verify_summary_fast'),
+        'smoke-defense workflow fast lane summary step does not expose step id');
     assert(smokeWorkflow.includes('publish-intel-verify-summary.cjs --lane fast --log-file intel-verify-fast.log'),
         'smoke-defense workflow fast lane does not execute fast verify summary publisher');
+    assert(smokeWorkflow.includes('--write-github-output 1'),
+        'smoke-defense workflow fast/full summary steps do not emit GitHub outputs');
+    assert(smokeWorkflow.includes('Intel verify triage signal (fast)'),
+        'smoke-defense workflow fast lane does not publish triage signal step');
+    assert(smokeWorkflow.includes('steps.verify_summary_fast.outputs.triage_severity'),
+        'smoke-defense workflow fast lane triage signal does not consume summary outputs');
+    assert(smokeWorkflow.includes('steps.verify_summary_fast.outputs.triage_has_critical'),
+        'smoke-defense workflow fast lane triage signal does not gate critical warning output');
     assert(smokeWorkflow.includes('npm run ops:intel:ci'),
         'smoke-defense workflow full lane does not use strict CI profile');
     assert(smokeWorkflow.includes('npm run ops:intel:ci | tee intel-verify-full.log'),
         'smoke-defense workflow full lane does not capture verify CI log artifact');
     assert(smokeWorkflow.includes('Publish intel verify summary (full)'),
         'smoke-defense workflow full lane does not publish intel verify summary');
+    assert(smokeWorkflow.includes('id: verify_summary_full'),
+        'smoke-defense workflow full lane summary step does not expose step id');
     assert(smokeWorkflow.includes('publish-intel-verify-summary.cjs --lane full --log-file intel-verify-full.log'),
         'smoke-defense workflow full lane does not execute full verify summary publisher');
+    assert(smokeWorkflow.includes('Intel verify triage signal (full)'),
+        'smoke-defense workflow full lane does not publish triage signal step');
+    assert(smokeWorkflow.includes('steps.verify_summary_full.outputs.triage_severity'),
+        'smoke-defense workflow full lane triage signal does not consume summary outputs');
+    assert(smokeWorkflow.includes('steps.verify_summary_full.outputs.triage_has_critical'),
+        'smoke-defense workflow full lane triage signal does not gate critical warning output');
     assert(smokeWorkflow.includes('npm run ops:intel:sla'),
         'smoke-defense workflow watchdog lane does not run SLA check');
     assert(smokeWorkflow.includes('SLA_MAX_AGE_HOURS'),
@@ -1605,10 +1623,20 @@ function testIntelIngestOpsPresence() {
         'intel verify summary publisher does not support --log-file argument');
     assert(verifySummaryScript.includes('--lane'),
         'intel verify summary publisher does not support --lane argument');
+    assert(verifySummaryScript.includes('--write-github-output'),
+        'intel verify summary publisher does not support --write-github-output argument');
     assert(verifySummaryScript.includes('GITHUB_STEP_SUMMARY'),
         'intel verify summary publisher does not append to GITHUB_STEP_SUMMARY');
+    assert(verifySummaryScript.includes('GITHUB_OUTPUT'),
+        'intel verify summary publisher does not emit GitHub step outputs');
     assert(verifySummaryScript.includes('extractJsonObjectsFromLog'),
         'intel verify summary publisher does not define log JSON extractor');
+    assert(verifySummaryScript.includes('buildTriage'),
+        'intel verify summary publisher does not define triage builder');
+    assert(verifySummaryScript.includes('triage_severity'),
+        'intel verify summary publisher does not publish triage severity output');
+    assert(verifySummaryScript.includes('Recommended actions:'),
+        'intel verify summary publisher does not expose actionable recommendations');
     assert(verifySummaryScript.includes('requires a value'),
         'intel verify summary publisher does not fail closed on missing CLI flag values');
     const intelSecretsScript = readText('scripts/check-intel-verify-secrets.cjs');
