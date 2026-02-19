@@ -392,6 +392,13 @@ jobs:
       INTEL_INGEST_API_KEY: ${{ secrets.INTEL_INGEST_API_KEY }}
       INTEL_INGEST_SIGNING_SECRET: ${{ secrets.INTEL_INGEST_SIGNING_SECRET }}
       INTEL_VERIFY_ENABLED: ${{ secrets.INTEL_VERIFY_ENABLED }}
+      INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
+      INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
+      INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
+      INTEL_SLA_INCIDENT_ESCALATION_HOURS: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_HOURS }}
+      INTEL_SLA_INCIDENT_ESCALATION_LABEL: ${{ vars.INTEL_SLA_INCIDENT_ESCALATION_LABEL }}
+      INTEL_TRIAGE_AUTO_INCIDENT: ${{ vars.INTEL_TRIAGE_AUTO_INCIDENT }}
+      INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN: ${{ vars.INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN }}
 
     steps:
       - name: Checkout
@@ -446,6 +453,35 @@ jobs:
           if [ "${{ steps.verify_summary_full.outputs.triage_has_critical }}" = "true" ]; then
             echo "::warning::Intel verify full triage reported CRITICAL state. Review Step Summary recommendations."
           fi
+
+      - name: Route triage-critical incident (full lane)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' && steps.verify_summary_full.outputs.triage_has_critical == 'true' }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "${INTEL_TRIAGE_AUTO_INCIDENT:-0}" != "1" ]; then
+            echo "triage incident routing skipped: INTEL_TRIAGE_AUTO_INCIDENT!=1"
+            exit 0
+          fi
+
+          dry_run_flag="${INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN:-false}"
+          node scripts/report-intel-sla-incident.cjs \
+            --mode open \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --required-job intel-verify-full \
+            --sla-max-age-hours "12" \
+            --sla-outcome failure \
+            --remediation-outcome triage_critical \
+            --remediation-dispatched false \
+            --remediation-reason "triage:${{ steps.verify_summary_full.outputs.triage_reason_codes }}" \
+            --remediation-run-conclusion "${{ steps.verify_summary_full.outputs.triage_severity }}" \
+            --comment-cooldown-minutes "${INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES:-60}" \
+            --escalation-hours "${INTEL_SLA_INCIDENT_ESCALATION_HOURS:-6}" \
+            --escalation-label "${INTEL_SLA_INCIDENT_ESCALATION_LABEL:-priority:p0}" \
+            --dry-run "${dry_run_flag}"
 
   intel-burnin-report:
     runs-on: ubuntu-latest

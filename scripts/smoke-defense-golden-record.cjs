@@ -1469,6 +1469,10 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not expose incident escalation hours configuration');
     assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_ESCALATION_LABEL'),
         'smoke-defense workflow does not expose incident escalation label configuration');
+    assert(smokeWorkflow.includes('INTEL_TRIAGE_AUTO_INCIDENT'),
+        'smoke-defense workflow does not expose triage auto-incident toggle variable');
+    assert(smokeWorkflow.includes('INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN'),
+        'smoke-defense workflow does not expose triage auto-incident dry-run variable');
     assert(smokeWorkflow.includes('Intel SLA watchdog skipped:'),
         'smoke-defense workflow watchdog lanes do not expose explicit gate skip message');
     assert(smokeWorkflow.includes('check-intel-verify-secrets.cjs'),
@@ -1547,6 +1551,20 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow full lane triage signal does not consume summary outputs');
     assert(smokeWorkflow.includes('steps.verify_summary_full.outputs.triage_has_critical'),
         'smoke-defense workflow full lane triage signal does not gate critical warning output');
+    assert(smokeWorkflow.includes('Route triage-critical incident (full lane)'),
+        'smoke-defense workflow full lane does not define triage-critical incident routing step');
+    assert(smokeWorkflow.includes("steps.verify_summary_full.outputs.triage_has_critical == 'true'"),
+        'smoke-defense workflow triage-critical incident routing step does not gate on critical triage output');
+    assert(smokeWorkflow.includes('INTEL_TRIAGE_AUTO_INCIDENT:-0'),
+        'smoke-defense workflow triage-critical routing step does not guard with INTEL_TRIAGE_AUTO_INCIDENT toggle');
+    assert(smokeWorkflow.includes('INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN'),
+        'smoke-defense workflow triage-critical routing step does not read dry-run toggle');
+    assert(smokeWorkflow.includes('--remediation-outcome triage_critical'),
+        'smoke-defense workflow triage-critical incident routing step does not tag remediation outcome');
+    assert(smokeWorkflow.includes('--remediation-reason "triage:${{ steps.verify_summary_full.outputs.triage_reason_codes }}"'),
+        'smoke-defense workflow triage-critical incident routing step does not pass triage reason codes');
+    assert(smokeWorkflow.includes('--remediation-run-conclusion "${{ steps.verify_summary_full.outputs.triage_severity }}"'),
+        'smoke-defense workflow triage-critical incident routing step does not pass triage severity conclusion');
     assert(smokeWorkflow.includes('npm run ops:intel:sla'),
         'smoke-defense workflow watchdog lane does not run SLA check');
     assert(smokeWorkflow.includes('SLA_MAX_AGE_HOURS'),
