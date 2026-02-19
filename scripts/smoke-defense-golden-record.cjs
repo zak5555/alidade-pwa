@@ -1249,6 +1249,17 @@ function testIntelIngestOpsPresence() {
         'intel burn-in checker script does not support --incident-labels flag');
     assert(burninScript.includes('requires a value'),
         'intel burn-in checker script does not fail closed on missing CLI flag values');
+    const burninTrendScript = readText('scripts/report-intel-burnin-trend.cjs');
+    assert(burninTrendScript.includes('findLastFlagValue'),
+        'intel burn-in trend script does not support last-wins CLI flag parsing');
+    assert(burninTrendScript.includes('--window-days'),
+        'intel burn-in trend script does not support --window-days flag');
+    assert(burninTrendScript.includes('--min-success-rate-pct'),
+        'intel burn-in trend script does not support --min-success-rate-pct flag');
+    assert(burninTrendScript.includes('--max-incident-rate-per-100-runs'),
+        'intel burn-in trend script does not support --max-incident-rate-per-100-runs flag');
+    assert(burninTrendScript.includes('requires a value'),
+        'intel burn-in trend script does not fail closed on missing CLI flag values');
 
     const packageJson = readText('package.json');
     assert(packageJson.includes('"ops:intel:probe"'),
@@ -1269,6 +1280,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:sla script');
     assert(packageJson.includes('"ops:intel:burnin"'),
         'package.json does not register ops:intel:burnin script');
+    assert(packageJson.includes('"ops:intel:burnin:trend"'),
+        'package.json does not register ops:intel:burnin:trend script');
     assert(packageJson.includes('"ops:intel:sla:remediate"'),
         'package.json does not register ops:intel:sla:remediate script');
     assert(packageJson.includes('"ops:intel:sla:incident:dry"'),
@@ -1286,6 +1299,7 @@ function testIntelIngestOpsPresence() {
     const quickVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:quick'] || '');
     const intelSlaScript = String(packageManifest?.scripts?.['ops:intel:sla'] || '');
     const intelBurninScript = String(packageManifest?.scripts?.['ops:intel:burnin'] || '');
+    const intelBurninTrendScript = String(packageManifest?.scripts?.['ops:intel:burnin:trend'] || '');
     const intelSlaRemediationScript = String(packageManifest?.scripts?.['ops:intel:sla:remediate'] || '');
     const intelSlaIncidentDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:dry'] || '');
     const intelSlaIncidentResolveDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:resolve:dry'] || '');
@@ -1309,6 +1323,14 @@ function testIntelIngestOpsPresence() {
         'ops:intel:burnin does not enforce zero open incidents');
     assert(intelBurninScript.includes('--incident-labels ops,intel,sla'),
         'ops:intel:burnin does not enforce incident label filter');
+    assert(intelBurninTrendScript.includes('report-intel-burnin-trend.cjs'),
+        'ops:intel:burnin:trend does not execute trend reporter script');
+    assert(intelBurninTrendScript.includes('--window-days 30'),
+        'ops:intel:burnin:trend does not enforce monthly trend window');
+    assert(intelBurninTrendScript.includes('--min-success-rate-pct 75'),
+        'ops:intel:burnin:trend does not enforce minimum success rate threshold');
+    assert(intelBurninTrendScript.includes('--max-incident-rate-per-100-runs 5'),
+        'ops:intel:burnin:trend does not enforce incident rate threshold');
     assert(intelSlaRemediationScript.includes('dispatch-intel-verify-remediation.cjs'),
         'ops:intel:sla:remediate does not execute remediation dispatcher script');
     assert(intelSlaRemediationScript.includes('--cooldown-minutes'),
@@ -1404,6 +1426,14 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not define intel full verify lane');
     assert(smokeWorkflow.includes('intel-burnin-report'),
         'smoke-defense workflow does not define intel burn-in report lane');
+    assert(smokeWorkflow.includes('Resolve burn-in profile'),
+        'smoke-defense workflow burn-in lane does not resolve an event profile');
+    assert(smokeWorkflow.includes('id: burnin_profile'),
+        'smoke-defense workflow burn-in lane does not expose burn-in profile outputs');
+    assert(smokeWorkflow.includes('case "${{ github.event_name }}" in'),
+        'smoke-defense workflow burn-in lane does not branch thresholds by event');
+    assert(smokeWorkflow.includes('schedule|release)'),
+        'smoke-defense workflow burn-in lane does not define strict schedule/release profile');
     assert(smokeWorkflow.includes('intel-sla-watchdog'),
         'smoke-defense workflow does not define intel SLA watchdog lane');
     assert(smokeWorkflow.includes('intel-sla-watchdog-fast'),
@@ -1436,10 +1466,16 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow watchdog lane does not pass SLA max age override');
     assert(smokeWorkflow.includes('node scripts/check-intel-burnin.cjs'),
         'smoke-defense workflow burn-in lane does not execute burn-in checker');
-    assert(smokeWorkflow.includes('--require-success-events push,workflow_dispatch'),
-        'smoke-defense workflow burn-in lane does not enforce required success events');
+    assert(smokeWorkflow.includes('--min-success-streak "${{ steps.burnin_profile.outputs.min_success_streak }}"'),
+        'smoke-defense workflow burn-in lane does not use dynamic min success streak');
+    assert(smokeWorkflow.includes('--lookback-limit "${{ steps.burnin_profile.outputs.lookback_limit }}"'),
+        'smoke-defense workflow burn-in lane does not use dynamic lookback window');
+    assert(smokeWorkflow.includes('--require-success-events "${{ steps.burnin_profile.outputs.required_success_events }}"'),
+        'smoke-defense workflow burn-in lane does not use dynamic required success events');
     assert(smokeWorkflow.includes('Intel Burn-in Report'),
         'smoke-defense workflow burn-in lane does not publish job summary');
+    assert(smokeWorkflow.includes('- Profile: ${{ steps.burnin_profile.outputs.profile_summary }}'),
+        'smoke-defense workflow burn-in summary does not include resolved profile details');
     assert(smokeWorkflow.includes('Resolve SLA incident issue'),
         'smoke-defense workflow watchdog lane does not define SLA incident resolve step');
     assert(smokeWorkflow.includes('--mode resolve'),
@@ -1476,6 +1512,17 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow SLA incident gate does not check remediation dispatch outcome');
     assert(smokeWorkflow.includes('branches:') && smokeWorkflow.includes('- main'),
         'smoke-defense workflow push trigger is not limited to main branch');
+    const burninMonthlyWorkflow = readText('.github/workflows/intel-burnin-monthly-trend.yml');
+    assert(burninMonthlyWorkflow.includes("cron: '23 5 1 * *'"),
+        'intel burn-in monthly workflow cron is missing or unexpected');
+    assert(burninMonthlyWorkflow.includes('window_days'),
+        'intel burn-in monthly workflow does not expose manual window_days input');
+    assert(burninMonthlyWorkflow.includes('Generate monthly burn-in trend report'),
+        'intel burn-in monthly workflow does not run trend generation step');
+    assert(burninMonthlyWorkflow.includes('report-intel-burnin-trend.cjs'),
+        'intel burn-in monthly workflow does not execute trend script');
+    assert(burninMonthlyWorkflow.includes('Intel Burn-in Monthly Trend Report'),
+        'intel burn-in monthly workflow does not publish monthly trend summary');
 
     const remediationScript = readText('scripts/dispatch-intel-verify-remediation.cjs');
     assert(remediationScript.includes('--cooldown-minutes'),
@@ -1633,6 +1680,10 @@ function testIntelCliMissingValueGuards() {
         {
             script: 'scripts/check-intel-burnin.cjs',
             args: ['--repo']
+        },
+        {
+            script: 'scripts/report-intel-burnin-trend.cjs',
+            args: ['--repo']
         }
     ];
 
@@ -1673,6 +1724,7 @@ async function main() {
         'scripts/check-intel-ingest-health.cjs',
         'scripts/check-intel-verify-sla.cjs',
         'scripts/check-intel-burnin.cjs',
+        'scripts/report-intel-burnin-trend.cjs',
         'scripts/dispatch-intel-verify-remediation.cjs',
         'scripts/report-intel-sla-incident.cjs',
         'scripts/probe-intel-ingest.cjs',

@@ -1,0 +1,74 @@
+name: Intel Burn-in Monthly Trend
+
+on:
+  schedule:
+    - cron: '23 5 1 * *'
+  workflow_dispatch:
+    inputs:
+      window_days:
+        description: "Trend window in days"
+        required: false
+        default: "30"
+        type: string
+      min_success_rate_pct:
+        description: "Minimum run success rate percentage"
+        required: false
+        default: "75"
+        type: string
+      max_incident_rate_per_100_runs:
+        description: "Maximum incident rate per 100 runs"
+        required: false
+        default: "5"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: intel-burnin-monthly-trend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  intel-burnin-monthly-trend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      WINDOW_DAYS: ${{ github.event_name == 'workflow_dispatch' && inputs.window_days || '30' }}
+      MIN_SUCCESS_RATE_PCT: ${{ github.event_name == 'workflow_dispatch' && inputs.min_success_rate_pct || '75' }}
+      MAX_INCIDENT_RATE_PER_100_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.max_incident_rate_per_100_runs || '5' }}
+      INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate monthly burn-in trend report
+        run: |
+          node scripts/report-intel-burnin-trend.cjs \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --window-days "${WINDOW_DAYS}" \
+            --incident-labels "${INTEL_SLA_INCIDENT_LABELS:-ops,intel,sla}" \
+            --min-success-rate-pct "${MIN_SUCCESS_RATE_PCT}" \
+            --max-incident-rate-per-100-runs "${MAX_INCIDENT_RATE_PER_100_RUNS}" \
+            --token "${GH_TOKEN}" | tee burnin-trend-report.json
+
+      - name: Publish monthly burn-in summary
+        if: ${{ always() }}
+        run: |
+          echo "## Intel Burn-in Monthly Trend Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Window Days: ${WINDOW_DAYS}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Min Success Rate (%): ${MIN_SUCCESS_RATE_PCT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Max Incident Rate per 100 Runs: ${MAX_INCIDENT_RATE_PER_100_RUNS}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`json" >> "$GITHUB_STEP_SUMMARY"
+          cat burnin-trend-report.json >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"

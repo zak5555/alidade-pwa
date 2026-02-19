@@ -567,6 +567,7 @@ jobs:
     env:
       GITHUB_REPOSITORY: ${{ github.repository }}
       GH_TOKEN: ${{ github.token }}
+      INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
 
     steps:
       - name: Checkout
@@ -577,22 +578,56 @@ jobs:
         with:
           node-version: 20
 
+      - name: Resolve burn-in profile
+        id: burnin_profile
+        run: |
+          min_success_streak=8
+          lookback_limit=30
+          required_success_events="push,workflow_dispatch"
+
+          case "${{ github.event_name }}" in
+            push)
+              min_success_streak=5
+              lookback_limit=20
+              required_success_events="push"
+              ;;
+            workflow_dispatch)
+              min_success_streak=8
+              lookback_limit=30
+              required_success_events="push,workflow_dispatch"
+              ;;
+            schedule|release)
+              min_success_streak=12
+              lookback_limit=40
+              required_success_events="push"
+              ;;
+          esac
+
+          profile_summary="event=${{ github.event_name }} streak=${min_success_streak} lookback=${lookback_limit} required=${required_success_events}"
+
+          echo "min_success_streak=${min_success_streak}" >> "$GITHUB_OUTPUT"
+          echo "lookback_limit=${lookback_limit}" >> "$GITHUB_OUTPUT"
+          echo "required_success_events=${required_success_events}" >> "$GITHUB_OUTPUT"
+          echo "profile_summary=${profile_summary}" >> "$GITHUB_OUTPUT"
+
       - name: Generate burn-in report
         run: |
           node scripts/check-intel-burnin.cjs \
             --workflow smoke-defense.yml \
             --branch "${{ github.ref_name }}" \
-            --min-success-streak 8 \
-            --lookback-limit 30 \
+            --min-success-streak "${{ steps.burnin_profile.outputs.min_success_streak }}" \
+            --lookback-limit "${{ steps.burnin_profile.outputs.lookback_limit }}" \
             --max-open-incidents 0 \
             --incident-labels "${INTEL_SLA_INCIDENT_LABELS:-ops,intel,sla}" \
-            --require-success-events push,workflow_dispatch \
+            --require-success-events "${{ steps.burnin_profile.outputs.required_success_events }}" \
             --token "${GH_TOKEN}" | tee burnin-report.json
 
       - name: Publish burn-in summary
         if: ${{ always() }}
         run: |
           echo "## Intel Burn-in Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Profile: ${{ steps.burnin_profile.outputs.profile_summary }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "\`\`\`json" >> "$GITHUB_STEP_SUMMARY"
           cat burnin-report.json >> "$GITHUB_STEP_SUMMARY"
