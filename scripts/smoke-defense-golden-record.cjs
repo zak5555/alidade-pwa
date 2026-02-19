@@ -1402,6 +1402,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not define intel fast verify lane');
     assert(smokeWorkflow.includes('intel-verify-full'),
         'smoke-defense workflow does not define intel full verify lane');
+    assert(smokeWorkflow.includes('intel-burnin-report'),
+        'smoke-defense workflow does not define intel burn-in report lane');
     assert(smokeWorkflow.includes('intel-sla-watchdog'),
         'smoke-defense workflow does not define intel SLA watchdog lane');
     assert(smokeWorkflow.includes('intel-sla-watchdog-fast'),
@@ -1432,6 +1434,12 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow watchdog lane does not resolve SLA max age input');
     assert(smokeWorkflow.includes('npm run ops:intel:sla -- --max-age-hours'),
         'smoke-defense workflow watchdog lane does not pass SLA max age override');
+    assert(smokeWorkflow.includes('node scripts/check-intel-burnin.cjs'),
+        'smoke-defense workflow burn-in lane does not execute burn-in checker');
+    assert(smokeWorkflow.includes('--require-success-events push,workflow_dispatch'),
+        'smoke-defense workflow burn-in lane does not enforce required success events');
+    assert(smokeWorkflow.includes('Intel Burn-in Report'),
+        'smoke-defense workflow burn-in lane does not publish job summary');
     assert(smokeWorkflow.includes('Resolve SLA incident issue'),
         'smoke-defense workflow watchdog lane does not define SLA incident resolve step');
     assert(smokeWorkflow.includes('--mode resolve'),

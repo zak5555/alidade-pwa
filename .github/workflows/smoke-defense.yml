@@ -558,3 +558,42 @@ jobs:
       - name: Verify intel ingest pipeline (full)
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
         run: npm run ops:intel:ci
+
+  intel-burnin-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    needs: smoke-defense
+    if: ${{ github.event_name != 'pull_request' }}
+    env:
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate burn-in report
+        run: |
+          node scripts/check-intel-burnin.cjs \
+            --workflow smoke-defense.yml \
+            --branch "${{ github.ref_name }}" \
+            --min-success-streak 8 \
+            --lookback-limit 30 \
+            --max-open-incidents 0 \
+            --incident-labels "${INTEL_SLA_INCIDENT_LABELS:-ops,intel,sla}" \
+            --require-success-events push,workflow_dispatch \
+            --token "${GH_TOKEN}" | tee burnin-report.json
+
+      - name: Publish burn-in summary
+        if: ${{ always() }}
+        run: |
+          echo "## Intel Burn-in Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`json" >> "$GITHUB_STEP_SUMMARY"
+          cat burnin-report.json >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
