@@ -283,6 +283,14 @@ async function testContextRuntimeBaselineIntegration() {
         'Baseline threats were not merged into threat feed');
     assert(typeof vectorContext.baselineIntel?.integrityStatus === 'string',
         'Vector context baseline intel does not expose integrity status');
+    assert(Array.isArray(vectorContext.riskExplainability?.reasons),
+        'Vector context does not expose risk explainability reasons');
+    assert(typeof vectorContext.routeHint?.mode === 'string',
+        'Vector context does not expose smart route hint mode');
+    assert(typeof vectorContext.riskZones?.[0]?.temporalRisk?.windowId === 'string',
+        'Risk zone temporal risk window metadata is missing');
+    assert(typeof vectorContext.riskZones?.[0]?.preAlert?.armed === 'boolean',
+        'Risk zone pre-alert metadata is missing');
     assert(typeof engine.getCurrentDangerLevel() === 'string', 'Danger level did not resolve');
     assert(events.includes('contextUpdate'), 'Context updates were not dispatched');
 
@@ -363,6 +371,10 @@ async function testContextRuntimeOfflineCacheAndInterpolation() {
         'Context runtime did not produce risk zones for interpolation scenario');
     assert(vectorA.riskZones.some((zone) => zone.source === 'baseline_risk_zone_interpolated'),
         'Context runtime did not emit interpolated risk-zone signal');
+    assert(vectorA.riskZones.some((zone) => typeof zone?.temporalRisk?.timeAdjustedComposite === 'number'),
+        'Interpolated risk zones do not expose temporal composite metadata');
+    assert(vectorA.riskZones.some((zone) => Array.isArray(zone?.riskExplainability?.reasons)),
+        'Interpolated risk zones do not expose explainability reasons');
 
     const cacheRaw = localStorage.getItem('alidade_context_snapshot_v1');
     assert(typeof cacheRaw === 'string' && cacheRaw.length > 0,
@@ -608,6 +620,14 @@ function testVectorHudSecuritySignalPresence() {
         'Vector HUD does not render context source slot');
     assert(source.includes('hud-risk-mode'),
         'Vector HUD does not render risk signal mode slot');
+    assert(source.includes('hud-alert-explain'),
+        'Vector HUD does not render explainability slot');
+    assert(source.includes('hud-pre-alert-card'),
+        'Vector HUD does not render pre-alert command card slot');
+    assert(source.includes('hud-route-hint'),
+        'Vector HUD does not render smart route hint slot');
+    assert(source.includes('navigatorObj.vibrate'),
+        'Vector HUD does not attempt pre-alert haptic signal');
     return {
         name: 'vector-hud-security-signal-presence',
         ok: true
@@ -1001,6 +1021,19 @@ function testIntelEventWiringPresence() {
         'Context runtime does not expose risk interpolation helper');
     assert(contextSource.includes('baseline_risk_zone_interpolated'),
         'Context runtime does not tag interpolated risk zones');
+    assert(contextSource.includes('resolveTemporalRiskWindow'),
+        'Context runtime does not expose temporal risk window helper');
+    assert(contextSource.includes('getRiskRouteHint'),
+        'Context runtime does not expose smart route hint helper');
+    assert(contextSource.includes('riskExplainability'),
+        'Context runtime does not expose explainability fields for risk zones');
+
+    const routeUiSource = readText('js/app/protocols/route-planner-ui-utils.js');
+    assert(routeUiSource.includes('routePlannerBuildSmartRouteHintHtml'),
+        'Route planner UI utils do not expose smart route hint renderer');
+    const routeRunnerSource = readText('js/app/protocols/route-planner-runner-utils.js');
+    assert(routeRunnerSource.includes('smartRouteHintHTML'),
+        'Route planner runner does not render smart route hint HTML');
 
     const sosSource = readText('js/emergency-sos.js');
     assert(sosSource.includes("emitIntelEvent('sos.armed'"),

@@ -86,6 +86,45 @@
         };
     }
 
+    if (typeof protocolsUtils.routePlannerBuildSmartRouteHintHtml !== 'function') {
+        protocolsUtils.routePlannerBuildSmartRouteHintHtml = function routePlannerBuildSmartRouteHintHtml(payload = {}) {
+            const routeHint = payload.routeHint || {};
+            const detourSuggested = routeHint.detourSuggested === true;
+            const delayMinutes = Number(routeHint.delayMinutes || 0);
+            const areaName = routeHint.areaName || 'route sector';
+            const reasons = Array.isArray(routeHint.why) ? routeHint.why.slice(0, 2) : [];
+            const action = routeHint.action || 'Continue current route with standard caution.';
+
+            let toneClass = 'border-emerald-500/20 bg-emerald-500/10 text-emerald-300';
+            let title = 'SMART ROUTE HINT: STABLE';
+            if (detourSuggested) {
+                toneClass = 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+                title = 'SMART ROUTE HINT: SOFT DETOUR';
+            } else if (String(routeHint.mode || '').toLowerCase().includes('caution')) {
+                toneClass = 'border-zinc-500/40 bg-zinc-800/50 text-zinc-300';
+                title = 'SMART ROUTE HINT: CAUTION';
+            }
+
+            const etaLine = detourSuggested
+                ? `Optional detour latency: +~${Math.max(1, delayMinutes)} min.`
+                : 'No detour recommended.';
+            const reasonsHtml = reasons.length > 0
+                ? `<p class="text-[11px] text-zinc-300 font-mono mt-2 leading-relaxed">${reasons.join(' | ')}</p>`
+                : '';
+
+            return `
+            <div id="route-smart-hint-card" class="reveal-stagger mb-4 rounded-xl border ${toneClass} p-4" style="animation-delay: 0.25s">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-[10px] font-black tracking-[0.18em] uppercase">${title}</p>
+                    <p class="text-[10px] font-mono opacity-80">${areaName}</p>
+                </div>
+                <p class="text-sm font-semibold mt-2 leading-relaxed">${action}</p>
+                <p class="text-[11px] text-zinc-400 font-mono mt-2">${etaLine}</p>
+                ${reasonsHtml}
+            </div>`;
+        };
+    }
+
     if (typeof protocolsUtils.routePlannerBuildTimelineHtml !== 'function') {
         protocolsUtils.routePlannerBuildTimelineHtml = function routePlannerBuildTimelineHtml(stops) {
             return stops.map((stop, index) => {

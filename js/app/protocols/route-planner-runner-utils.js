@@ -179,6 +179,21 @@
             const securitySection = typeof protocolsUtils.routePlannerBuildSecuritySection === 'function'
                 ? protocolsUtils.routePlannerBuildSecuritySection(hazardsHTML)
                 : '';
+            let vectorContext = null;
+            if (windowObjParam?.contextEngine && typeof windowObjParam.contextEngine.getContext === 'function') {
+                try {
+                    vectorContext = windowObjParam.contextEngine.getContext('vector');
+                } catch (_error) {
+                    vectorContext = null;
+                }
+            }
+            const smartRouteHintHTML = typeof protocolsUtils.routePlannerBuildSmartRouteHintHtml === 'function'
+                ? protocolsUtils.routePlannerBuildSmartRouteHintHtml({
+                    routeHint: vectorContext?.routeHint || null,
+                    vectorContext,
+                    result
+                })
+                : '';
             const timelineHTML = typeof protocolsUtils.routePlannerBuildTimelineHtml === 'function'
                 ? protocolsUtils.routePlannerBuildTimelineHtml(result.stops || [])
                 : '';
@@ -201,6 +216,8 @@
                     </div>
                 </div>
             </div>
+
+            ${smartRouteHintHTML}
 
             <div class="reveal-stagger p-5 bg-zinc-900/40 rounded-xl border border-zinc-800 mb-4" style="animation-delay: 0.2s">
                 ${timelineHTML}

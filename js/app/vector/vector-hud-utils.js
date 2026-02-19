@@ -380,6 +380,21 @@
                                 <p class="text-xs text-zinc-300 font-mono font-bold" id="hud-risk-mode">CLEAR</p>
                             </div>
                         </div>
+                        <div class="pt-2 border-t border-zinc-800/80">
+                            <p class="text-[10px] text-zinc-500 font-mono uppercase">WHY THIS ALERT</p>
+                            <p class="text-xs text-zinc-300 font-mono leading-relaxed mt-1" id="hud-alert-explain">NO ACTIVE ALERT</p>
+                        </div>
+                        <div id="hud-pre-alert-card" class="hidden rounded-[2px] border border-amber-500/30 bg-amber-950/20 p-2">
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-[10px] text-amber-400 font-mono uppercase font-bold" id="hud-pre-alert-title">PRE-ALERT</p>
+                                <p class="text-[10px] text-amber-300 font-mono" id="hud-pre-alert-distance">-- M</p>
+                            </div>
+                            <p class="text-xs text-zinc-200 font-mono mt-1 leading-relaxed" id="hud-pre-alert-command">Move to busy lane. No stops. Keep phone hidden.</p>
+                        </div>
+                        <div class="pt-2 border-t border-zinc-800/80">
+                            <p class="text-[10px] text-zinc-500 font-mono uppercase">SMART ROUTE HINT</p>
+                            <p class="text-xs text-zinc-300 font-mono leading-relaxed mt-1" id="hud-route-hint">Route clear. Keep visible lanes.</p>
+                        </div>
                     </div>
                 </div>
                 <div class="flex justify-center items-center py-8">
@@ -659,11 +674,19 @@
             const intelIntegrityEl = documentObj.getElementById('hud-intel-integrity');
             const contextSourceEl = documentObj.getElementById('hud-context-source');
             const riskModeEl = documentObj.getElementById('hud-risk-mode');
+            const alertExplainEl = documentObj.getElementById('hud-alert-explain');
+            const preAlertCardEl = documentObj.getElementById('hud-pre-alert-card');
+            const preAlertDistanceEl = documentObj.getElementById('hud-pre-alert-distance');
+            const preAlertCommandEl = documentObj.getElementById('hud-pre-alert-command');
+            const routeHintEl = documentObj.getElementById('hud-route-hint');
             const calibrateBtn = documentObj.getElementById('calibrate-btn');
             const solarToggle = documentObj.getElementById('solar-toggle');
             let currentHeading = 0;
             let targetBearing = 0;
             let compassActive = false;
+            let lastPreAlertHapticAt = 0;
+            let lastPreAlertZoneId = null;
+            const PRE_ALERT_HAPTIC_COOLDOWN_MS = 45000;
             void compassActive;
             void getSunAzimuthFn;
 
@@ -717,6 +740,10 @@
                 const baselineIntel = vectorContext?.baselineIntel || null;
                 const contextCache = vectorContext?.contextCache || null;
                 const sessionData = windowParam.contextEngine?.context?.sessionData || null;
+                const topZone = riskZones[0] || null;
+                const explainability = vectorContext?.riskExplainability || topZone?.riskExplainability || null;
+                const routeHint = vectorContext?.routeHint || null;
+                const armedPreAlertZone = riskZones.find((zone) => zone?.preAlert?.armed === true) || null;
                 const hasInterpolatedRisk = riskZones.some((zone) =>
                     zone?.source === 'baseline_risk_zone_interpolated' || Boolean(zone?.interpolation)
                 );
@@ -775,7 +802,10 @@
                 if (riskModeEl) {
                     let modeLabel = 'CLEAR';
                     let modeClass = 'text-zinc-400';
-                    if (riskZones.length > 0 && !hasDirectRisk && hasInterpolatedRisk) {
+                    if (armedPreAlertZone) {
+                        modeLabel = 'PRE-ALERT';
+                        modeClass = 'text-amber-400';
+                    } else if (riskZones.length > 0 && !hasDirectRisk && hasInterpolatedRisk) {
                         modeLabel = 'PERIMETER';
                         modeClass = 'text-amber-400';
                     } else if (riskZones.length > 0) {
@@ -784,6 +814,71 @@
                     }
                     riskModeEl.textContent = modeLabel;
                     riskModeEl.className = `text-xs font-mono font-bold ${modeClass}`;
+                }
+
+                if (alertExplainEl) {
+                    if (Array.isArray(explainability?.reasons) && explainability.reasons.length > 0) {
+                        const concise = explainability.reasons.slice(0, 2).join(' | ');
+                        alertExplainEl.textContent = concise;
+                        alertExplainEl.className = 'text-xs text-zinc-200 font-mono leading-relaxed mt-1';
+                    } else if (topZone?.areaName) {
+                        alertExplainEl.textContent = `Active zone: ${topZone.areaName}. Keep route in visible lanes.`;
+                        alertExplainEl.className = 'text-xs text-zinc-300 font-mono leading-relaxed mt-1';
+                    } else {
+                        alertExplainEl.textContent = 'NO ACTIVE ALERT';
+                        alertExplainEl.className = 'text-xs text-zinc-400 font-mono leading-relaxed mt-1';
+                    }
+                }
+
+                if (routeHintEl) {
+                    if (routeHint?.action) {
+                        routeHintEl.textContent = routeHint.action;
+                        routeHintEl.className = routeHint.detourSuggested
+                            ? 'text-xs text-amber-300 font-mono leading-relaxed mt-1'
+                            : 'text-xs text-zinc-300 font-mono leading-relaxed mt-1';
+                    } else {
+                        routeHintEl.textContent = 'Route clear. Keep visible lanes.';
+                        routeHintEl.className = 'text-xs text-zinc-400 font-mono leading-relaxed mt-1';
+                    }
+                }
+
+                if (preAlertCardEl) {
+                    if (armedPreAlertZone) {
+                        const preAlertDistance = Number(armedPreAlertZone?.preAlert?.distanceMeters);
+                        const preAlertDistanceLabel = Number.isFinite(preAlertDistance)
+                            ? `${Math.max(0, Math.round(preAlertDistance))} M`
+                            : '-- M';
+                        const preAlertCommand = armedPreAlertZone?.preAlert?.command ||
+                            explainability?.action ||
+                            'Move to busy lane. No stops. Keep phone hidden.';
+                        preAlertCardEl.classList.remove('hidden');
+                        if (preAlertDistanceEl) preAlertDistanceEl.textContent = preAlertDistanceLabel;
+                        if (preAlertCommandEl) preAlertCommandEl.textContent = preAlertCommand;
+
+                        const shouldPulse = (() => {
+                            const zoneId = String(armedPreAlertZone.id || '');
+                            const now = Date.now();
+                            const isNewZone = zoneId && zoneId !== lastPreAlertZoneId;
+                            const cooldownPassed = (now - lastPreAlertHapticAt) >= PRE_ALERT_HAPTIC_COOLDOWN_MS;
+                            if (isNewZone || cooldownPassed) {
+                                lastPreAlertZoneId = zoneId || lastPreAlertZoneId;
+                                lastPreAlertHapticAt = now;
+                                return true;
+                            }
+                            return false;
+                        })();
+
+                        if (shouldPulse && navigatorObj && typeof navigatorObj.vibrate === 'function') {
+                            try {
+                                navigatorObj.vibrate([120, 80, 160]);
+                            } catch (_error) {
+                                // Ignore haptics failures to keep HUD loop stable.
+                            }
+                        }
+                    } else {
+                        preAlertCardEl.classList.add('hidden');
+                        lastPreAlertZoneId = null;
+                    }
                 }
             }
             function handleContextUpdate() {

@@ -20,7 +20,9 @@ class UnifiedContextEngine {
             maxCachedRiskZones: 4,
             interpolationRingMeters: 180,
             minInterpolatedRiskScore: 0.15,
-            maxInterpolatedZones: 2
+            maxInterpolatedZones: 2,
+            preAlertDistanceMeters: 120,
+            temporalRiskTimezone: 'Africa/Casablanca'
         });
         this.lastContextSnapshotPersistAt = 0;
         this.contextCacheMeta = {
@@ -99,6 +101,124 @@ class UnifiedContextEngine {
         if (value === null || value === undefined || value === '') return fallback;
         const normalized = Number(value);
         return Number.isFinite(normalized) ? normalized : fallback;
+    }
+
+    clamp01(value, fallback = 0) {
+        const numeric = this.toFiniteNumber(value, fallback);
+        return Math.max(0, Math.min(1, numeric));
+    }
+
+    resolveMarrakechHour(dateObj = new Date()) {
+        try {
+            const formatter = new Intl.DateTimeFormat('en-GB', {
+                hour: '2-digit',
+                hour12: false,
+                timeZone: this.contextRuntimePolicy.temporalRiskTimezone
+            });
+            const hour = Number.parseInt(formatter.format(dateObj), 10);
+            if (Number.isFinite(hour)) return hour;
+        } catch (_error) {
+            // Fall back to runtime local time when Intl timezone lookup is unavailable.
+        }
+        return dateObj.getHours();
+    }
+
+    resolveTemporalRiskWindow(hourValue) {
+        const safeHour = this.toFiniteNumber(hourValue, this.resolveMarrakechHour());
+        if (safeHour >= 0 && safeHour < 6) {
+            return { id: 'late_night', label: 'LATE NIGHT', multiplier: 1.3 };
+        }
+        if (safeHour >= 6 && safeHour < 11) {
+            return { id: 'morning', label: 'MORNING', multiplier: 0.95 };
+        }
+        if (safeHour >= 11 && safeHour < 17) {
+            return { id: 'daytime', label: 'DAYTIME', multiplier: 1.0 };
+        }
+        if (safeHour >= 17 && safeHour < 21) {
+            return { id: 'evening_peak', label: 'EVENING PEAK', multiplier: 1.2 };
+        }
+        return { id: 'night_market', label: 'NIGHT MARKET', multiplier: 1.12 };
+    }
+
+    resolveThreatSensitivityBoost(zone = {}, temporalWindow = {}) {
+        const threatText = (Array.isArray(zone.threatTypes) ? zone.threatTypes : [])
+            .map((item) => String(item || '').toLowerCase())
+            .join(' ');
+        const windowId = String(temporalWindow.id || '');
+        let boost = 0;
+
+        if (/(pickpocket|theft|snatch|steal|rob|scam|harass)/.test(threatText)) {
+            boost = ['late_night', 'evening_peak', 'night_market'].includes(windowId) ? 0.18 : 0.08;
+        }
+
+        if (/(fake_guide|guide|pressure|overcharge|fraud)/.test(threatText) && windowId === 'evening_peak') {
+            boost = Math.max(boost, 0.12);
+        }
+
+        return this.clamp01(boost, 0);
+    }
+
+    resolveRiskExplainability(zone = {}, temporalWindow = {}, temporalRisk = {}) {
+        const isInterpolated = zone.source === 'baseline_risk_zone_interpolated' || Boolean(zone.interpolation);
+        const threatList = Array.isArray(zone.threatTypes) ? zone.threatTypes.filter(Boolean).slice(0, 3) : [];
+        const hour = this.resolveMarrakechHour();
+        const baseRiskPct = Math.round(this.clamp01(zone.baselineScore, 0) * 100);
+        const confidencePct = Math.round(this.clamp01(zone.confidence, 0) * 100);
+        const adjustedRiskPct = Math.round(this.clamp01(temporalRisk.timeAdjustedComposite, 0) * 100);
+        const proximityReason = isInterpolated
+            ? `Perimeter warning: approaching ${zone.areaName || 'risk zone'} before entry.`
+            : `Inside active risk zone: ${zone.areaName || 'unknown area'}.`;
+        const threatReason = threatList.length > 0
+            ? `Threat tags: ${threatList.join(', ')}.`
+            : 'Baseline zone risk is elevated from trusted static intel.';
+        const timeReason = `Time window ${temporalWindow.label || 'UNKNOWN'} (${String(hour).padStart(2, '0')}:00) adjusts exposure.`;
+        const confidenceReason = `Composite score ${adjustedRiskPct}% (baseline ${baseRiskPct}% / confidence ${confidencePct}%).`;
+        const action = isInterpolated
+            ? 'Pre-alert: move to a busier lane now, avoid stopping, keep phone out of sight.'
+            : 'Inside risk zone: keep moving, avoid phone display, exit via visible high-footfall lane.';
+
+        return {
+            headline: proximityReason,
+            reasons: [proximityReason, threatReason, timeReason, confidenceReason],
+            action
+        };
+    }
+
+    decorateRiskZoneSignal(zone = {}) {
+        if (!zone || typeof zone !== 'object') return zone;
+
+        const temporalWindow = this.resolveTemporalRiskWindow();
+        const proximityWeight = this.clamp01(zone?.interpolation?.proximityScore, 1);
+        const baseComposite = this.clamp01(zone.baselineScore, 0) * this.clamp01(zone.confidence, 0) * proximityWeight;
+        const threatBoost = this.resolveThreatSensitivityBoost(zone, temporalWindow);
+        const timeAdjustedComposite = this.clamp01(baseComposite * temporalWindow.multiplier * (1 + threatBoost), 0);
+        const interpolationOffset = this.toFiniteNumber(zone?.interpolation?.offsetMeters, null);
+        const preAlertDistance = this.toFiniteNumber(this.contextRuntimePolicy.preAlertDistanceMeters, 120);
+        const preAlertArmed = zone.source === 'baseline_risk_zone_interpolated' &&
+            interpolationOffset !== null &&
+            interpolationOffset <= preAlertDistance &&
+            timeAdjustedComposite >= 0.25;
+
+        const temporalRisk = {
+            windowId: temporalWindow.id,
+            windowLabel: temporalWindow.label,
+            multiplier: temporalWindow.multiplier,
+            threatBoost,
+            baseComposite,
+            timeAdjustedComposite
+        };
+        const explainability = this.resolveRiskExplainability(zone, temporalWindow, temporalRisk);
+
+        return {
+            ...zone,
+            temporalRisk,
+            riskExplainability: explainability,
+            preAlert: {
+                armed: preAlertArmed,
+                distanceMeters: interpolationOffset,
+                command: explainability.action
+            }
+        };
     }
 
     canUseStorage() {
@@ -378,7 +498,14 @@ class UnifiedContextEngine {
                     mergedById.set(zone.id, zone);
                 }
             });
-        return [...mergedById.values()].slice(0, this.contextRuntimePolicy.maxCachedRiskZones);
+        return [...mergedById.values()]
+            .map((zone) => this.decorateRiskZoneSignal(zone))
+            .sort((a, b) => {
+                const riskA = this.toFiniteNumber(a?.temporalRisk?.timeAdjustedComposite, 0);
+                const riskB = this.toFiniteNumber(b?.temporalRisk?.timeAdjustedComposite, 0);
+                return riskB - riskA;
+            })
+            .slice(0, this.contextRuntimePolicy.maxCachedRiskZones);
     }
 
     resolveGoldenRecordPayload() {
@@ -494,16 +621,23 @@ class UnifiedContextEngine {
             .map((zone, index) => {
                 const proximityScore = zone.interpolation?.proximityScore;
                 const weight = typeof proximityScore === 'number' ? Math.max(0, Math.min(1, proximityScore)) : 1;
-                const compositeRisk = (zone.baselineScore || 0) * (zone.confidence || 0) * weight;
+                const compositeRisk = this.toFiniteNumber(
+                    zone?.temporalRisk?.timeAdjustedComposite,
+                    (zone.baselineScore || 0) * (zone.confidence || 0) * weight
+                );
                 const severity = compositeRisk >= 0.75 ? 'high' : (compositeRisk >= 0.5 ? 'medium' : 'low');
                 const threatList = (zone.threatTypes || []).slice(0, 3).join(', ');
                 const isInterpolated = zone.source === 'baseline_risk_zone_interpolated' || Boolean(zone.interpolation);
+                const timeWindow = zone?.temporalRisk?.windowLabel
+                    ? ` Time window: ${zone.temporalRisk.windowLabel}.`
+                    : '';
+                const explainabilityAction = zone?.riskExplainability?.action || null;
                 return {
                     id: `baseline_zone_${zone.id || index}`,
                     name: `Baseline Risk: ${zone.areaName}`,
                     severity,
                     status: 'active',
-                    advice: isInterpolated
+                    advice: explainabilityAction || (isInterpolated
                         ? `Nearby risk perimeter detected around ${zone.areaName}. ${
                             threatList
                                 ? `Likely exposure: ${threatList}.`
@@ -511,7 +645,7 @@ class UnifiedContextEngine {
                         } Keep route flexible and stay in visible lanes.`
                         : (threatList
                             ? `Primary risks: ${threatList}. Keep moving, maintain line-of-sight, secure valuables.`
-                            : 'Elevated baseline risk detected. Stay alert and avoid prolonged stops.'),
+                            : 'Elevated baseline risk detected. Stay alert and avoid prolonged stops.')) + timeWindow,
                     distance: typeof zone.distance === 'number' ? Math.round(zone.distance) : null,
                     source: zone.source || 'baseline_risk_zone'
                 };
@@ -888,12 +1022,64 @@ class UnifiedContextEngine {
         if (combinedThreats.some((t) => t.severity === 'medium')) return 'medium';
 
         const maxZoneRisk = this.context.activeRiskZones.reduce((maxRisk, zone) => {
-            const composite = (zone.baselineScore || 0) * (zone.confidence || 0);
+            const composite = this.toFiniteNumber(
+                zone?.temporalRisk?.timeAdjustedComposite,
+                (zone.baselineScore || 0) * (zone.confidence || 0)
+            );
             return composite > maxRisk ? composite : maxRisk;
         }, 0);
         if (maxZoneRisk >= 0.75) return 'high';
         if (maxZoneRisk >= 0.5) return 'medium';
         return 'low';
+    }
+
+    getTopRiskExplainability() {
+        const topZone = this.context.activeRiskZones?.[0];
+        if (!topZone) return null;
+
+        const explainability = topZone.riskExplainability || {};
+        return {
+            areaName: topZone.areaName || null,
+            source: topZone.source || 'baseline_risk_zone',
+            reasons: Array.isArray(explainability.reasons) ? explainability.reasons : [],
+            action: explainability.action || null,
+            preAlert: topZone.preAlert || null,
+            temporalRisk: topZone.temporalRisk || null
+        };
+    }
+
+    getRiskRouteHint() {
+        const topZone = this.context.activeRiskZones?.[0];
+        if (!topZone) {
+            return {
+                mode: 'clear',
+                detourSuggested: false,
+                delayMinutes: 0,
+                action: 'Route clear. Keep steady pace and stay in visible lanes.',
+                why: []
+            };
+        }
+
+        const adjustedScore = this.toFiniteNumber(topZone?.temporalRisk?.timeAdjustedComposite, 0);
+        const isPerimeter = topZone.source === 'baseline_risk_zone_interpolated' || Boolean(topZone.interpolation);
+        const shouldDetour = adjustedScore >= 0.62 || (isPerimeter && topZone?.preAlert?.armed === true);
+        const delayMinutes = shouldDetour ? (adjustedScore >= 0.75 ? 8 : 5) : 0;
+        const action = shouldDetour
+            ? `Soft detour suggested near ${topZone.areaName}: use higher-footfall lanes (+~${delayMinutes} min).`
+            : `Proceed via ${topZone.areaName} with caution; avoid pauses and blind corners.`;
+        const reasons = Array.isArray(topZone?.riskExplainability?.reasons)
+            ? topZone.riskExplainability.reasons.slice(0, 2)
+            : [];
+
+        return {
+            mode: shouldDetour ? 'soft_detour' : 'proceed_with_caution',
+            detourSuggested: shouldDetour,
+            delayMinutes,
+            areaName: topZone.areaName || null,
+            action,
+            why: reasons,
+            score: Number(adjustedScore.toFixed(2))
+        };
     }
 
     getNavigationRecommendations() {
@@ -907,6 +1093,17 @@ class UnifiedContextEngine {
         if (this.context.activeRiskZones.length > 0) {
             const topRiskZone = this.context.activeRiskZones[0];
             recs.push(`Risk zone active: ${topRiskZone.areaName}. Keep valuables concealed and route via busier lanes.`);
+            const explainability = this.getTopRiskExplainability();
+            if (Array.isArray(explainability?.reasons) && explainability.reasons.length > 0) {
+                recs.push(`Why now: ${explainability.reasons[0]}`);
+            }
+            if (typeof explainability?.action === 'string' && explainability.action) {
+                recs.push(`Immediate action: ${explainability.action}`);
+            }
+            const routeHint = this.getRiskRouteHint();
+            if (routeHint?.detourSuggested) {
+                recs.push(`Smart route hint: ${routeHint.action}`);
+            }
         }
         if (this.context.nearbyCriticalPoints.length > 0) {
             const nearestCritical = this.context.nearbyCriticalPoints[0];
@@ -945,6 +1142,8 @@ class UnifiedContextEngine {
                     riskZones: this.context.activeRiskZones,
                     threats: this.getCombinedThreatFeed(),
                     recommendations: this.getNavigationRecommendations(),
+                    riskExplainability: this.getTopRiskExplainability(),
+                    routeHint: this.getRiskRouteHint(),
                     baselineIntel: this.context.baselineIntel || null,
                     contextCache: this.contextCacheMeta
                 };
@@ -1004,7 +1203,8 @@ class UnifiedContextEngine {
             lng: Number(location.lng),
             accuracy: Number.isFinite(Number(location.accuracy)) ? Number(location.accuracy) : null,
             dangerLevel: String(this.getCurrentDangerLevel() || 'unknown'),
-            powerMode
+            powerMode,
+            temporalRiskWindow: this.resolveTemporalRiskWindow().id
         };
 
         intelUtils.emitIntelEvent('context.update', payload, {
