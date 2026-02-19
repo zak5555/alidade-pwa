@@ -462,6 +462,7 @@ jobs:
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
         run: |
           node scripts/check-intel-triage-dry-run-guard.cjs \
+            --auto-incident "${INTEL_TRIAGE_AUTO_INCIDENT:-0}" \
             --dry-run "${INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN:-false}" \
             --expires-at "${INTEL_TRIAGE_DRY_RUN_EXPIRES_AT:-}" \
             --warning-hours "${INTEL_TRIAGE_DRY_RUN_WARNING_HOURS:-48}" \
@@ -471,8 +472,12 @@ jobs:
       - name: Triage dry-run reminder signal (full lane)
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
         run: |
-          echo "Triage dry-run guard (full): severity=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_severity }} enabled=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_enabled }} expires_at=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_expires_at }} remaining_hours=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_remaining_hours }}"
+          echo "Triage dry-run guard (full): mode=${{ steps.triage_dry_run_guard.outputs.triage_route_mode }} production_ready=${{ steps.triage_dry_run_guard.outputs.triage_production_ready }} severity=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_severity }} enabled=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_enabled }} expires_at=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_expires_at }} remaining_hours=${{ steps.triage_dry_run_guard.outputs.triage_dry_run_remaining_hours }}"
+          mode="${{ steps.triage_dry_run_guard.outputs.triage_route_mode }}"
           reminder="${{ steps.triage_dry_run_guard.outputs.triage_dry_run_reminder }}"
+          if [ "${mode}" = "manual" ]; then
+            echo "::notice::Triage route mode is manual (INTEL_TRIAGE_AUTO_INCIDENT!=1)."
+          fi
           if [ "${{ steps.triage_dry_run_guard.outputs.triage_dry_run_severity }}" = "critical" ]; then
             echo "::warning::Triage dry-run expiry guard is CRITICAL. ${reminder}"
           elif [ "${{ steps.triage_dry_run_guard.outputs.triage_dry_run_severity }}" = "warning" ]; then

@@ -28,6 +28,7 @@
     "ops:intel:sla:incident:resolve:dry": "node scripts/report-intel-sla-incident.cjs --mode resolve --workflow smoke-defense.yml --branch main --required-job intel-verify-full --sla-max-age-hours 12 --sla-outcome success --labels ops,incident,intel,sla,priority:p1 --assignees alidade-owner --comment-cooldown-minutes 60 --escalation-hours 6 --escalation-label priority:p0 --dry-run true",
     "ops:intel:triage:dryrun:guard": "node --env-file=.env scripts/check-intel-triage-dry-run-guard.cjs --write-github-output 0",
     "ops:intel:triage:dryrun:guard:strict": "node --env-file=.env scripts/check-intel-triage-dry-run-guard.cjs --strict 1 --write-github-output 0",
+    "ops:intel:triage:route:live:check": "node --env-file=.env scripts/check-intel-triage-dry-run-guard.cjs --strict 1 --require-auto-incident 1 --dry-run false --write-github-output 0",
     "ops:intel:health:quick": "node --env-file=.env scripts/check-intel-ingest-health.cjs --profile quick",
     "ops:intel:health:strict": "node --env-file=.env scripts/check-intel-ingest-health.cjs --profile strict",
     "ops:intel:verify:strict": "node --env-file=.env scripts/verify-intel-ingest.cjs --profile strict",

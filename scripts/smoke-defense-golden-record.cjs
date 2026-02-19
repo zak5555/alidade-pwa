@@ -1339,6 +1339,8 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:triage:dryrun:guard script');
     assert(packageJson.includes('"ops:intel:triage:dryrun:guard:strict"'),
         'package.json does not register ops:intel:triage:dryrun:guard:strict script');
+    assert(packageJson.includes('"ops:intel:triage:route:live:check"'),
+        'package.json does not register ops:intel:triage:route:live:check script');
     assert(packageJson.includes('"ops:intel:ci"'),
         'package.json does not register ops:intel:ci script');
     assert(packageJson.includes('"ops:hooks:install"'),
@@ -1358,6 +1360,7 @@ function testIntelIngestOpsPresence() {
     const intelSlaIncidentResolveDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:resolve:dry'] || '');
     const triageDryRunGuardNpmScript = String(packageManifest?.scripts?.['ops:intel:triage:dryrun:guard'] || '');
     const triageDryRunGuardStrictNpmScript = String(packageManifest?.scripts?.['ops:intel:triage:dryrun:guard:strict'] || '');
+    const triageRouteLiveCheckScript = String(packageManifest?.scripts?.['ops:intel:triage:route:live:check'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
     assert(quickVerifyScript.includes('--profile quick'),
@@ -1432,6 +1435,12 @@ function testIntelIngestOpsPresence() {
         'ops:intel:triage:dryrun:guard:strict does not enforce strict mode');
     assert(triageDryRunGuardStrictNpmScript.includes('--write-github-output 0'),
         'ops:intel:triage:dryrun:guard:strict does not disable github output in local mode');
+    assert(triageRouteLiveCheckScript.includes('check-intel-triage-dry-run-guard.cjs'),
+        'ops:intel:triage:route:live:check does not execute triage dry-run guard script');
+    assert(triageRouteLiveCheckScript.includes('--require-auto-incident 1'),
+        'ops:intel:triage:route:live:check does not require auto incident mode');
+    assert(triageRouteLiveCheckScript.includes('--dry-run false'),
+        'ops:intel:triage:route:live:check does not enforce live routing mode');
     assert(strictHealthScript.includes('--profile strict'),
         'ops:intel:health:strict does not use strict profile preset');
     assert(strictVerifyScript.includes('--profile strict'),
@@ -1591,6 +1600,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow triage dry-run guard step does not expose step id');
     assert(smokeWorkflow.includes('check-intel-triage-dry-run-guard.cjs'),
         'smoke-defense workflow triage dry-run guard step does not execute dry-run guard script');
+    assert(smokeWorkflow.includes('--auto-incident "${INTEL_TRIAGE_AUTO_INCIDENT:-0}"'),
+        'smoke-defense workflow triage dry-run guard step does not pass auto-incident toggle');
     assert(smokeWorkflow.includes('--expires-at "${INTEL_TRIAGE_DRY_RUN_EXPIRES_AT:-}"'),
         'smoke-defense workflow triage dry-run guard step does not pass expiry variable');
     assert(smokeWorkflow.includes('--warning-hours "${INTEL_TRIAGE_DRY_RUN_WARNING_HOURS:-48}"'),
@@ -1601,6 +1612,8 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow full lane does not define triage dry-run reminder signal step');
     assert(smokeWorkflow.includes('steps.triage_dry_run_guard.outputs.triage_dry_run_severity'),
         'smoke-defense workflow triage dry-run reminder step does not consume guard severity output');
+    assert(smokeWorkflow.includes('steps.triage_dry_run_guard.outputs.triage_route_mode'),
+        'smoke-defense workflow triage dry-run reminder step does not consume guard route-mode output');
     assert(smokeWorkflow.includes('triage_dry_run_reminder'),
         'smoke-defense workflow triage dry-run reminder step does not consume guard reminder output');
     assert(smokeWorkflow.includes('npm run ops:intel:sla'),
@@ -1696,6 +1709,8 @@ function testIntelIngestOpsPresence() {
     assert(verifySummaryScript.includes('requires a value'),
         'intel verify summary publisher does not fail closed on missing CLI flag values');
     const triageDryRunGuardScript = readText('scripts/check-intel-triage-dry-run-guard.cjs');
+    assert(triageDryRunGuardScript.includes('--auto-incident'),
+        'triage dry-run guard script does not support --auto-incident argument');
     assert(triageDryRunGuardScript.includes('--dry-run'),
         'triage dry-run guard script does not support --dry-run argument');
     assert(triageDryRunGuardScript.includes('--expires-at'),
@@ -1704,14 +1719,20 @@ function testIntelIngestOpsPresence() {
         'triage dry-run guard script does not support --warning-hours argument');
     assert(triageDryRunGuardScript.includes('--strict'),
         'triage dry-run guard script does not support --strict argument');
+    assert(triageDryRunGuardScript.includes('--require-auto-incident'),
+        'triage dry-run guard script does not support --require-auto-incident argument');
     assert(triageDryRunGuardScript.includes('--write-github-output'),
         'triage dry-run guard script does not support --write-github-output argument');
     assert(triageDryRunGuardScript.includes('GITHUB_STEP_SUMMARY'),
         'triage dry-run guard script does not append to GITHUB_STEP_SUMMARY');
     assert(triageDryRunGuardScript.includes('GITHUB_OUTPUT'),
         'triage dry-run guard script does not emit GitHub outputs');
+    assert(triageDryRunGuardScript.includes('triage_auto_incident_enabled'),
+        'triage dry-run guard script does not emit auto-incident enabled output');
     assert(triageDryRunGuardScript.includes('triage_dry_run_severity'),
         'triage dry-run guard script does not emit triage severity output');
+    assert(triageDryRunGuardScript.includes('triage_route_mode'),
+        'triage dry-run guard script does not emit route mode output');
     assert(triageDryRunGuardScript.includes('requires a value'),
         'triage dry-run guard script does not fail closed on missing CLI flag values');
     const intelSecretsScript = readText('scripts/check-intel-verify-secrets.cjs');
@@ -1864,6 +1885,14 @@ function testIntelCliMissingValueGuards() {
         {
             script: 'scripts/check-intel-triage-dry-run-guard.cjs',
             args: ['--dry-run']
+        },
+        {
+            script: 'scripts/check-intel-triage-dry-run-guard.cjs',
+            args: ['--auto-incident']
+        },
+        {
+            script: 'scripts/check-intel-triage-dry-run-guard.cjs',
+            args: ['--require-auto-incident']
         },
         {
             script: 'scripts/check-intel-verify-secrets.cjs',

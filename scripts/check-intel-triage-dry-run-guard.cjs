@@ -94,6 +94,9 @@ function pickHigherSeverity(left, right) {
 }
 
 function buildReminder(report) {
+    if (!report.autoIncidentEnabled) {
+        return 'Auto incident routing is disabled (INTEL_TRIAGE_AUTO_INCIDENT!=1).';
+    }
     if (!report.dryRunEnabled) {
         return 'Dry-run is disabled; incident routing is active.';
     }
@@ -116,7 +119,10 @@ function buildSummaryMarkdown(report) {
     const lines = [];
     lines.push('## Intel Triage Dry-Run Guard');
     lines.push('');
+    lines.push(`- Auto-incident enabled: ${report.autoIncidentEnabled}`);
     lines.push(`- Dry-run enabled: ${report.dryRunEnabled}`);
+    lines.push(`- Route mode: ${report.routeMode}`);
+    lines.push(`- Production ready: ${report.productionReady}`);
     lines.push(`- Severity: ${report.severity}`);
     lines.push(`- Reason codes: ${report.reasonCodes.length > 0 ? report.reasonCodes.join(', ') : 'none'}`);
     lines.push(`- Expires at: ${report.expiresAt || 'not_set'}`);
@@ -143,12 +149,15 @@ function writeGithubOutputs(report) {
     }
 
     const outputs = {
+        triage_auto_incident_enabled: report.autoIncidentEnabled ? 'true' : 'false',
         triage_dry_run_enabled: report.dryRunEnabled ? 'true' : 'false',
         triage_dry_run_has_expiry: report.hasExpiry ? 'true' : 'false',
         triage_dry_run_expired: report.expired ? 'true' : 'false',
         triage_dry_run_expires_at: report.expiresAt || '',
         triage_dry_run_remaining_hours: report.remainingHoursText,
         triage_dry_run_severity: report.severity,
+        triage_route_mode: report.routeMode,
+        triage_production_ready: report.productionReady ? 'true' : 'false',
         triage_dry_run_reason_codes: report.reasonCodes.join(','),
         triage_dry_run_reminder: report.reminder,
         triage_dry_run_ok: report.ok ? 'true' : 'false'
@@ -160,6 +169,7 @@ function writeGithubOutputs(report) {
 }
 
 function main() {
+    const autoIncidentRaw = parseStringFlag('--auto-incident', getEnvValue('INTEL_TRIAGE_AUTO_INCIDENT') || '1');
     const dryRunRaw = parseStringFlag('--dry-run', getEnvValue('INTEL_TRIAGE_AUTO_INCIDENT_DRY_RUN') || 'false');
     const expiresAtRaw = parseStringFlag('--expires-at', getEnvValue('INTEL_TRIAGE_DRY_RUN_EXPIRES_AT'));
     const nowIsoRaw = parseStringFlag('--now-iso', '');
@@ -172,8 +182,10 @@ function main() {
         0,
         1
     ) === 1;
+    const requireAutoIncident = parseIntegerFlag('--require-auto-incident', 0, 0, 1) === 1;
     const writeGithubOutput = parseIntegerFlag('--write-github-output', 1, 0, 1) === 1;
 
+    const autoIncidentEnabled = parseBooleanLike(autoIncidentRaw, false);
     const dryRunEnabled = parseBooleanLike(dryRunRaw, false);
     const nowDate = nowIsoRaw ? parseTimestamp(nowIsoRaw) : new Date();
     if (!nowDate || Number.isNaN(nowDate.getTime())) {
@@ -191,8 +203,11 @@ function main() {
     let severity = 'ok';
     const reasonCodes = [];
 
-    if (!dryRunEnabled) {
-        reasonCodes.push('dry_run_disabled');
+    if (!autoIncidentEnabled) {
+        severity = pickHigherSeverity(severity, 'warning');
+        reasonCodes.push('auto_incident_disabled');
+    } else if (!dryRunEnabled) {
+        reasonCodes.push('live_routing_enabled');
     } else {
         if (!hasExpiry) {
             severity = pickHigherSeverity(severity, 'warning');
@@ -212,10 +227,23 @@ function main() {
     }
 
     const normalizedReasonCodes = uniqueItems(reasonCodes);
+    const routeMode = !autoIncidentEnabled
+        ? 'manual'
+        : (dryRunEnabled ? 'dry_run' : 'live');
+    const productionReady = routeMode === 'live';
     const report = {
-        ok: !(strict && (severity === 'critical' || normalizedReasonCodes.includes('dry_run_missing_expiry') || normalizedReasonCodes.includes('dry_run_invalid_expiry'))),
+        ok: !(strict && (
+            severity === 'critical' ||
+            normalizedReasonCodes.includes('dry_run_missing_expiry') ||
+            normalizedReasonCodes.includes('dry_run_invalid_expiry') ||
+            (requireAutoIncident && !autoIncidentEnabled)
+        )),
         strict,
+        requireAutoIncident,
+        autoIncidentEnabled,
         dryRunEnabled,
+        routeMode,
+        productionReady,
         hasExpiry: hasExpiry && !expiryInvalid,
         expiryInvalid,
         expiresAt: expiresAtDate ? expiresAtDate.toISOString() : (hasExpiry ? String(expiresAtRaw || '').trim() : ''),
@@ -242,7 +270,10 @@ function main() {
 
     console.log(JSON.stringify({
         ok: report.ok,
+        autoIncidentEnabled: report.autoIncidentEnabled,
         dryRunEnabled: report.dryRunEnabled,
+        routeMode: report.routeMode,
+        productionReady: report.productionReady,
         severity: report.severity,
         reasonCodes: report.reasonCodes,
         expiresAt: report.expiresAt || null,
