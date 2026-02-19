@@ -1335,6 +1335,10 @@ function testIntelIngestOpsPresence() {
         'package.json does not register ops:intel:sla:incident:dry script');
     assert(packageJson.includes('"ops:intel:sla:incident:resolve:dry"'),
         'package.json does not register ops:intel:sla:incident:resolve:dry script');
+    assert(packageJson.includes('"ops:intel:triage:dryrun:guard"'),
+        'package.json does not register ops:intel:triage:dryrun:guard script');
+    assert(packageJson.includes('"ops:intel:triage:dryrun:guard:strict"'),
+        'package.json does not register ops:intel:triage:dryrun:guard:strict script');
     assert(packageJson.includes('"ops:intel:ci"'),
         'package.json does not register ops:intel:ci script');
     assert(packageJson.includes('"ops:hooks:install"'),
@@ -1352,6 +1356,8 @@ function testIntelIngestOpsPresence() {
     const intelSlaRemediationScript = String(packageManifest?.scripts?.['ops:intel:sla:remediate'] || '');
     const intelSlaIncidentDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:dry'] || '');
     const intelSlaIncidentResolveDryScript = String(packageManifest?.scripts?.['ops:intel:sla:incident:resolve:dry'] || '');
+    const triageDryRunGuardNpmScript = String(packageManifest?.scripts?.['ops:intel:triage:dryrun:guard'] || '');
+    const triageDryRunGuardStrictNpmScript = String(packageManifest?.scripts?.['ops:intel:triage:dryrun:guard:strict'] || '');
     const strictVerifyScript = String(packageManifest?.scripts?.['ops:intel:verify:strict'] || '');
     const strictVerifyRejectionScript = String(packageManifest?.scripts?.['ops:intel:verify:strict:rejection'] || '');
     assert(quickVerifyScript.includes('--profile quick'),
@@ -1418,6 +1424,14 @@ function testIntelIngestOpsPresence() {
         'ops:intel:sla:incident:resolve:dry does not pass incident escalation label');
     assert(intelSlaIncidentResolveDryScript.includes('--dry-run true'),
         'ops:intel:sla:incident:resolve:dry does not enforce dry-run mode');
+    assert(triageDryRunGuardNpmScript.includes('check-intel-triage-dry-run-guard.cjs'),
+        'ops:intel:triage:dryrun:guard does not execute triage dry-run guard script');
+    assert(triageDryRunGuardNpmScript.includes('--write-github-output 0'),
+        'ops:intel:triage:dryrun:guard does not disable github output in local mode');
+    assert(triageDryRunGuardStrictNpmScript.includes('--strict 1'),
+        'ops:intel:triage:dryrun:guard:strict does not enforce strict mode');
+    assert(triageDryRunGuardStrictNpmScript.includes('--write-github-output 0'),
+        'ops:intel:triage:dryrun:guard:strict does not disable github output in local mode');
     assert(strictHealthScript.includes('--profile strict'),
         'ops:intel:health:strict does not use strict profile preset');
     assert(strictVerifyScript.includes('--profile strict'),
