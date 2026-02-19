@@ -1515,8 +1515,20 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow watchdog lane does not support workflow_dispatch full profile');
     assert(smokeWorkflow.includes('npm run ops:intel:verify:quick'),
         'smoke-defense workflow fast lane does not use quick verify profile');
+    assert(smokeWorkflow.includes('npm run ops:intel:verify:quick | tee intel-verify-fast.log'),
+        'smoke-defense workflow fast lane does not capture verify log artifact');
+    assert(smokeWorkflow.includes('Publish intel verify summary (fast)'),
+        'smoke-defense workflow fast lane does not publish intel verify summary');
+    assert(smokeWorkflow.includes('publish-intel-verify-summary.cjs --lane fast --log-file intel-verify-fast.log'),
+        'smoke-defense workflow fast lane does not execute fast verify summary publisher');
     assert(smokeWorkflow.includes('npm run ops:intel:ci'),
         'smoke-defense workflow full lane does not use strict CI profile');
+    assert(smokeWorkflow.includes('npm run ops:intel:ci | tee intel-verify-full.log'),
+        'smoke-defense workflow full lane does not capture verify CI log artifact');
+    assert(smokeWorkflow.includes('Publish intel verify summary (full)'),
+        'smoke-defense workflow full lane does not publish intel verify summary');
+    assert(smokeWorkflow.includes('publish-intel-verify-summary.cjs --lane full --log-file intel-verify-full.log'),
+        'smoke-defense workflow full lane does not execute full verify summary publisher');
     assert(smokeWorkflow.includes('npm run ops:intel:sla'),
         'smoke-defense workflow watchdog lane does not run SLA check');
     assert(smokeWorkflow.includes('SLA_MAX_AGE_HOURS'),
@@ -1588,6 +1600,17 @@ function testIntelIngestOpsPresence() {
         'remediation dispatcher script does not support cooldown argument');
     assert(remediationScript.includes('requires a value'),
         'remediation dispatcher script does not fail closed on missing CLI flag values');
+    const verifySummaryScript = readText('scripts/publish-intel-verify-summary.cjs');
+    assert(verifySummaryScript.includes('--log-file'),
+        'intel verify summary publisher does not support --log-file argument');
+    assert(verifySummaryScript.includes('--lane'),
+        'intel verify summary publisher does not support --lane argument');
+    assert(verifySummaryScript.includes('GITHUB_STEP_SUMMARY'),
+        'intel verify summary publisher does not append to GITHUB_STEP_SUMMARY');
+    assert(verifySummaryScript.includes('extractJsonObjectsFromLog'),
+        'intel verify summary publisher does not define log JSON extractor');
+    assert(verifySummaryScript.includes('requires a value'),
+        'intel verify summary publisher does not fail closed on missing CLI flag values');
     const intelSecretsScript = readText('scripts/check-intel-verify-secrets.cjs');
     assert(intelSecretsScript.includes('missing_SUPABASE_URL'),
         'intel secrets checker script does not gate on missing SUPABASE_URL');
@@ -1669,6 +1692,8 @@ function testIntelIngestOpsPresence() {
         'health checker script does not support last-wins CLI flag parsing');
     assert(verifyScript.includes('findLastFlagValue'),
         'verify checker script does not support last-wins CLI flag parsing');
+    assert(verifySummaryScript.includes('findLastFlagValue'),
+        'intel verify summary publisher does not support last-wins CLI flag parsing');
     assert(smokeWorkflow.includes('paths-ignore:'),
         'smoke-defense workflow does not define trigger path ignore optimization');
 
@@ -1726,6 +1751,10 @@ function testIntelCliMissingValueGuards() {
         {
             script: 'scripts/check-intel-ingest-health.cjs',
             args: ['--supabase-url']
+        },
+        {
+            script: 'scripts/publish-intel-verify-summary.cjs',
+            args: ['--log-file']
         },
         {
             script: 'scripts/check-intel-verify-secrets.cjs',
@@ -1796,6 +1825,7 @@ async function main() {
         'js/app/vector/vector-hud-utils.js',
         'js/app/defense/defense-runtime.js',
         'scripts/check-intel-ingest-health.cjs',
+        'scripts/publish-intel-verify-summary.cjs',
         'scripts/check-intel-verify-secrets.cjs',
         'scripts/check-intel-verify-sla.cjs',
         'scripts/check-intel-burnin.cjs',

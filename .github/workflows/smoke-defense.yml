@@ -367,7 +367,11 @@ jobs:
 
       - name: Verify intel ingest pipeline (fast)
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
-        run: npm run ops:intel:verify:quick
+        run: npm run ops:intel:verify:quick | tee intel-verify-fast.log
+
+      - name: Publish intel verify summary (fast)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: node scripts/publish-intel-verify-summary.cjs --lane fast --log-file intel-verify-fast.log
 
   intel-verify-full:
     runs-on: ubuntu-latest
@@ -419,7 +423,11 @@ jobs:
 
       - name: Verify intel ingest pipeline (full)
         if: ${{ steps.secrets_ready.outputs.ready == 'true' }}
-        run: npm run ops:intel:ci
+        run: npm run ops:intel:ci | tee intel-verify-full.log
+
+      - name: Publish intel verify summary (full)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: node scripts/publish-intel-verify-summary.cjs --lane full --log-file intel-verify-full.log
 
   intel-burnin-report:
     runs-on: ubuntu-latest
