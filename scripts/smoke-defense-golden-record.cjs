@@ -1358,8 +1358,16 @@ function testIntelIngestOpsPresence() {
         'smoke-defense workflow does not expose incident escalation hours configuration');
     assert(smokeWorkflow.includes('INTEL_SLA_INCIDENT_ESCALATION_LABEL'),
         'smoke-defense workflow does not expose incident escalation label configuration');
-    assert(smokeWorkflow.includes('Intel SLA watchdog skipped: intel_verify_disabled'),
-        'smoke-defense workflow watchdog lanes do not expose explicit verify-disabled gate message');
+    assert(smokeWorkflow.includes('Intel SLA watchdog skipped:'),
+        'smoke-defense workflow watchdog lanes do not expose explicit gate skip message');
+    assert(smokeWorkflow.includes('missing_SUPABASE_URL'),
+        'smoke-defense workflow watchdog lanes do not gate on missing SUPABASE_URL');
+    assert(smokeWorkflow.includes('invalid_SUPABASE_SERVICE_ROLE_KEY_format'),
+        'smoke-defense workflow watchdog lanes do not gate on invalid SUPABASE_SERVICE_ROLE_KEY format');
+    assert(smokeWorkflow.includes('missing_INTEL_INGEST_API_KEY'),
+        'smoke-defense workflow watchdog lanes do not gate on missing INTEL_INGEST_API_KEY');
+    assert(smokeWorkflow.includes('invalid_INTEL_INGEST_SIGNING_SECRET_length'),
+        'smoke-defense workflow watchdog lanes do not gate on invalid INTEL_INGEST_SIGNING_SECRET length');
     assert(smokeWorkflow.includes('verify_profile'),
         'smoke-defense workflow does not expose manual verify profile input');
     assert(smokeWorkflow.includes('sla_max_age_hours'),

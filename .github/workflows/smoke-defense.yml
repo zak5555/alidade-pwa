@@ -88,6 +88,10 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
       SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
       INTEL_VERIFY_ENABLED: ${{ secrets.INTEL_VERIFY_ENABLED }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      INTEL_INGEST_API_KEY: ${{ secrets.INTEL_INGEST_API_KEY }}
+      INTEL_INGEST_SIGNING_SECRET: ${{ secrets.INTEL_INGEST_SIGNING_SECRET }}
       INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
       INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
       INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
@@ -98,10 +102,38 @@ jobs:
       - name: Watchdog gate
         id: watchdog_gate
         run: |
+          reasons=()
+
           if [ "${INTEL_VERIFY_ENABLED:-0}" != "1" ]; then
+            reasons+=("intel_verify_disabled")
+          fi
+
+          if [ -z "${SUPABASE_URL}" ]; then
+            reasons+=("missing_SUPABASE_URL")
+          elif [[ ! "${SUPABASE_URL}" =~ ^https?:// ]]; then
+            reasons+=("invalid_SUPABASE_URL_format")
+          fi
+
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            reasons+=("missing_SUPABASE_SERVICE_ROLE_KEY")
+          elif [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^sb_secret_[A-Za-z0-9_-]{20,}$ ]] && [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^[^.]+\.[^.]+\.[^.]+$ ]]; then
+            reasons+=("invalid_SUPABASE_SERVICE_ROLE_KEY_format")
+          fi
+
+          if [ -z "${INTEL_INGEST_API_KEY}" ]; then
+            reasons+=("missing_INTEL_INGEST_API_KEY")
+          fi
+
+          if [ -z "${INTEL_INGEST_SIGNING_SECRET}" ]; then
+            reasons+=("missing_INTEL_INGEST_SIGNING_SECRET")
+          elif [ "${#INTEL_INGEST_SIGNING_SECRET}" -lt 32 ]; then
+            reasons+=("invalid_INTEL_INGEST_SIGNING_SECRET_length")
+          fi
+
+          if [ "${#reasons[@]}" -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "reason=intel_verify_disabled" >> "$GITHUB_OUTPUT"
-            echo "Intel SLA watchdog skipped: intel_verify_disabled"
+            echo "reason=${reasons[*]}" >> "$GITHUB_OUTPUT"
+            echo "Intel SLA watchdog skipped: ${reasons[*]}"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
             echo "reason=ok" >> "$GITHUB_OUTPUT"
@@ -212,6 +244,10 @@ jobs:
       GITHUB_REPOSITORY: ${{ github.repository }}
       SLA_MAX_AGE_HOURS: ${{ github.event_name == 'workflow_dispatch' && inputs.sla_max_age_hours || '12' }}
       INTEL_VERIFY_ENABLED: ${{ secrets.INTEL_VERIFY_ENABLED }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      INTEL_INGEST_API_KEY: ${{ secrets.INTEL_INGEST_API_KEY }}
+      INTEL_INGEST_SIGNING_SECRET: ${{ secrets.INTEL_INGEST_SIGNING_SECRET }}
       INTEL_SLA_INCIDENT_LABELS: ${{ vars.INTEL_SLA_INCIDENT_LABELS }}
       INTEL_SLA_INCIDENT_ASSIGNEES: ${{ vars.INTEL_SLA_INCIDENT_ASSIGNEES }}
       INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES: ${{ vars.INTEL_SLA_INCIDENT_COMMENT_COOLDOWN_MINUTES }}
@@ -222,10 +258,38 @@ jobs:
       - name: Watchdog gate
         id: watchdog_gate
         run: |
+          reasons=()
+
           if [ "${INTEL_VERIFY_ENABLED:-0}" != "1" ]; then
+            reasons+=("intel_verify_disabled")
+          fi
+
+          if [ -z "${SUPABASE_URL}" ]; then
+            reasons+=("missing_SUPABASE_URL")
+          elif [[ ! "${SUPABASE_URL}" =~ ^https?:// ]]; then
+            reasons+=("invalid_SUPABASE_URL_format")
+          fi
+
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY}" ]; then
+            reasons+=("missing_SUPABASE_SERVICE_ROLE_KEY")
+          elif [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^sb_secret_[A-Za-z0-9_-]{20,}$ ]] && [[ ! "${SUPABASE_SERVICE_ROLE_KEY}" =~ ^[^.]+\.[^.]+\.[^.]+$ ]]; then
+            reasons+=("invalid_SUPABASE_SERVICE_ROLE_KEY_format")
+          fi
+
+          if [ -z "${INTEL_INGEST_API_KEY}" ]; then
+            reasons+=("missing_INTEL_INGEST_API_KEY")
+          fi
+
+          if [ -z "${INTEL_INGEST_SIGNING_SECRET}" ]; then
+            reasons+=("missing_INTEL_INGEST_SIGNING_SECRET")
+          elif [ "${#INTEL_INGEST_SIGNING_SECRET}" -lt 32 ]; then
+            reasons+=("invalid_INTEL_INGEST_SIGNING_SECRET_length")
+          fi
+
+          if [ "${#reasons[@]}" -gt 0 ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "reason=intel_verify_disabled" >> "$GITHUB_OUTPUT"
-            echo "Intel SLA watchdog skipped: intel_verify_disabled"
+            echo "reason=${reasons[*]}" >> "$GITHUB_OUTPUT"
+            echo "Intel SLA watchdog skipped: ${reasons[*]}"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
             echo "reason=ok" >> "$GITHUB_OUTPUT"
