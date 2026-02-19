@@ -43,6 +43,14 @@ function runNodeCheckEsm(filePath) {
     return true;
 }
 
+function runNodeScript(filePath, args = []) {
+    const abs = path.join(ROOT, filePath);
+    return spawnSync(process.execPath, [abs, ...args], {
+        cwd: ROOT,
+        encoding: 'utf8'
+    });
+}
+
 function readText(filePath) {
     return fs.readFileSync(path.join(ROOT, filePath), 'utf8');
 }
@@ -1554,6 +1562,57 @@ function testEmergencySosResilienceWiringPresence() {
     };
 }
 
+function testIntelCliMissingValueGuards() {
+    const scenarios = [
+        {
+            script: 'scripts/check-intel-ingest-health.cjs',
+            args: ['--supabase-url']
+        },
+        {
+            script: 'scripts/verify-intel-ingest.cjs',
+            args: ['--supabase-url']
+        },
+        {
+            script: 'scripts/probe-intel-ingest.cjs',
+            args: ['--supabase-url']
+        },
+        {
+            script: 'scripts/check-intel-verify-sla.cjs',
+            args: ['--repo']
+        },
+        {
+            script: 'scripts/dispatch-intel-verify-remediation.cjs',
+            args: ['--repo']
+        },
+        {
+            script: 'scripts/report-intel-sla-incident.cjs',
+            args: ['--repo']
+        }
+    ];
+
+    const checks = scenarios.map((scenario) => {
+        const result = runNodeScript(scenario.script, scenario.args);
+        const output = `${result.stderr || ''}\n${result.stdout || ''}`;
+        assert(result.status !== 0,
+            `${scenario.script} did not fail when a required flag value was omitted`,
+            output.trim());
+        assert(output.includes('requires a value'),
+            `${scenario.script} did not report missing flag value guard`,
+            output.trim());
+        return {
+            script: scenario.script,
+            args: scenario.args.join(' '),
+            status: result.status
+        };
+    });
+
+    return {
+        name: 'intel-cli-missing-value-guards',
+        ok: true,
+        checks
+    };
+}
+
 async function main() {
     const syntaxFiles = [
         'js/app/data/golden-record-runtime-utils.js',
@@ -1590,6 +1649,7 @@ async function main() {
     results.push(testIntelIngestEdgeFunctionPresence());
     results.push(testIntelEventStreamMigrationPresence());
     results.push(testIntelIngestOpsPresence());
+    results.push(testIntelCliMissingValueGuards());
     results.push(await testContextRuntimeBaselineIntegration());
     results.push(await testContextRuntimeOfflineCacheAndInterpolation());
     results.push(await testDefenseDynamicEmergencyMapAndCards());
