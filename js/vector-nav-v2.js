@@ -65,6 +65,58 @@ const DANGER_ZONES = [
 window.MEDINA_LANDMARKS = MEDINA_LANDMARKS;
 window.MEDINA_DANGER_ZONES = DANGER_ZONES;
 
+const NAV_STATES = Object.freeze({
+    UNKNOWN: 'UNKNOWN',
+    CONFIDENT: 'CONFIDENT',
+    ESTIMATED: 'ESTIMATED',
+    LOST: 'LOST',
+    PANIC: 'PANIC'
+});
+
+function encodeGeohash(lat, lng, precision = 7) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+    const safePrecision = Math.max(1, Math.min(12, Number(precision) || 7));
+    const base32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+    let geohash = '';
+    let isEvenBit = true;
+    let bit = 0;
+    let value = 0;
+    let latMin = -90;
+    let latMax = 90;
+    let lngMin = -180;
+    let lngMax = 180;
+
+    while (geohash.length < safePrecision) {
+        if (isEvenBit) {
+            const mid = (lngMin + lngMax) / 2;
+            if (lng >= mid) {
+                value = (value << 1) + 1;
+                lngMin = mid;
+            } else {
+                value = (value << 1);
+                lngMax = mid;
+            }
+        } else {
+            const mid = (latMin + latMax) / 2;
+            if (lat >= mid) {
+                value = (value << 1) + 1;
+                latMin = mid;
+            } else {
+                value = (value << 1);
+                latMax = mid;
+            }
+        }
+        isEvenBit = !isEvenBit;
+        bit += 1;
+        if (bit === 5) {
+            geohash += base32[value];
+            bit = 0;
+            value = 0;
+        }
+    }
+    return geohash;
+}
+
 
 // ---------------------------------------------------------------
 // MEDINA NAVIGATOR CLASS (Standalone Overlay)
@@ -91,6 +143,21 @@ class MedinaNavigator {
         this.breadcrumbs = [];
         this.maxBreadcrumbs = 200;
         this.lastBreadcrumbTime = 0;
+        this.lastPositionAt = 0;
+        this.navState = NAV_STATES.UNKNOWN;
+        this.stateCandidate = NAV_STATES.UNKNOWN;
+        this.stateCandidateStreak = 0;
+        this.lastStateChangeAt = 0;
+        this.lastDowngradeAt = 0;
+        this.lastLostAt = 0;
+        this.recoverySession = null;
+        this.recoveryActionPresented = false;
+        this.guidanceTracking = {
+            lastDistance: null,
+            worseningSince: null,
+            lastFalseAt: 0
+        };
+        this.deviceHash = this._resolveDeviceHash();
 
         // Animation
         this._pulsePhase = 0;
@@ -169,6 +236,223 @@ class MedinaNavigator {
         this.canvas.height = window.innerHeight;
     }
 
+    _resolveDeviceHash() {
+        const key = 'alidade_device_hash_v1';
+        try {
+            const existing = String(window.localStorage?.getItem(key) || '').trim();
+            if (existing) return existing;
+            const next = `dv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
+            window.localStorage?.setItem(key, next);
+            return next;
+        } catch (_error) {
+            return `dv_${Date.now().toString(36)}`;
+        }
+    }
+
+    _emitIntelEvent(eventName, payload = {}, meta = {}) {
+        const intelUtils = window.ALIDADE_INTEL_EVENT_UTILS;
+        if (!intelUtils || typeof intelUtils.emitIntelEvent !== 'function') return;
+        const safeMeta = {
+            source: 'medina_navigator',
+            ...meta
+        };
+        intelUtils.emitIntelEvent(eventName, payload, safeMeta).catch(() => { });
+    }
+
+    _resolveConfidenceFromAccuracy(accuracy) {
+        if (!Number.isFinite(accuracy)) return 0;
+        if (accuracy <= 20) return 0.9;
+        if (accuracy <= 50) return 0.6;
+        return 0.25;
+    }
+
+    _resolveCandidateState(now = Date.now()) {
+        const freshnessMs = this.lastPositionAt > 0 ? Math.max(0, now - this.lastPositionAt) : Number.POSITIVE_INFINITY;
+        const accuracy = Number(this.gpsAccuracy);
+        let state = NAV_STATES.LOST;
+        let reason = 'gps_missing';
+        if (Number.isFinite(accuracy) && freshnessMs <= 8000 && accuracy <= 20) {
+            state = NAV_STATES.CONFIDENT;
+            reason = 'gps_strong';
+        } else if (Number.isFinite(accuracy) && freshnessMs <= 20000 && accuracy <= 50) {
+            state = NAV_STATES.ESTIMATED;
+            reason = 'gps_estimated';
+        } else if (freshnessMs > 30000) {
+            state = NAV_STATES.PANIC;
+            reason = 'position_stale';
+        } else {
+            state = NAV_STATES.LOST;
+            reason = 'gps_degraded';
+        }
+
+        if ((this.navState === NAV_STATES.LOST || this.navState === NAV_STATES.PANIC) && this.lastLostAt > 0) {
+            const lostDuration = now - this.lastLostAt;
+            if (lostDuration >= 30000) {
+                state = NAV_STATES.PANIC;
+                reason = 'lost_timeout';
+            }
+        }
+
+        return {
+            state,
+            reason,
+            freshnessMs,
+            accuracy: Number.isFinite(accuracy) ? accuracy : null,
+            confidence: this._resolveConfidenceFromAccuracy(accuracy)
+        };
+    }
+
+    _stateRank(state) {
+        const order = {
+            [NAV_STATES.UNKNOWN]: 0,
+            [NAV_STATES.PANIC]: 1,
+            [NAV_STATES.LOST]: 2,
+            [NAV_STATES.ESTIMATED]: 3,
+            [NAV_STATES.CONFIDENT]: 4
+        };
+        return order[state] || 0;
+    }
+
+    _resolveRecoveryActionType() {
+        if (Array.isArray(this.breadcrumbs) && this.breadcrumbs.length >= 8) return 'backtrack';
+        if (this.userPosition) return 'safe_point';
+        return 'show_to_local';
+    }
+
+    _presentRecoveryAction(candidate) {
+        if (this.recoveryActionPresented) return;
+        const actionType = this._resolveRecoveryActionType();
+        this.recoveryActionPresented = true;
+        this._emitIntelEvent('nav.recovery_action_presented', {
+            action_type: actionType,
+            state: candidate?.state || this.navState,
+            occurred_at: new Date().toISOString()
+        });
+    }
+
+    _handleStateTransition(nextState, candidate) {
+        const now = Date.now();
+        const previousState = this.navState || NAV_STATES.UNKNOWN;
+        if (nextState === previousState) return;
+
+        this.navState = nextState;
+        this.lastStateChangeAt = now;
+        if (this._stateRank(nextState) < this._stateRank(previousState)) {
+            this.lastDowngradeAt = now;
+        }
+
+        if (nextState === NAV_STATES.LOST || nextState === NAV_STATES.PANIC) {
+            if (!this.lastLostAt) this.lastLostAt = now;
+            if (!this.recoverySession) {
+                this.recoverySession = {
+                    startAt: now,
+                    startState: nextState
+                };
+                this._emitIntelEvent('nav.recovery_started', {
+                    start_state: nextState,
+                    occurred_at: new Date(now).toISOString()
+                });
+            }
+            this._presentRecoveryAction(candidate);
+        } else {
+            this.lastLostAt = 0;
+            if (this.recoverySession) {
+                const elapsed = Math.max(0, now - this.recoverySession.startAt);
+                const method = this._resolveRecoveryActionType();
+                this._emitIntelEvent('nav.recovery_completed', {
+                    elapsed_ms: elapsed,
+                    resolution_type: method === 'backtrack' ? 'home_base' : 'safe_point',
+                    method
+                });
+                this.recoverySession = null;
+                this.recoveryActionPresented = false;
+            }
+        }
+
+        this._emitIntelEvent('nav.state_changed', {
+            from_state: previousState,
+            to_state: nextState,
+            reason: candidate?.reason || 'state_transition',
+            accuracy_m: candidate?.accuracy,
+            freshness_ms: Number(candidate?.freshnessMs || 0),
+            confidence: Number(candidate?.confidence || 0),
+            sample_index: this.breadcrumbs.length
+        });
+    }
+
+    _updateNavigationState(now = Date.now()) {
+        const candidate = this._resolveCandidateState(now);
+        const currentState = this.navState || NAV_STATES.UNKNOWN;
+
+        if (candidate.state === this.stateCandidate) {
+            this.stateCandidateStreak += 1;
+        } else {
+            this.stateCandidate = candidate.state;
+            this.stateCandidateStreak = 1;
+        }
+
+        const isUpgrade = this._stateRank(candidate.state) > this._stateRank(currentState);
+        const requiredStreak = isUpgrade ? 5 : 3;
+        const confidentCooldownBlocked = candidate.state === NAV_STATES.CONFIDENT &&
+            this.lastDowngradeAt > 0 &&
+            (now - this.lastDowngradeAt) < 8000;
+
+        if (candidate.state !== currentState &&
+            this.stateCandidateStreak >= requiredStreak &&
+            !confidentCooldownBlocked) {
+            this._handleStateTransition(candidate.state, candidate);
+        } else if (currentState === NAV_STATES.LOST || currentState === NAV_STATES.PANIC) {
+            this._presentRecoveryAction(candidate);
+        }
+    }
+
+    _resetGuidanceTracking() {
+        this.guidanceTracking.lastDistance = null;
+        this.guidanceTracking.worseningSince = null;
+    }
+
+    _trackGuidanceQuality(now = Date.now()) {
+        if (!this.activeWaypoint || !this.userPosition || this.navState !== NAV_STATES.CONFIDENT) {
+            this._resetGuidanceTracking();
+            return;
+        }
+
+        const currentDistance = this._distance(
+            this.userPosition.lat,
+            this.userPosition.lng,
+            this.activeWaypoint.lat,
+            this.activeWaypoint.lng
+        );
+
+        if (!Number.isFinite(this.guidanceTracking.lastDistance)) {
+            this.guidanceTracking.lastDistance = currentDistance;
+            this.guidanceTracking.worseningSince = null;
+            return;
+        }
+
+        const worsening = currentDistance > (this.guidanceTracking.lastDistance + 5);
+        if (worsening) {
+            if (!this.guidanceTracking.worseningSince) {
+                this.guidanceTracking.worseningSince = now;
+            }
+            const worseningDuration = now - this.guidanceTracking.worseningSince;
+            if (worseningDuration >= 45000 && (now - this.guidanceTracking.lastFalseAt) > 45000) {
+                this.guidanceTracking.lastFalseAt = now;
+                this._emitIntelEvent('nav.guidance_marked_false', {
+                    reason: 'auto_contradiction',
+                    state_at_issue: this.navState,
+                    target_type: this.activeWaypoint.targetType || 'landmark',
+                    elapsed_ms_from_issue: worseningDuration
+                });
+                this.guidanceTracking.worseningSince = null;
+            }
+        } else {
+            this.guidanceTracking.worseningSince = null;
+        }
+
+        this.guidanceTracking.lastDistance = currentDistance;
+    }
+
     // === SENSORS ===
 
     _bindSensors() {
@@ -204,6 +488,7 @@ class MedinaNavigator {
     _onPositionUpdate() {
         // Breadcrumbs & Logic
         const now = Date.now();
+        this.lastPositionAt = now;
         if (now - this.lastBreadcrumbTime > 5000 && this.userPosition) {
             this.breadcrumbs.push({ ...this.userPosition, t: now });
             if (this.breadcrumbs.length > this.maxBreadcrumbs) this.breadcrumbs.shift();
@@ -219,6 +504,8 @@ class MedinaNavigator {
 
         this._checkDangerZones();
         this._checkWaypointArrival();
+        this._updateNavigationState(now);
+        this._trackGuidanceQuality(now);
     }
 
     // === RENDER LOOP ===
@@ -253,6 +540,10 @@ class MedinaNavigator {
         // DOM Updates (throttled)
         if (this._frameCount % 10 === 0) {
             this.updateDOMOverlay();
+        }
+        if (this._frameCount % 15 === 0) {
+            this._updateNavigationState(Date.now());
+            this._trackGuidanceQuality(Date.now());
         }
 
         this.animationId = requestAnimationFrame(() => this._loop());
@@ -578,24 +869,41 @@ class MedinaNavigator {
 
     // === LOGIC ===
 
-    setWaypoint(lat, lng, name, icon) {
-        this.activeWaypoint = { lat, lng, name, icon };
+    setWaypoint(lat, lng, name, icon, targetType = 'landmark') {
+        this.activeWaypoint = { lat, lng, name, icon, targetType };
+        this._resetGuidanceTracking();
+        this._emitIntelEvent('nav.guidance_issued', {
+            target_type: String(targetType || 'landmark').toLowerCase(),
+            target_name: String(name || 'unknown').slice(0, 80),
+            occurred_at: new Date().toISOString()
+        });
         if (window.Haptics) window.Haptics.trigger('success');
     }
 
     clearWaypoint() {
         this.activeWaypoint = null;
+        this._resetGuidanceTracking();
     }
 
     setLandmarkWaypoint(id) {
         const lm = MEDINA_LANDMARKS.find(l => l.id === id);
-        if (lm) this.setWaypoint(lm.lat, lm.lng, lm.name, lm.icon);
+        if (lm) this.setWaypoint(lm.lat, lm.lng, lm.name, lm.icon, 'landmark');
     }
 
     _checkWaypointArrival() {
         if (!this.activeWaypoint || !this.userPosition) return;
         const dist = this._distance(this.userPosition.lat, this.userPosition.lng, this.activeWaypoint.lat, this.activeWaypoint.lng);
         if (dist < this.arrivedThreshold) {
+            if (this.recoverySession) {
+                const elapsed = Math.max(0, Date.now() - this.recoverySession.startAt);
+                this._emitIntelEvent('nav.recovery_completed', {
+                    elapsed_ms: elapsed,
+                    resolution_type: 'home_base',
+                    method: 'waypoint_arrival'
+                });
+                this.recoverySession = null;
+                this.recoveryActionPresented = false;
+            }
             this.clearWaypoint();
             if (window.Haptics) window.Haptics.trigger('success');
             // Toast logic if needed
@@ -625,11 +933,65 @@ class MedinaNavigator {
         }
     }
 
+    reportWrongGuidance(reason = 'manual_report') {
+        if (!this.activeWaypoint) return;
+        this._emitIntelEvent('nav.guidance_marked_false', {
+            reason: String(reason || 'manual_report').slice(0, 60),
+            state_at_issue: this.navState,
+            target_type: this.activeWaypoint.targetType || 'landmark',
+            elapsed_ms_from_issue: 0
+        });
+    }
+
+    submitThreatReport(options = {}) {
+        if (!this.userPosition) return { ok: false, reason: 'missing_position' };
+
+        const zone = options.zone || this.activeDangerZones[0] || null;
+        const category = String(options.category || zone?.id || 'street_hazard').trim().toLowerCase();
+        const severity = String(options.severity || zone?.severity || 'medium').trim().toLowerCase();
+        const geohash7 = encodeGeohash(this.userPosition.lat, this.userPosition.lng, 7);
+        if (!geohash7) return { ok: false, reason: 'invalid_geohash' };
+
+        const payload = {
+            category,
+            geohash7,
+            severity,
+            occurred_at: new Date().toISOString(),
+            device_hash: this.deviceHash,
+            source_module: 'medina_navigator',
+            zone_id: zone?.id || null,
+            is_contradictory: options.isContradictory === true
+        };
+        this._emitIntelEvent('threat.report_submitted', payload, {
+            source: 'medina_navigator'
+        });
+        return { ok: true, payload };
+    }
+
     _triggerAlert(zone) {
         // Create Alert DOM
         const div = document.createElement('div');
         div.className = 'fixed top-20 left-4 right-4 bg-red-950/90 border-2 border-red-500 text-white p-4 rounded-lg z-50 animate-bounce';
-        div.innerHTML = `⚠️ <b>${zone.name}</b><br><span class="text-xs">${zone.threat}</span>`;
+        div.innerHTML = `
+            ⚠️ <b>${zone.name}</b><br>
+            <span class="text-xs">${zone.threat}</span>
+            <div class="mt-3 flex gap-2">
+                <button type="button" data-threat-report="1" class="px-2 py-1 text-[10px] font-mono border border-red-300 rounded bg-red-800/50 hover:bg-red-700/60">
+                    REPORT THREAT
+                </button>
+            </div>
+        `;
+        const reportBtn = div.querySelector('[data-threat-report="1"]');
+        if (reportBtn) {
+            reportBtn.addEventListener('click', () => {
+                const result = this.submitThreatReport({ zone });
+                if (result.ok) {
+                    showWaypointToast('Threat report submitted.');
+                } else {
+                    showWaypointToast('Threat report failed.', true);
+                }
+            });
+        }
         document.body.appendChild(div);
         setTimeout(() => div.remove(), 5000);
         if (window.Haptics) window.Haptics.trigger('warning');
@@ -715,6 +1077,15 @@ function clearMedinaWaypoint() {
     showWaypointToast('Waypoint cleared.');
 }
 
+function reportWrongDirection() {
+    if (!window.medinaNav) {
+        showWaypointToast('Navigator is not ready yet.', true);
+        return;
+    }
+    window.medinaNav.reportWrongGuidance('manual_report');
+    showWaypointToast('Guidance issue reported.');
+}
+
 function showWaypointPanel() {
     hideWaypointPanel();
 
@@ -759,6 +1130,9 @@ function showWaypointPanel() {
                     DONE
                 </button>
             </div>
+            <button onclick="window.reportWrongDirection()" class="w-full py-2 text-[11px] font-mono rounded-md border border-amber-600/50 bg-amber-950/40 text-amber-300 hover:bg-amber-900/50">
+                WRONG DIRECTION
+            </button>
         </div>
     `;
 
@@ -778,4 +1152,5 @@ window.showWaypointPanel = showWaypointPanel;
 window.hideWaypointPanel = hideWaypointPanel;
 window.selectMedinaWaypoint = selectMedinaWaypoint;
 window.clearMedinaWaypoint = clearMedinaWaypoint;
+window.reportWrongDirection = reportWrongDirection;
 // alert('VECTOR NAV V2 STANDALONE LOADED! 🦁'); // Uncomment for debug

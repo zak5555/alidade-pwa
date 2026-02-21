@@ -26,6 +26,9 @@
     const INGEST_ENDPOINT_STORAGE_KEY = 'alidade_intel_ingest_endpoint_v1';
     const REJECTION_LOG_MAX = 80;
     const NONCE_TTL_MS = 10 * 60 * 1000;
+    const GEOHASH7_REGEX = /^[0123456789bcdefghjkmnpqrstuvwxyz]{7}$/i;
+    const THREAT_NODE_STATUSES = new Set(['unverified', 'provisional', 'verified']);
+    const THREAT_SEVERITIES = new Set(['low', 'medium', 'high']);
 
     function resolveDefaultIngestEndpoint() {
         return '/functions/v1/intel-ingest';
@@ -85,6 +88,7 @@
         'sos.armed': 30,
         'sos.triggered': 20,
         'sos.deactivated': 20,
+        'threat.report_submitted': 8,
         default: 100
     });
 
@@ -104,8 +108,41 @@
         'sos.armed',
         'sos.triggered',
         'sos.deactivated',
-        'context.update'
+        'context.update',
+        'threat.report_submitted',
+        'threat.report_deduped',
+        'threat.report_rate_limited',
+        'threat.node_status_changed',
+        'nav.state_changed',
+        'nav.guidance_issued',
+        'nav.guidance_marked_false',
+        'nav.recovery_started',
+        'nav.recovery_action_presented',
+        'nav.recovery_completed'
     ]);
+
+    function isFiniteInRange(value, min, max) {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed)) return false;
+        if (Number.isFinite(min) && parsed < min) return false;
+        if (Number.isFinite(max) && parsed > max) return false;
+        return true;
+    }
+
+    function isStringInRange(value, minLen = 1, maxLen = 200) {
+        const text = String(value || '').trim();
+        return text.length >= minLen && text.length <= maxLen;
+    }
+
+    function normalizeThreatSeverity(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        return THREAT_SEVERITIES.has(normalized) ? normalized : '';
+    }
+
+    function normalizeThreatNodeStatus(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        return THREAT_NODE_STATUSES.has(normalized) ? normalized : '';
+    }
 
     const EVENT_SCHEMA_VALIDATORS = {
         'context.update': (payload) =>
@@ -147,6 +184,99 @@
                 return false;
             }
             return true;
+        },
+        'threat.report_submitted': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const category = String(payload.category || '').trim().toLowerCase();
+            const geohash7 = String(payload.geohash7 || '').trim().toLowerCase();
+            const severity = normalizeThreatSeverity(payload.severity);
+            const occurredAt = String(payload.occurred_at || '').trim();
+            const deviceHash = String(payload.device_hash || '').trim();
+            if (!isStringInRange(category, 2, 64)) return false;
+            if (!GEOHASH7_REGEX.test(geohash7)) return false;
+            if (!severity) return false;
+            if (!occurredAt || !Number.isFinite(Date.parse(occurredAt))) return false;
+            if (!isStringInRange(deviceHash, 8, 128)) return false;
+            if (payload.is_contradictory != null && typeof payload.is_contradictory !== 'boolean') return false;
+            return true;
+        },
+        'threat.report_deduped': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const category = String(payload.category || '').trim().toLowerCase();
+            const geohash7 = String(payload.geohash7 || '').trim().toLowerCase();
+            return isStringInRange(category, 2, 64) && GEOHASH7_REGEX.test(geohash7);
+        },
+        'threat.report_rate_limited': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const category = String(payload.category || '').trim().toLowerCase();
+            const geohash7 = String(payload.geohash7 || '').trim().toLowerCase();
+            const reason = String(payload.reason || '').trim();
+            return isStringInRange(category, 2, 64) &&
+                GEOHASH7_REGEX.test(geohash7) &&
+                isStringInRange(reason, 3, 120);
+        },
+        'threat.node_status_changed': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const fromStatus = normalizeThreatNodeStatus(payload.from_status);
+            const toStatus = normalizeThreatNodeStatus(payload.to_status);
+            const reason = String(payload.reason || '').trim();
+            const weightedScore = Number(payload.weighted_score);
+            const agreementScore = Number(payload.agreement_score);
+            return Boolean(fromStatus) &&
+                Boolean(toStatus) &&
+                isStringInRange(reason, 3, 120) &&
+                Number.isFinite(weightedScore) &&
+                weightedScore >= 0 &&
+                Number.isFinite(agreementScore) &&
+                agreementScore >= 0 &&
+                agreementScore <= 1;
+        },
+        'nav.state_changed': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const fromState = String(payload.from_state || '').trim().toUpperCase();
+            const toState = String(payload.to_state || '').trim().toUpperCase();
+            const reason = String(payload.reason || '').trim();
+            const allowedStates = new Set(['UNKNOWN', 'CONFIDENT', 'ESTIMATED', 'LOST', 'PANIC']);
+            if (!allowedStates.has(fromState) || !allowedStates.has(toState)) return false;
+            if (!isStringInRange(reason, 2, 120)) return false;
+            if (!isFiniteInRange(payload.freshness_ms, 0, Number.POSITIVE_INFINITY)) return false;
+            if (!isFiniteInRange(payload.confidence, 0, 1)) return false;
+            if (payload.accuracy_m != null && !isFiniteInRange(payload.accuracy_m, 0, Number.POSITIVE_INFINITY)) return false;
+            return true;
+        },
+        'nav.guidance_issued': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const targetType = String(payload.target_type || '').trim().toLowerCase();
+            return isStringInRange(targetType, 2, 40);
+        },
+        'nav.guidance_marked_false': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const reason = String(payload.reason || '').trim().toLowerCase();
+            const stateAtIssue = String(payload.state_at_issue || '').trim().toUpperCase();
+            const targetType = String(payload.target_type || '').trim().toLowerCase();
+            return isStringInRange(reason, 3, 80) &&
+                isStringInRange(stateAtIssue, 4, 20) &&
+                isStringInRange(targetType, 2, 40) &&
+                isFiniteInRange(payload.elapsed_ms_from_issue, 0, Number.POSITIVE_INFINITY);
+        },
+        'nav.recovery_started': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const startState = String(payload.start_state || '').trim().toUpperCase();
+            return startState === 'LOST' || startState === 'PANIC';
+        },
+        'nav.recovery_action_presented': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const actionType = String(payload.action_type || '').trim().toLowerCase();
+            const allowed = new Set(['backtrack', 'safe_point', 'show_to_local', 'sos']);
+            return allowed.has(actionType);
+        },
+        'nav.recovery_completed': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const resolutionType = String(payload.resolution_type || '').trim().toLowerCase();
+            const method = String(payload.method || '').trim().toLowerCase();
+            return isStringInRange(resolutionType, 2, 40) &&
+                isStringInRange(method, 2, 40) &&
+                isFiniteInRange(payload.elapsed_ms, 0, Number.POSITIVE_INFINITY);
         }
     };
 
@@ -525,6 +655,8 @@
         const normalized = String(eventName || '').toLowerCase();
         if (normalized.startsWith('sos.')) return 'sos_event';
         if (normalized.startsWith('hazard.')) return 'hazard_alert';
+        if (normalized.startsWith('threat.')) return 'hazard_alert';
+        if (normalized.startsWith('nav.')) return 'hazard_alert';
         if (normalized.startsWith('price.anomaly')) return 'price_anomaly';
         if (normalized.startsWith('context.')) return 'context_update';
         return 'legacy_activity';
