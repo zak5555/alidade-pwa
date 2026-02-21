@@ -65,7 +65,7 @@
                 ENABLE_REWARDS_UI: true,
                 ENABLE_SERVER_VALIDATION: true,
                 ENABLE_LEDGER_WRITE: true,
-                ENABLE_ADVANCED_SCORING: false
+                ENABLE_ADVANCED_SCORING: true
             };
 
             return Object.keys(defaults).reduce((acc, key) => {
