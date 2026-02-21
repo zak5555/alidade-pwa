@@ -36,6 +36,25 @@ type SourceRateLimitRule = {
     isWildcard: boolean;
 };
 
+type ThreatNodeStatus = "unverified" | "provisional" | "verified";
+
+type ThreatReportPayload = {
+    category: string;
+    geohash7: string;
+    severity: "low" | "medium" | "high";
+    occurredAt: string;
+    deviceHash: string;
+    sourceModule: string;
+    isContradictory: boolean;
+    zoneId: string | null;
+};
+
+type ThreatDeviceStats = {
+    acceptedCount: number;
+    rejectedCount: number;
+    firstSeenAt: string | null;
+};
+
 const CORS_HEADERS: HeadersInit = {
     "access-control-allow-origin": "*",
     "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-intel-ingest-key",
@@ -54,7 +73,17 @@ const CANONICAL_EVENTS = new Set([
     "sos.armed",
     "sos.triggered",
     "sos.deactivated",
-    "context.update"
+    "context.update",
+    "threat.report_submitted",
+    "threat.report_deduped",
+    "threat.report_rate_limited",
+    "threat.node_status_changed",
+    "nav.state_changed",
+    "nav.guidance_issued",
+    "nav.guidance_marked_false",
+    "nav.recovery_started",
+    "nav.recovery_action_presented",
+    "nav.recovery_completed"
 ]);
 
 const MAX_EVENTS_PER_REQUEST = 200;
@@ -79,6 +108,10 @@ const MAX_META_BYTES = 8 * 1024;
 const MAX_PAYLOAD_BYTES = 32 * 1024;
 const MAX_EVENT_BYTES = 48 * 1024;
 const CROWD_SUBMITTED_EVENT_NAME = "price.crowd_submitted";
+const THREAT_SUBMITTED_EVENT_NAME = "threat.report_submitted";
+const THREAT_DEDUPED_EVENT_NAME = "threat.report_deduped";
+const THREAT_RATE_LIMITED_EVENT_NAME = "threat.report_rate_limited";
+const THREAT_NODE_STATUS_CHANGED_EVENT_NAME = "threat.node_status_changed";
 const CROWD_PRICE_MIN = 5;
 const CROWD_PRICE_MAX = 50000;
 const CROWD_AUTH_MAX_PER_HOUR = 30;
@@ -86,6 +119,16 @@ const CROWD_AUTH_MAX_PER_DAY = 120;
 const CROWD_ANON_MAX_PER_HOUR = 12;
 const CROWD_ANON_MAX_PER_DAY = 40;
 const CROWD_DEDUPE_WINDOW_HOURS = 6;
+const THREAT_DEVICE_DAILY_CAP_DEFAULT = 12;
+const THREAT_DEVICE_DAILY_CAP_MIN = 10;
+const THREAT_DEVICE_DAILY_CAP_MAX = 15;
+const THREAT_BURST_CAP = 2;
+const THREAT_BURST_WINDOW_MS = 10 * 60 * 1000;
+const THREAT_PRIMARY_WINDOW_MS = 4 * 60 * 60 * 1000;
+const THREAT_FALLBACK_WINDOW_MS = 24 * 60 * 60 * 1000;
+const THREAT_DECAY_HALF_LIFE_MS = 72 * 60 * 60 * 1000;
+const THREAT_DEFAULT_DEVICE_WEIGHT = 1.0;
+const THREAT_TRUSTED_DEVICE_WEIGHT = 1.35;
 
 const recentNonceMemory = new Map<string, number>();
 const sessionRateMemory = new Map<string, number[]>();
@@ -150,6 +193,62 @@ function isSafeIdentifier(value: string): boolean {
     return /^[A-Za-z0-9:_-]+$/.test(value);
 }
 
+function parseThreatNodeStatus(value: unknown): ThreatNodeStatus | null {
+    const normalized = normalizeString(value).trim().toLowerCase();
+    if (normalized === "unverified" || normalized === "provisional" || normalized === "verified") {
+        return normalized;
+    }
+    return null;
+}
+
+function parseThreatSeverity(value: unknown): "low" | "medium" | "high" | null {
+    const normalized = normalizeString(value).trim().toLowerCase();
+    if (normalized === "low" || normalized === "medium" || normalized === "high") {
+        return normalized;
+    }
+    return null;
+}
+
+function normalizeThreatDailyCap(): number {
+    const raw = normalizeString(Deno.env.get("THREAT_DEVICE_DAILY_CAP")).trim();
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return THREAT_DEVICE_DAILY_CAP_DEFAULT;
+    return Math.max(
+        THREAT_DEVICE_DAILY_CAP_MIN,
+        Math.min(THREAT_DEVICE_DAILY_CAP_MAX, Math.round(parsed))
+    );
+}
+
+function parseThreatReportPayload(payload: Record<string, JsonValue> | undefined): ThreatReportPayload | null {
+    if (!isRecordObject(payload)) return null;
+    const category = normalizeString(payload.category).trim().toLowerCase();
+    const geohash7 = normalizeString(payload.geohash7).trim().toLowerCase();
+    const severity = parseThreatSeverity(payload.severity);
+    const occurredAt = normalizeString(payload.occurred_at).trim();
+    const deviceHash = normalizeString(payload.device_hash).trim();
+    const sourceModule = normalizeString(payload.source_module).trim().toLowerCase() || "unknown";
+    const isContradictory = payload.is_contradictory === true;
+    const zoneIdRaw = normalizeString(payload.zone_id).trim();
+    const zoneId = zoneIdRaw ? zoneIdRaw.slice(0, 120) : null;
+
+    if (!category || category.length < 2 || category.length > 64) return null;
+    if (!/^[0123456789bcdefghjkmnpqrstuvwxyz]{7}$/i.test(geohash7)) return null;
+    if (!severity) return null;
+    if (!occurredAt || !Number.isFinite(Date.parse(occurredAt))) return null;
+    if (!deviceHash || deviceHash.length < 8 || deviceHash.length > 128) return null;
+
+    return {
+        category,
+        geohash7,
+        severity,
+        occurredAt,
+        deviceHash,
+        sourceModule,
+        isContradictory,
+        zoneId
+    };
+}
+
 function haversineDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const toRad = (value: number) => (value * Math.PI) / 180;
     const earthRadiusMeters = 6371000;
@@ -202,6 +301,80 @@ function validatePayloadSchema(eventName: string, payload: Record<string, JsonVa
             if (askingPrice !== null && askingPrice < pricePaid) return false;
             if (qualityEstimate !== null && (qualityEstimate < 0 || qualityEstimate > 1)) return false;
             return true;
+        }
+        case THREAT_SUBMITTED_EVENT_NAME:
+            return parseThreatReportPayload(payload) !== null;
+        case THREAT_DEDUPED_EVENT_NAME:
+        case THREAT_RATE_LIMITED_EVENT_NAME: {
+            const category = normalizeString(payload.category).trim().toLowerCase();
+            const geohash7 = normalizeString(payload.geohash7).trim().toLowerCase();
+            const reason = normalizeString(payload.reason).trim().toLowerCase();
+            return category.length >= 2 &&
+                category.length <= 64 &&
+                /^[0123456789bcdefghjkmnpqrstuvwxyz]{7}$/i.test(geohash7) &&
+                reason.length >= 3 &&
+                reason.length <= 120;
+        }
+        case THREAT_NODE_STATUS_CHANGED_EVENT_NAME: {
+            const fromStatus = parseThreatNodeStatus(payload.from_status);
+            const toStatus = parseThreatNodeStatus(payload.to_status);
+            const reason = normalizeString(payload.reason).trim();
+            const weightedScore = toFiniteNumber(payload.weighted_score);
+            const agreementScore = toFiniteNumber(payload.agreement_score);
+            return Boolean(fromStatus) &&
+                Boolean(toStatus) &&
+                reason.length >= 3 &&
+                reason.length <= 120 &&
+                weightedScore !== null &&
+                weightedScore >= 0 &&
+                agreementScore !== null &&
+                agreementScore >= 0 &&
+                agreementScore <= 1;
+        }
+        case "nav.state_changed": {
+            const fromState = normalizeString(payload.from_state).trim().toUpperCase();
+            const toState = normalizeString(payload.to_state).trim().toUpperCase();
+            const reason = normalizeString(payload.reason).trim();
+            const allowed = new Set(["UNKNOWN", "CONFIDENT", "ESTIMATED", "LOST", "PANIC"]);
+            const freshnessMs = toFiniteNumber(payload.freshness_ms);
+            const confidence = toFiniteNumber(payload.confidence);
+            return allowed.has(fromState) &&
+                allowed.has(toState) &&
+                reason.length >= 2 &&
+                reason.length <= 120 &&
+                freshnessMs !== null &&
+                freshnessMs >= 0 &&
+                confidence !== null &&
+                confidence >= 0 &&
+                confidence <= 1;
+        }
+        case "nav.guidance_issued":
+            return normalizeString(payload.target_type).trim().length >= 2;
+        case "nav.guidance_marked_false": {
+            const reason = normalizeString(payload.reason).trim();
+            const stateAtIssue = normalizeString(payload.state_at_issue).trim();
+            const targetType = normalizeString(payload.target_type).trim();
+            const elapsed = toFiniteNumber(payload.elapsed_ms_from_issue);
+            return reason.length >= 3 &&
+                stateAtIssue.length >= 4 &&
+                targetType.length >= 2 &&
+                elapsed !== null &&
+                elapsed >= 0;
+        }
+        case "nav.recovery_started": {
+            const startState = normalizeString(payload.start_state).trim().toUpperCase();
+            return startState === "LOST" || startState === "PANIC";
+        }
+        case "nav.recovery_action_presented":
+            return normalizeString(payload.action_type).trim().length >= 2;
+        case "nav.recovery_completed": {
+            const elapsed = toFiniteNumber(payload.elapsed_ms);
+            const resolutionType = normalizeString(payload.resolution_type).trim();
+            const method = normalizeString(payload.method).trim();
+            return elapsed !== null &&
+                elapsed >= 0 &&
+                resolutionType.length >= 2 &&
+                method.length >= 2;
         }
         default:
             return true;
@@ -693,6 +866,471 @@ async function validateCrowdSubmissionRules(params: {
     return { ok: true };
 }
 
+async function loadThreatDeviceStats(
+    client: SupabaseClient,
+    deviceHash: string
+): Promise<ThreatDeviceStats> {
+    const { data, error } = await client
+        .from("threat_device_stats")
+        .select("accepted_count,rejected_count,first_seen_at")
+        .eq("device_hash", deviceHash)
+        .limit(1)
+        .maybeSingle();
+
+    if (error || !data) {
+        return {
+            acceptedCount: 0,
+            rejectedCount: 0,
+            firstSeenAt: null
+        };
+    }
+
+    return {
+        acceptedCount: Number(data.accepted_count || 0),
+        rejectedCount: Number(data.rejected_count || 0),
+        firstSeenAt: normalizeString(data.first_seen_at).trim() || null
+    };
+}
+
+function isTrustedThreatDevice(stats: ThreatDeviceStats, nowMs: number): boolean {
+    const accepted = Number(stats.acceptedCount || 0);
+    const rejected = Number(stats.rejectedCount || 0);
+    const firstSeenAtMs = Date.parse(stats.firstSeenAt || "");
+    if (!Number.isFinite(firstSeenAtMs)) return false;
+    const ageMs = nowMs - firstSeenAtMs;
+    const denominator = accepted + rejected;
+    const rejectionRatio = denominator > 0 ? (rejected / denominator) : 0;
+    return accepted >= 3 && ageMs >= (7 * 24 * 60 * 60 * 1000) && rejectionRatio <= 0.15;
+}
+
+async function upsertThreatDeviceStats(params: {
+    client: SupabaseClient | null;
+    deviceHash: string;
+    acceptedDelta: number;
+    rejectedDelta: number;
+    seenAtIso: string;
+}): Promise<void> {
+    const { client, deviceHash, acceptedDelta, rejectedDelta, seenAtIso } = params;
+    if (!client || !deviceHash) return;
+
+    const current = await loadThreatDeviceStats(client, deviceHash);
+    const nextAccepted = Math.max(0, Number(current.acceptedCount || 0) + Math.max(0, Math.round(acceptedDelta)));
+    const nextRejected = Math.max(0, Number(current.rejectedCount || 0) + Math.max(0, Math.round(rejectedDelta)));
+    const currentFirstSeenMs = Date.parse(current.firstSeenAt || "");
+    const seenAtMs = Date.parse(seenAtIso);
+    const firstSeenAt = Number.isFinite(currentFirstSeenMs)
+        ? new Date(Math.min(currentFirstSeenMs, Number.isFinite(seenAtMs) ? seenAtMs : currentFirstSeenMs)).toISOString()
+        : (Number.isFinite(seenAtMs) ? new Date(seenAtMs).toISOString() : new Date().toISOString());
+
+    const { data: existing } = await client
+        .from("threat_device_stats")
+        .select("device_hash")
+        .eq("device_hash", deviceHash)
+        .limit(1)
+        .maybeSingle();
+
+    if (existing?.device_hash) {
+        await client
+            .from("threat_device_stats")
+            .update({
+                accepted_count: nextAccepted,
+                rejected_count: nextRejected,
+                first_seen_at: firstSeenAt,
+                last_seen_at: new Date().toISOString()
+            })
+            .eq("device_hash", deviceHash);
+        return;
+    }
+
+    await client
+        .from("threat_device_stats")
+        .insert({
+            device_hash: deviceHash,
+            accepted_count: nextAccepted,
+            rejected_count: nextRejected,
+            first_seen_at: firstSeenAt,
+            last_seen_at: new Date().toISOString()
+        });
+}
+
+async function countThreatReportsByDeviceSince(
+    client: SupabaseClient,
+    deviceHash: string,
+    sinceIso: string
+): Promise<number | null> {
+    const { count, error } = await client
+        .from("threat_reports")
+        .select("id", { head: true, count: "exact" })
+        .eq("device_hash", deviceHash)
+        .gte("ingested_at", sinceIso);
+    if (error) return null;
+    return Number.isFinite(Number(count)) ? Number(count) : 0;
+}
+
+async function countThreatBurstReports(params: {
+    client: SupabaseClient;
+    deviceHash: string;
+    geohash7: string;
+    category: string;
+    sinceIso: string;
+}): Promise<number | null> {
+    const { client, deviceHash, geohash7, category, sinceIso } = params;
+    const { count, error } = await client
+        .from("threat_reports")
+        .select("id", { head: true, count: "exact" })
+        .eq("device_hash", deviceHash)
+        .eq("geohash7", geohash7)
+        .eq("category", category)
+        .gte("ingested_at", sinceIso);
+    if (error) return null;
+    return Number.isFinite(Number(count)) ? Number(count) : 0;
+}
+
+function resolveThreatDedupeWindowStart(occurredAtMs: number): string {
+    const bucketStartMs = Math.floor(occurredAtMs / THREAT_BURST_WINDOW_MS) * THREAT_BURST_WINDOW_MS;
+    return new Date(bucketStartMs).toISOString();
+}
+
+function buildThreatDedupeKey(payload: ThreatReportPayload, occurredAtMs: number): string {
+    return [
+        payload.deviceHash.toLowerCase(),
+        payload.geohash7.toLowerCase(),
+        payload.category.toLowerCase(),
+        resolveThreatDedupeWindowStart(occurredAtMs)
+    ].join("|");
+}
+
+async function hasThreatDedupeKey(
+    client: SupabaseClient,
+    dedupeKey: string
+): Promise<boolean | null> {
+    const { count, error } = await client
+        .from("threat_reports")
+        .select("id", { head: true, count: "exact" })
+        .eq("dedupe_key", dedupeKey);
+    if (error) return null;
+    return Number.isFinite(Number(count)) ? Number(count) > 0 : false;
+}
+
+function threatSeverityToScore(severity: "low" | "medium" | "high"): number {
+    if (severity === "high") return 3;
+    if (severity === "medium") return 2;
+    return 1;
+}
+
+function computeThreatAgreementScore(severities: Array<"low" | "medium" | "high">): number {
+    if (!severities.length) return 0;
+    if (severities.length === 1) return 1;
+    const numeric = severities.map((severity) => threatSeverityToScore(severity));
+    const average = numeric.reduce((sum, value) => sum + value, 0) / numeric.length;
+    const meanAbsDeviation = numeric.reduce((sum, value) => sum + Math.abs(value - average), 0) / numeric.length;
+    const score = 1 - (meanAbsDeviation / 2);
+    return Math.max(0, Math.min(1, score));
+}
+
+function applyThreatNodeDecay(
+    status: ThreatNodeStatus,
+    lastSignalAtIso: string | null,
+    nowMs: number
+): ThreatNodeStatus {
+    const lastSignalAtMs = Date.parse(lastSignalAtIso || "");
+    if (!Number.isFinite(lastSignalAtMs)) return status;
+    const ageMs = nowMs - lastSignalAtMs;
+    if (ageMs >= THREAT_DECAY_HALF_LIFE_MS * 2) return "unverified";
+    if (ageMs >= THREAT_DECAY_HALF_LIFE_MS) {
+        if (status === "verified") return "provisional";
+        if (status === "provisional") return "unverified";
+    }
+    return status;
+}
+
+function buildSyntheticEventFromTrigger(params: {
+    triggerEvent: IntelEventEnvelope;
+    eventName: string;
+    payload: Record<string, JsonValue>;
+    source: string;
+}): IntelEventEnvelope {
+    const { triggerEvent, eventName, payload, source } = params;
+    const baseMeta = isRecordObject(triggerEvent.meta) ? { ...triggerEvent.meta } : {};
+    return {
+        id: null,
+        event_name: eventName,
+        occurred_at: new Date().toISOString(),
+        payload,
+        meta: {
+            ...baseMeta,
+            source,
+            trigger_event_name: normalizeString(triggerEvent.event_name).trim() || "unknown",
+            trigger_event_id: normalizeString(triggerEvent.id).trim() || null
+        },
+        nonce: triggerEvent.nonce || `server_${Date.now().toString(36)}`,
+        signature: triggerEvent.signature || "",
+        signature_alg: "sha256"
+    };
+}
+
+async function processThreatSubmission(params: {
+    client: SupabaseClient | null;
+    event: IntelEventEnvelope;
+    eventMeta: Record<string, JsonValue> | undefined;
+    nowMs: number;
+    occurredAtMs: number;
+    dailyCap: number;
+}): Promise<{
+    ok: true;
+    acceptedEvent: IntelEventEnvelope;
+    syntheticEvents: IntelEventEnvelope[];
+} | {
+    ok: false;
+    reason: string;
+    syntheticEvent?: IntelEventEnvelope;
+    payload?: ThreatReportPayload;
+}> {
+    const { client, event, eventMeta, nowMs, occurredAtMs, dailyCap } = params;
+    const payload = parseThreatReportPayload(event.payload);
+    if (!payload) {
+        return { ok: false, reason: "schema_validation_failed" };
+    }
+    if (!client) {
+        return { ok: false, reason: "threat_validation_backend_unavailable", payload };
+    }
+
+    const sinceDayIso = new Date(nowMs - (24 * 60 * 60 * 1000)).toISOString();
+    const sinceBurstIso = new Date(nowMs - THREAT_BURST_WINDOW_MS).toISOString();
+    const dedupeKey = buildThreatDedupeKey(payload, occurredAtMs);
+
+    const dayCount = await countThreatReportsByDeviceSince(client, payload.deviceHash, sinceDayIso);
+    if (dayCount === null) {
+        return { ok: false, reason: "threat_validation_backend_unavailable", payload };
+    }
+    if (dayCount >= dailyCap) {
+        const syntheticEvent = buildSyntheticEventFromTrigger({
+            triggerEvent: event,
+            eventName: THREAT_RATE_LIMITED_EVENT_NAME,
+            payload: {
+                category: payload.category,
+                geohash7: payload.geohash7,
+                reason: "threat_rate_limit_day_exceeded"
+            },
+            source: "intel_ingest"
+        });
+        return { ok: false, reason: "threat_rate_limit_day_exceeded", syntheticEvent, payload };
+    }
+
+    const burstCount = await countThreatBurstReports({
+        client,
+        deviceHash: payload.deviceHash,
+        geohash7: payload.geohash7,
+        category: payload.category,
+        sinceIso: sinceBurstIso
+    });
+    if (burstCount === null) {
+        return { ok: false, reason: "threat_validation_backend_unavailable", payload };
+    }
+    if (burstCount >= THREAT_BURST_CAP) {
+        const syntheticEvent = buildSyntheticEventFromTrigger({
+            triggerEvent: event,
+            eventName: THREAT_RATE_LIMITED_EVENT_NAME,
+            payload: {
+                category: payload.category,
+                geohash7: payload.geohash7,
+                reason: "threat_rate_limit_burst_exceeded"
+            },
+            source: "intel_ingest"
+        });
+        return { ok: false, reason: "threat_rate_limit_burst_exceeded", syntheticEvent, payload };
+    }
+
+    const duplicate = await hasThreatDedupeKey(client, dedupeKey);
+    if (duplicate === null) {
+        return { ok: false, reason: "threat_validation_backend_unavailable", payload };
+    }
+    if (duplicate) {
+        const syntheticEvent = buildSyntheticEventFromTrigger({
+            triggerEvent: event,
+            eventName: THREAT_DEDUPED_EVENT_NAME,
+            payload: {
+                category: payload.category,
+                geohash7: payload.geohash7,
+                reason: "threat_duplicate_within_window"
+            },
+            source: "intel_ingest"
+        });
+        return { ok: false, reason: "threat_duplicate_within_window", syntheticEvent, payload };
+    }
+
+    const deviceStats = await loadThreatDeviceStats(client, payload.deviceHash);
+    const trustedDevice = isTrustedThreatDevice(deviceStats, nowMs);
+    const deviceWeight = trustedDevice ? THREAT_TRUSTED_DEVICE_WEIGHT : THREAT_DEFAULT_DEVICE_WEIGHT;
+    const acceptedMeta = isRecordObject(eventMeta) ? { ...eventMeta } : {};
+    acceptedMeta.threat_device_weight = deviceWeight;
+    acceptedMeta.threat_trusted_device = trustedDevice;
+
+    const acceptedEvent: IntelEventEnvelope = {
+        ...event,
+        meta: acceptedMeta
+    };
+
+    const insertResult = await client
+        .from("threat_reports")
+        .insert({
+            event_id: normalizeString(event.id).trim() || null,
+            occurred_at: payload.occurredAt,
+            ingested_at: new Date(nowMs).toISOString(),
+            session_id: normalizeSessionId(eventMeta),
+            source: normalizeSource(eventMeta),
+            source_module: payload.sourceModule || "unknown",
+            device_hash: payload.deviceHash,
+            geohash7: payload.geohash7,
+            category: payload.category,
+            severity: payload.severity,
+            severity_score: threatSeverityToScore(payload.severity),
+            weight: deviceWeight,
+            dedupe_key: dedupeKey,
+            is_contradictory: payload.isContradictory,
+            zone_id: payload.zoneId
+        });
+
+    if (insertResult.error) {
+        const message = normalizeString(insertResult.error.message).toLowerCase();
+        if (message.includes("duplicate") || message.includes("unique")) {
+            const syntheticEvent = buildSyntheticEventFromTrigger({
+                triggerEvent: event,
+                eventName: THREAT_DEDUPED_EVENT_NAME,
+                payload: {
+                    category: payload.category,
+                    geohash7: payload.geohash7,
+                    reason: "threat_duplicate_within_window"
+                },
+                source: "intel_ingest"
+            });
+            return { ok: false, reason: "threat_duplicate_within_window", syntheticEvent, payload };
+        }
+        return { ok: false, reason: "threat_persist_failed", payload };
+    }
+
+    await upsertThreatDeviceStats({
+        client,
+        deviceHash: payload.deviceHash,
+        acceptedDelta: 1,
+        rejectedDelta: 0,
+        seenAtIso: payload.occurredAt
+    });
+
+    const since24hIso = new Date(nowMs - THREAT_FALLBACK_WINDOW_MS).toISOString();
+    const since4hIso = new Date(nowMs - THREAT_PRIMARY_WINDOW_MS).toISOString();
+    const { data: reports24h, error: reports24hError } = await client
+        .from("threat_reports")
+        .select("device_hash,severity,weight,occurred_at,is_contradictory,ingested_at")
+        .eq("geohash7", payload.geohash7)
+        .eq("category", payload.category)
+        .gte("occurred_at", since24hIso);
+    if (reports24hError) {
+        return { ok: true, acceptedEvent, syntheticEvents: [] };
+    }
+
+    const allReports = Array.isArray(reports24h) ? reports24h : [];
+    const reports4h = allReports.filter((row) => {
+        const occurred = Date.parse(normalizeString(row.occurred_at));
+        return Number.isFinite(occurred) && occurred >= Date.parse(since4hIso);
+    });
+    const uniqueDevices4h = new Set(reports4h.map((row) => normalizeString(row.device_hash).trim()).filter(Boolean)).size;
+    const reportCount4h = reports4h.length;
+    const weightedScore4h = reports4h.reduce((sum, row) => sum + Number(row.weight || 0), 0);
+
+    const uniqueDevices24h = new Set(allReports.map((row) => normalizeString(row.device_hash).trim()).filter(Boolean)).size;
+    const reportCount24h = allReports.length;
+    const weightedScore24h = allReports.reduce((sum, row) => sum + Number(row.weight || 0), 0);
+    const severities24h = allReports
+        .map((row) => parseThreatSeverity(row.severity))
+        .filter((severity): severity is "low" | "medium" | "high" => Boolean(severity));
+    const agreementScore = computeThreatAgreementScore(severities24h);
+    const contradictoryCount = allReports.filter((row) => row.is_contradictory === true).length;
+    const earliestReportMs = allReports.reduce((min, row) => {
+        const occurred = Date.parse(normalizeString(row.occurred_at));
+        if (!Number.isFinite(occurred)) return min;
+        return Math.min(min, occurred);
+    }, Number.POSITIVE_INFINITY);
+    const fallbackEligible = Number.isFinite(earliestReportMs) &&
+        (nowMs - earliestReportMs) >= THREAT_FALLBACK_WINDOW_MS;
+    const primaryVerified = reportCount4h >= 3 &&
+        uniqueDevices4h >= 2 &&
+        weightedScore4h >= 3.0;
+    const provisionalFallback = fallbackEligible &&
+        reportCount24h >= 2 &&
+        uniqueDevices24h >= 2 &&
+        weightedScore24h >= 2.2 &&
+        agreementScore >= 0.9 &&
+        contradictoryCount === 0;
+
+    const { data: existingNode } = await client
+        .from("threat_nodes")
+        .select("status,last_signal_at")
+        .eq("geohash7", payload.geohash7)
+        .eq("category", payload.category)
+        .limit(1)
+        .maybeSingle();
+
+    const existingStatus = parseThreatNodeStatus(existingNode?.status) || "unverified";
+    const decayedStatus = applyThreatNodeDecay(existingStatus, normalizeString(existingNode?.last_signal_at).trim() || null, nowMs);
+
+    let nextStatus: ThreatNodeStatus = "unverified";
+    let statusReason = "signal_insufficient";
+    if (primaryVerified) {
+        nextStatus = "verified";
+        statusReason = "primary_verified";
+    } else if (provisionalFallback) {
+        nextStatus = "provisional";
+        statusReason = "fallback_provisional";
+    } else if (decayedStatus !== "unverified") {
+        nextStatus = decayedStatus;
+        statusReason = "status_decay";
+    }
+
+    await client
+        .from("threat_nodes")
+        .upsert({
+            geohash7: payload.geohash7,
+            category: payload.category,
+            status: nextStatus,
+            weighted_score: Number(primaryVerified ? weightedScore4h : weightedScore24h),
+            agreement_score: agreementScore,
+            report_count_4h: reportCount4h,
+            report_count_24h: reportCount24h,
+            unique_devices_4h: uniqueDevices4h,
+            unique_devices_24h: uniqueDevices24h,
+            contradiction_count_24h: contradictoryCount,
+            last_signal_at: new Date(nowMs).toISOString(),
+            updated_at: new Date(nowMs).toISOString()
+        }, {
+            onConflict: "geohash7,category"
+        });
+
+    const syntheticEvents: IntelEventEnvelope[] = [];
+    if (existingStatus !== nextStatus) {
+        syntheticEvents.push(buildSyntheticEventFromTrigger({
+            triggerEvent: event,
+            eventName: THREAT_NODE_STATUS_CHANGED_EVENT_NAME,
+            payload: {
+                from_status: existingStatus,
+                to_status: nextStatus,
+                reason: statusReason,
+                weighted_score: Number(Number(primaryVerified ? weightedScore4h : weightedScore24h).toFixed(3)),
+                agreement_score: Number(agreementScore.toFixed(3)),
+                category: payload.category,
+                geohash7: payload.geohash7
+            },
+            source: "intel_ingest"
+        }));
+    }
+
+    return {
+        ok: true,
+        acceptedEvent,
+        syntheticEvents
+    };
+}
+
 async function readRequestBodyBytes(req: Request, maxBytes: number): Promise<{
     ok: true;
     bytes: Uint8Array;
@@ -993,6 +1631,7 @@ serve(async (req: Request) => {
     const supabase = resolveSupabaseClient();
     const requestBearerToken = normalizeString(req.headers.get("authorization")).replace(/^Bearer\s+/i, "").trim();
     let cachedCrowdAuthContext: CrowdAuthContext | null = null;
+    const threatDailyCap = normalizeThreatDailyCap();
 
     for (const event of incomingEvents) {
         const envelopeShape = validateEnvelopeShape(event);
@@ -1086,6 +1725,38 @@ serve(async (req: Request) => {
                 ...event,
                 meta: acceptedMeta
             };
+        } else if (eventName === THREAT_SUBMITTED_EVENT_NAME) {
+            const threatResult = await processThreatSubmission({
+                client: supabase,
+                event,
+                eventMeta,
+                nowMs,
+                occurredAtMs,
+                dailyCap: threatDailyCap
+            });
+            if (!threatResult.ok) {
+                if (threatResult.payload?.deviceHash) {
+                    await upsertThreatDeviceStats({
+                        client: supabase,
+                        deviceHash: threatResult.payload.deviceHash,
+                        acceptedDelta: 0,
+                        rejectedDelta: 1,
+                        seenAtIso: threatResult.payload.occurredAt || new Date(nowMs).toISOString()
+                    });
+                }
+                const rejectedMeta = isRecordObject(eventMeta) ? { ...eventMeta } : {};
+                rejectedMeta.threat_rule = `rejected:${threatResult.reason}`;
+                rejectedEvents.push(buildRejection({ ...event, meta: rejectedMeta }, threatResult.reason));
+                if (threatResult.syntheticEvent) {
+                    acceptedEvents.push(threatResult.syntheticEvent);
+                }
+                continue;
+            }
+            acceptedEvents.push(threatResult.acceptedEvent);
+            if (Array.isArray(threatResult.syntheticEvents) && threatResult.syntheticEvents.length > 0) {
+                acceptedEvents.push(...threatResult.syntheticEvents);
+            }
+            continue;
         }
 
         acceptedEvents.push(acceptedEvent);

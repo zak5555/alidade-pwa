@@ -1115,6 +1115,18 @@ function testIntelIngestEdgeFunctionPresence() {
         'intel-ingest edge function does not expose rejectedPersistedCount in response');
     assert(source.includes('rejectionPersistenceWarning'),
         'intel-ingest edge function does not expose rejectionPersistenceWarning in response');
+    assert(source.includes('THREAT_SUBMITTED_EVENT_NAME'),
+        'intel-ingest edge function does not define threat.report_submitted constant');
+    assert(source.includes('THREAT_DEVICE_DAILY_CAP_DEFAULT'),
+        'intel-ingest edge function does not define default threat day-cap');
+    assert(source.includes('normalizeThreatDailyCap'),
+        'intel-ingest edge function does not normalize threat day-cap');
+    assert(source.includes('processThreatSubmission'),
+        'intel-ingest edge function does not process threat submission anti-spam/verification');
+    assert(source.includes('THREAT_NODE_STATUS_CHANGED_EVENT_NAME'),
+        'intel-ingest edge function does not emit threat.node_status_changed synthetic events');
+    assert(source.includes('nav.guidance_marked_false'),
+        'intel-ingest edge function does not whitelist nav.guidance_marked_false');
     return {
         name: 'intel-ingest-edge-function-presence',
         ok: true
@@ -1139,6 +1151,24 @@ function testIntelEventStreamMigrationPresence() {
         'intel_event_stream migration does not include pg_cron retention scheduling guard');
     return {
         name: 'intel-event-stream-migration-presence',
+        ok: true
+    };
+}
+
+function testSafetyOsV17MigrationPresence() {
+    const source = readText('supabase/migrations/20260221123000_safety_os_v17_threat_mesh_nav_metrics.sql');
+    assert(source.includes('CREATE TABLE IF NOT EXISTS public.threat_reports'),
+        'safety-os-v17 migration does not create threat_reports');
+    assert(source.includes('CREATE TABLE IF NOT EXISTS public.threat_nodes'),
+        'safety-os-v17 migration does not create threat_nodes');
+    assert(source.includes('CREATE TABLE IF NOT EXISTS public.threat_device_stats'),
+        'safety-os-v17 migration does not create threat_device_stats');
+    assert(source.includes('intel_nav_quality_metrics'),
+        'safety-os-v17 migration does not define nav quality metrics RPC');
+    assert(source.includes('false_guidance_rate'),
+        'safety-os-v17 migration does not expose false_guidance_rate metric');
+    return {
+        name: 'safety-os-v17-migration-presence',
         ok: true
     };
 }
@@ -1991,6 +2021,7 @@ async function main() {
     results.push(testIntelEventWiringPresence());
     results.push(testIntelIngestEdgeFunctionPresence());
     results.push(testIntelEventStreamMigrationPresence());
+    results.push(testSafetyOsV17MigrationPresence());
     results.push(testIntelIngestOpsPresence());
     results.push(testIntelCliMissingValueGuards());
     results.push(await testContextRuntimeBaselineIntegration());

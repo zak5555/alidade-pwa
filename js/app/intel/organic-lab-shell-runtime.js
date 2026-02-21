@@ -56,7 +56,7 @@ window.switchOrganicTab = function (tab) {
     document.querySelectorAll('.organic-tab').forEach(btn => {
         btn.className = "organic-tab px-5 py-2.5 min-h-[44px] rounded-sm text-xs font-mono font-bold tracking-wider bg-void-900 text-zinc-400 border border-void-600 whitespace-nowrap transition-all";
     });
-    const activeBtn = document.getElementById(`org - tab - ${tab} `);
+    const activeBtn = document.getElementById(`org-tab-${tab}`);
     if (activeBtn) {
         // Active tab styling based on tab type
         const tabColors = {
@@ -65,7 +65,7 @@ window.switchOrganicTab = function (tab) {
             recovery: 'bg-signal-emerald text-zinc-950 border-2 border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.25)]',
             medevac: 'bg-red-500 text-zinc-950 border-2 border-red-400 shadow-[0_0_20px_rgba(239,68,68,0.25)]'
         };
-        activeBtn.className = `organic - tab px - 5 py - 2.5 min - h - [44px] rounded - sm text - xs font - mono font - bold tracking - wider ${tabColors[tab]} whitespace - nowrap transition - all`;
+        activeBtn.className = `organic-tab px-5 py-2.5 min-h-[44px] rounded-sm text-xs font-mono font-bold tracking-wider ${tabColors[tab]} whitespace-nowrap transition-all`;
     }
 
     const container = document.getElementById('organic-display');

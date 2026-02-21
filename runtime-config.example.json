@@ -1,0 +1,6 @@
+{
+  "intelIngestEndpoint": "https://<project-ref>.supabase.co/functions/v1/intel-ingest",
+  "intelIngestApiKey": "<INTEL_INGEST_API_KEY>",
+  "intelIngestSigningSecret": "<INTEL_INGEST_SIGNING_SECRET>",
+  "intelAuthBearerToken": "<OPTIONAL_BEARER_TOKEN>"
+}

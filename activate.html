@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ALIDADE | Activate License</title>
+    <link rel="apple-touch-icon" href="assets/icons/maskable_icon_x192.png">
+    <link rel="icon" type="image/png" href="assets/icons/maskable_icon_x192.png">
 
     <!-- Tailwind & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -342,10 +344,12 @@
                     </button>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                        <label for="auth-email" class="sr-only">Account Email</label>
                         <input type="email" id="auth-email" autocomplete="email"
                             class="machined-input w-full px-3 text-sm placeholder-zinc-700 font-sans"
                             placeholder="Email">
                         <div class="relative">
+                            <label for="auth-password" class="sr-only">Account Password</label>
                             <input type="password" id="auth-password" autocomplete="current-password"
                                 class="machined-input w-full px-3 text-sm placeholder-zinc-700 font-sans pr-16"
                                 placeholder="Password">
@@ -375,7 +379,7 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label class="text-xs uppercase tracking-wider text-zinc-500 font-mono">License Key</label>
+                    <label for="license_key" class="text-xs uppercase tracking-wider text-zinc-500 font-mono">License Key</label>
                     <input type="text" id="license_key" required
                         class="machined-input w-full px-3 text-center text-base tracking-widest uppercase placeholder-zinc-700"
                         placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="64">
@@ -383,8 +387,8 @@
                 </div>
 
                 <div class="space-y-2">
-                    <label class="text-xs uppercase tracking-wider text-zinc-500 font-mono">Purchase Email</label>
-                    <input type="email" id="email" required class="machined-input w-full px-3 text-sm placeholder-zinc-700 font-sans"
+                    <label for="email" class="text-xs uppercase tracking-wider text-zinc-500 font-mono">Purchase Email</label>
+                    <input type="email" id="email" required autocomplete="email" class="machined-input w-full px-3 text-sm placeholder-zinc-700 font-sans"
                         placeholder="email@example.com">
                     <p class="text-xs text-zinc-600 font-mono">Must match the Gumroad purchase email</p>
                 </div>

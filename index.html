@@ -547,10 +547,65 @@
         // Configuration (Replace with actual keys before deployment)
         const SUPABASE_URL = 'https://tynugwtetlclqowlguai.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR5bnVnd3RldGxjbHFvd2xndWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2ODgwNDQsImV4cCI6MjA4NjI2NDA0NH0.I2QFBzVVMJDzrFbJnPSdqV4dQK-SEKEx7IprdE-vmD0';
+        const loadRuntimeDeployConfig = async () => {
+            try {
+                const response = await fetch('./runtime-config.json', { cache: 'no-store' });
+                if (!response.ok) return {};
+                const parsed = await response.json();
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+                return parsed;
+            } catch (_error) {
+                return {};
+            }
+        };
+        const runtimeDeployConfig = await loadRuntimeDeployConfig();
+
+        const readRuntimeSecret = (...values) => {
+            for (const candidate of values) {
+                if (typeof candidate === 'string') {
+                    const normalized = candidate.trim();
+                    if (normalized) return normalized;
+                }
+            }
+            return '';
+        };
+
+        const readStorageSecret = (key) => {
+            try {
+                return readRuntimeSecret(localStorage.getItem(key));
+            } catch (_error) {
+                return '';
+            }
+        };
+
+        const runtimeIntelIngestApiKey = readRuntimeSecret(
+            runtimeDeployConfig.intelIngestApiKey,
+            window.__ALIDADE_INTEL_INGEST_API_KEY__,
+            readStorageSecret('alidade_intel_ingest_api_key_v1')
+        );
+        const runtimeIntelIngestSigningSecret = readRuntimeSecret(
+            runtimeDeployConfig.intelIngestSigningSecret,
+            window.__ALIDADE_INTEL_INGEST_SIGNING_SECRET__,
+            readStorageSecret('alidade_intel_signing_secret_v1')
+        );
+        const runtimeIntelIngestAuthBearer = readRuntimeSecret(
+            runtimeDeployConfig.intelAuthBearerToken,
+            window.__ALIDADE_INTEL_INGEST_AUTH_BEARER_TOKEN__,
+            readStorageSecret('alidade_intel_ingest_auth_bearer_v1')
+        );
+        const runtimeIntelIngestEndpoint = readRuntimeSecret(
+            runtimeDeployConfig.intelIngestEndpoint,
+            window.__ALIDADE_INTEL_INGEST_ENDPOINT__,
+            readStorageSecret('alidade_intel_ingest_endpoint_v1'),
+            `${SUPABASE_URL}/functions/v1/intel-ingest`
+        );
 
         window.ALIDADE_RUNTIME_CONFIG = {
             ...(window.ALIDADE_RUNTIME_CONFIG || {}),
-            intelIngestEndpoint: `${SUPABASE_URL}/functions/v1/intel-ingest`,
+            intelIngestEndpoint: runtimeIntelIngestEndpoint,
+            ...(runtimeIntelIngestApiKey ? { intelIngestApiKey: runtimeIntelIngestApiKey } : {}),
+            ...(runtimeIntelIngestSigningSecret ? { intelIngestSigningSecret: runtimeIntelIngestSigningSecret } : {}),
+            ...(runtimeIntelIngestAuthBearer ? { intelAuthBearerToken: runtimeIntelIngestAuthBearer } : {}),
             rewardsFlags: {
                 ENABLE_REWARDS_UI: true,
                 ENABLE_SERVER_VALIDATION: true,
@@ -802,4 +857,3 @@
 </body>
 
 </html>
-

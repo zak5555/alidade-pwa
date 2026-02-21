@@ -9,6 +9,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "ops:hooks:install": "node scripts/install-git-hooks.cjs",
+    "ops:runtime:config": "node --env-file=.env scripts/generate-runtime-config.cjs",
+    "ops:runtime:config:allow-missing": "node --env-file=.env scripts/generate-runtime-config.cjs --allow-missing",
     "security:scan:secrets": "node scripts/check-secrets-hygiene.cjs",
     "security:scan:secrets:staged": "node scripts/check-secrets-hygiene.cjs --staged",
     "test:dataset:golden": "node scripts/validate-golden-record-strict.cjs",
@@ -46,6 +48,7 @@
     "ops:points:stability:check:fast": "npm run ops:points:projector:health -- --max-lag-seconds 60 --max-lag-rows 500 --sample-size 500 && npm run ops:points:phase3:burnin:strict && npm run ops:points:phase3:status",
     "audit:app-contract": "node scripts/refactor/audit-app-contract.mjs app.js",
     "build": "tailwindcss -i ./style-input.css -o ./output.css --minify",
+    "build:prod": "npm run ops:runtime:config && npm run build",
     "watch": "tailwindcss -i ./style-input.css -o ./output.css --watch"
   },
   "keywords": [],

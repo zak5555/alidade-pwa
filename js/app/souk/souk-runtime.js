@@ -684,7 +684,7 @@ function attachSpeciesListeners() {
             });
 
             // Show selected check
-            document.getElementById(`check - ${species} `).classList.remove('opacity-0');
+            document.getElementById(`check-${species}`).classList.remove('opacity-0');
 
             // Update result
             const resultBox = document.getElementById('species-result');
@@ -747,7 +747,7 @@ function attachLabListeners() {
 }
 
 function updateLabResult(test, isPositive) {
-    const resultDiv = document.getElementById(`${test} -result`);
+    const resultDiv = document.getElementById(`${test}-result`);
 
     if (test === 'water') {
         if (isPositive) {
@@ -1013,7 +1013,7 @@ function attachFiberListeners() {
             const color = card.getAttribute('data-color');
 
             document.querySelectorAll('.burn-check').forEach(check => check.classList.add('opacity-0'));
-            document.getElementById(`check - ${burn} `).classList.remove('opacity-0');
+            document.getElementById(`check-${burn}`).classList.remove('opacity-0');
 
             const resultBox = document.getElementById('burn-result');
             const icon = document.getElementById('burn-icon');
@@ -1530,10 +1530,10 @@ function switchForensicTab(type) {
         btn.className = "forensic-tab relative px-5 py-2.5 min-h-[44px] rounded-sm text-xs font-mono font-bold tracking-wider bg-void-900/80 text-zinc-500 border border-void-700/50 transition-all duration-300 whitespace-nowrap overflow-hidden group hover:border-zinc-500/30 hover:text-zinc-300";
     });
 
-    const activeBtn = document.getElementById(`tab - ${type} `);
+    const activeBtn = document.getElementById(`tab-${type}`);
     if (activeBtn) {
         // Elite Active State
-        activeBtn.className = `forensic - tab relative px - 5 py - 2.5 min - h - [44px] rounded - sm text - xs font - mono font - bold tracking - wider bg - void -800 text - white border - b - 2 border - b - ${activeTheme.color} -500 border - t border - t - void -700 border - x border - x - void -700 transition - all duration - 300 whitespace - nowrap shadow - [0_4px_20px_ - 8px_${activeTheme.shadow}]`;
+        activeBtn.className = `forensic-tab relative px-5 py-2.5 min-h-[44px] rounded-sm text-xs font-mono font-bold tracking-wider bg-void-800 text-white border-b-2 border-b-${activeTheme.color}-500 border-t border-t-void-700 border-x border-x-void-700 transition-all duration-300 whitespace-nowrap shadow-[0_4px_20px_-8px_${activeTheme.shadow}]`;
     }
 
     // 4. Render Content (Data-Driven Injection)

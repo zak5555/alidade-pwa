@@ -301,8 +301,12 @@ function renderScriptsTab() {
 
 // Intel Accordion Toggle Helper
 window.toggleIntel = function (index) {
-    const content = document.getElementById(`content - ${index} `);
-    const icon = document.getElementById(`icon - ${index} `);
+    const content = document.getElementById(`content-${index}`);
+    const icon = document.getElementById(`icon-${index}`);
+
+    if (!content || !icon) {
+        return;
+    }
 
     if (content.classList.contains('hidden')) {
         content.classList.remove('hidden');

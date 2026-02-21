@@ -828,6 +828,17 @@
                 };
             }
 
+            const ingestApiKey = resolveIngestApiKey();
+            if (!ingestApiKey) {
+                this.lastFlushError = 'missing_ingest_api_key';
+                return {
+                    ok: false,
+                    skipped: true,
+                    reason: 'missing_ingest_api_key',
+                    pending: this.queue.length
+                };
+            }
+
             this.flushing = true;
             const now = Date.now();
             const dueItems = this.queue
@@ -856,10 +867,7 @@
 
             try {
                 const headers = { 'Content-Type': 'application/json' };
-                const ingestApiKey = resolveIngestApiKey();
-                if (ingestApiKey) {
-                    headers['x-intel-ingest-key'] = ingestApiKey;
-                }
+                headers['x-intel-ingest-key'] = ingestApiKey;
                 const ingestAuthBearer = await resolveIngestAuthBearerToken();
                 if (ingestAuthBearer) {
                     headers.Authorization = `Bearer ${ingestAuthBearer}`;

@@ -15,6 +15,7 @@ Optional hardening:
   - Format: `sourcePattern=limit` entries, comma-separated
   - Wildcard supported only as suffix (`ops_verify_reject_*=30`) or full fallback (`*=120`)
   - Example: `ops_verify=90,ops_verify_reject_*=30,*=120`
+- `THREAT_DEVICE_DAILY_CAP` for `threat.report_submitted` day-cap per device hash (clamped to `10..15`, default `12`)
 
 Supabase CLI example:
 
@@ -32,11 +33,15 @@ Apply migration before function deploy:
 - `supabase/migrations/20260217220500_create_intel_event_stream.sql`
 - `supabase/migrations/20260218052018_add_intel_ingest_rejection_telemetry.sql`
 - `supabase/migrations/20260218063000_add_intel_ingest_rejected_by_source_reason_kpi.sql`
+- `supabase/migrations/20260221123000_safety_os_v17_threat_mesh_nav_metrics.sql`
 
 This migration creates:
 
 - `public.intel_event_stream`
 - `public.intel_event_rejections`
+- `public.threat_device_stats`
+- `public.threat_reports`
+- `public.threat_nodes`
 - strict service-role-only RLS policies
 - dedupe unique index on `event_id`
 - retention function `public.purge_intel_event_stream(retain_days integer)`
@@ -117,6 +122,19 @@ The client runtime must send:
 
 - `x-intel-ingest-key`
 - signatures that match `INTEL_INGEST_SIGNING_SECRET`
+
+Recommended (no hardcoded secrets in tracked frontend files):
+
+```bash
+npm run ops:runtime:config
+```
+
+This generates `runtime-config.json` from `.env` (gitignored) and the app auto-loads it at startup.
+For production build:
+
+```bash
+npm run build:prod
+```
 
 For quick local verification, set these once in browser console:
 
