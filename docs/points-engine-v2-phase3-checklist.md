@@ -31,8 +31,10 @@ Enable advanced scoring (`v2`) safely while keeping current UX stable.
 
 ## Optional Later (Can Be Deferred)
 1. Tighten scoring weights and thresholds after 2-3 days of live data.
-2. Add Phase 3 metrics summary to GitHub Actions step summary.
-3. Add user-facing copy for `PENDING REVIEW` to explain expected review window.
+2. Raise burn-in strictness over time:
+   - `npm run ops:points:phase3:burnin:strict`
+3. Tune review policy by data quality:
+   - `node --env-file=.env scripts/configure-points-phase3.cjs --mode update --pending-auto-verify-minutes 180 --consistency-soft-deviation 0.2 --consistency-hard-deviation 0.6`
 
 ## Rollback
 1. Disable advanced scoring instantly:
@@ -40,3 +42,10 @@ Enable advanced scoring (`v2`) safely while keeping current UX stable.
 2. Keep projector running (it will continue with v1 behavior for new rows).
 3. Confirm rollback:
    - `npm run ops:points:phase3:status`
+
+## Step 2 (24-48h burn-in monitoring)
+Run every few hours:
+
+1. `npm run ops:points:phase3:burnin -- --require-advanced-scoring 1 --min-v2-total 1 --max-pending-aged 200 --max-lag-rows 500 --max-lag-seconds 60`
+2. `npm run ops:points:projector:health`
+3. `npm run ops:points:phase3:status`

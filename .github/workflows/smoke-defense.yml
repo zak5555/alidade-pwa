@@ -503,6 +503,36 @@ jobs:
             echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Check points phase3 burn-in snapshot (full lane)
+        id: points_phase3_burnin
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        continue-on-error: true
+        run: |
+          npm run ops:points:phase3:burnin -- --soft-fail 1 --write-github-output 1 --require-advanced-scoring 1 --min-v2-total 1 --max-pending-aged 200 --max-lag-rows 500 --max-lag-seconds 60 --sample-size 500 | tee points-phase3-burnin.json
+
+      - name: Publish points phase3 burn-in summary (full lane)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          echo "Points phase3 burn-in (full): ok=${{ steps.points_phase3_burnin.outputs.points_phase3_burnin_ok }} v2_total=${{ steps.points_phase3_burnin.outputs.points_phase3_v2_total }} v2_pending=${{ steps.points_phase3_burnin.outputs.points_phase3_v2_pending }} v2_verified=${{ steps.points_phase3_burnin.outputs.points_phase3_v2_verified }} pending_aged=${{ steps.points_phase3_burnin.outputs.points_phase3_v2_pending_aged }} lag_rows=${{ steps.points_phase3_burnin.outputs.points_phase3_lag_rows }} lag_seconds=${{ steps.points_phase3_burnin.outputs.points_phase3_lag_seconds }}"
+          if [ "${{ steps.points_phase3_burnin.outputs.points_phase3_burnin_ok }}" != "true" ]; then
+            echo "::notice::Points phase3 burn-in snapshot indicates drift. Review points-phase3-burnin.json."
+          fi
+          if [ -f points-phase3-burnin.json ]; then
+            echo "## Points Phase 3 Burn-in Snapshot (full lane)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- ok: ${{ steps.points_phase3_burnin.outputs.points_phase3_burnin_ok }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- v2 total: ${{ steps.points_phase3_burnin.outputs.points_phase3_v2_total }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- v2 pending: ${{ steps.points_phase3_burnin.outputs.points_phase3_v2_pending }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- v2 verified: ${{ steps.points_phase3_burnin.outputs.points_phase3_v2_verified }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- v2 pending aged: ${{ steps.points_phase3_burnin.outputs.points_phase3_v2_pending_aged }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- lag rows: ${{ steps.points_phase3_burnin.outputs.points_phase3_lag_rows }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- lag seconds: ${{ steps.points_phase3_burnin.outputs.points_phase3_lag_seconds }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`json" >> "$GITHUB_STEP_SUMMARY"
+            cat points-phase3-burnin.json >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Guard triage dry-run horizon (full lane)
         id: triage_dry_run_guard
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}

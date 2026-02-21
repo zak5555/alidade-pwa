@@ -150,6 +150,12 @@
                     <span>${userStats.syncBadge || 'LOCAL MODE'}</span>
                 </div>
 
+                <div id="contribution-sync-hint" class="text-[11px] text-zinc-500 font-mono mb-5 text-center leading-relaxed">
+                    ${priceUtils.resolveContributionSyncHint
+                    ? priceUtils.resolveContributionSyncHint(userStats.syncBadge || 'LOCAL MODE')
+                    : 'Server sync status updates automatically after validation.'}
+                </div>
+
                 <!-- Actions -->
                 <div class="flex gap-3">
                     <button id="btn-contribute-price"
@@ -209,6 +215,24 @@
             }
             badgeEl.classList.remove('text-zinc-400', 'text-emerald-300', 'text-amber-300', 'text-red-300');
             badgeEl.classList.add(nextTextClass);
+
+            const hintEl = documentObj.getElementById('contribution-sync-hint');
+            if (hintEl && typeof priceUtils.resolveContributionSyncHint === 'function') {
+                hintEl.textContent = priceUtils.resolveContributionSyncHint(label);
+            }
+        };
+    }
+
+    if (typeof priceUtils.resolveContributionSyncHint !== 'function') {
+        priceUtils.resolveContributionSyncHint = function resolveContributionSyncHint(labelRaw) {
+            const label = String(labelRaw || 'LOCAL MODE').trim().toUpperCase();
+            const hints = {
+                'SYNCED': 'Server verified. Your report is trusted by the system.',
+                'PENDING REVIEW': 'Under server review. Usually settles within a few hours.',
+                'REJECTED': 'Server rejected this report. Try cleaner values next time.',
+                'LOCAL MODE': 'Saved locally only. Server validation is currently off.'
+            };
+            return hints[label] || hints['LOCAL MODE'];
         };
     }
 
