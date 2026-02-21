@@ -63,8 +63,8 @@
             const runtimeFlags = windowObj.ALIDADE_RUNTIME_CONFIG?.rewardsFlags || {};
             const defaults = {
                 ENABLE_REWARDS_UI: true,
-                ENABLE_SERVER_VALIDATION: false,
-                ENABLE_LEDGER_WRITE: false,
+                ENABLE_SERVER_VALIDATION: true,
+                ENABLE_LEDGER_WRITE: true,
                 ENABLE_ADVANCED_SCORING: false
             };
 
@@ -265,11 +265,11 @@
             const logger = consoleObj || console;
             const fetchImpl = fetchFn || fetch;
             const serverValidationEnabled = typeof priceUtils.getRewardsFlag === 'function'
-                ? priceUtils.getRewardsFlag('ENABLE_SERVER_VALIDATION', false, windowObj.localStorage)
-                : false;
+                ? priceUtils.getRewardsFlag('ENABLE_SERVER_VALIDATION', true, windowObj.localStorage)
+                : true;
             const ledgerWriteEnabled = typeof priceUtils.getRewardsFlag === 'function'
-                ? priceUtils.getRewardsFlag('ENABLE_LEDGER_WRITE', false, windowObj.localStorage)
-                : false;
+                ? priceUtils.getRewardsFlag('ENABLE_LEDGER_WRITE', true, windowObj.localStorage)
+                : true;
             if (!serverValidationEnabled) {
                 return {
                     ok: true,
@@ -570,8 +570,8 @@
                         ? priceUtils.getRewardsFlag('ENABLE_REWARDS_UI', true, windowObj.localStorage)
                         : true;
                     const serverValidationEnabled = typeof priceUtils.getRewardsFlag === 'function'
-                        ? priceUtils.getRewardsFlag('ENABLE_SERVER_VALIDATION', false, windowObj.localStorage)
-                        : false;
+                        ? priceUtils.getRewardsFlag('ENABLE_SERVER_VALIDATION', true, windowObj.localStorage)
+                        : true;
 
                     if (rewardsEnabled && client && typeof client._rewardUser === 'function') {
                         client._rewardUser();
