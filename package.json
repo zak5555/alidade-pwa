@@ -42,6 +42,8 @@
     "ops:points:phase3:settle": "node --env-file=.env scripts/configure-points-phase3.cjs --mode settle --limit 500",
     "ops:points:phase3:burnin": "node --env-file=.env scripts/check-points-phase3-burnin.cjs",
     "ops:points:phase3:burnin:strict": "node --env-file=.env scripts/check-points-phase3-burnin.cjs --require-advanced-scoring 1 --min-v2-total 1 --max-pending-aged 200 --max-lag-rows 500 --max-lag-seconds 60 --sample-size 500",
+    "ops:points:stability:check": "npm run ops:points:projector:health -- --max-lag-seconds 60 --max-lag-rows 500 --sample-size 500 && npm run ops:points:phase3:burnin:strict && npm run ops:points:phase3:status && npm run ops:intel:verify:strict",
+    "ops:points:stability:check:fast": "npm run ops:points:projector:health -- --max-lag-seconds 60 --max-lag-rows 500 --sample-size 500 && npm run ops:points:phase3:burnin:strict && npm run ops:points:phase3:status",
     "audit:app-contract": "node scripts/refactor/audit-app-contract.mjs app.js",
     "build": "tailwindcss -i ./style-input.css -o ./output.css --minify",
     "watch": "tailwindcss -i ./style-input.css -o ./output.css --watch"

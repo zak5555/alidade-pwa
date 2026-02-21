@@ -49,3 +49,25 @@ Run every few hours:
 1. `npm run ops:points:phase3:burnin -- --require-advanced-scoring 1 --min-v2-total 1 --max-pending-aged 200 --max-lag-rows 500 --max-lag-seconds 60`
 2. `npm run ops:points:projector:health`
 3. `npm run ops:points:phase3:status`
+
+## Step 3 (48h stability gate)
+Use this after enabling advanced scoring, for the next 48h:
+
+1. Every 6h run one command:
+   - `npm run ops:points:stability:check`
+2. If you need a lighter check between full runs:
+   - `npm run ops:points:stability:check:fast`
+3. Keep `Smoke Defense` full lane green at least 8 consecutive runs.
+4. Exit criteria (promote to stable):
+   - `ops:points:stability:check` passes in all 8 windows.
+   - `v2_pending_aged` stays `0` (or below your threshold).
+   - `lag_rows=0` and `lag_seconds<=60`.
+   - no duplicate credit signal (`duplicate_* = 0`).
+5. If any window fails:
+   - run `npm run ops:points:phase3:status`
+   - run `npm run ops:points:projector:run`
+   - run `npm run ops:points:phase3:settle`
+   - re-run `npm run ops:points:stability:check`
+6. If failures repeat in 2 consecutive windows:
+   - rollback immediately: `npm run ops:points:phase3:disable`
+   - keep projector + monitoring on, then investigate.
