@@ -460,9 +460,8 @@ jobs:
       - name: Check points projector health (full lane)
         id: points_projector_health
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
-        continue-on-error: true
         run: |
-          npm run ops:points:projector:health -- --soft-fail 1 --write-github-output 1 --max-lag-seconds 60 --max-lag-rows 500 --sample-size 500 | tee points-projector-health.json
+          npm run ops:points:projector:health -- --write-github-output 1 --max-lag-seconds 60 --max-lag-rows 500 --sample-size 500 | tee points-projector-health.json
 
       - name: Publish points projector summary (full lane)
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
@@ -489,7 +488,6 @@ jobs:
 
       - name: Points phase3 status (full lane)
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
-        continue-on-error: true
         run: npm run ops:points:phase3:status | tee points-phase3-status.json
 
       - name: Publish points phase3 summary (full lane)
@@ -506,9 +504,8 @@ jobs:
       - name: Check points phase3 burn-in snapshot (full lane)
         id: points_phase3_burnin
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
-        continue-on-error: true
         run: |
-          npm run ops:points:phase3:burnin -- --soft-fail 1 --write-github-output 1 --require-advanced-scoring 1 --min-v2-total 1 --max-pending-aged 200 --max-lag-rows 500 --max-lag-seconds 60 --sample-size 500 | tee points-phase3-burnin.json
+          npm run ops:points:phase3:burnin -- --write-github-output 1 --require-advanced-scoring 1 --min-v2-total 1 --max-pending-aged 200 --max-lag-rows 500 --max-lag-seconds 60 --sample-size 500 | tee points-phase3-burnin.json
 
       - name: Publish points phase3 burn-in summary (full lane)
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}

@@ -156,6 +156,12 @@
                     : 'Server sync status updates automatically after validation.'}
                 </div>
 
+                <div class="bg-void-800/40 border border-void-700 rounded-lg p-3 mb-5 text-[10px] text-zinc-500 font-mono leading-relaxed">
+                    <div><span class="text-amber-300">PENDING REVIEW</span>: report was received and is being validated server-side.</div>
+                    <div>Typical pending time: <span class="text-zinc-300">5 to 180 minutes</span>.</div>
+                    <div>You will see <span class="text-emerald-300">SYNCED</span> once server verification finishes.</div>
+                </div>
+
                 <!-- Actions -->
                 <div class="flex gap-3">
                     <button id="btn-contribute-price"
@@ -227,8 +233,8 @@
         priceUtils.resolveContributionSyncHint = function resolveContributionSyncHint(labelRaw) {
             const label = String(labelRaw || 'LOCAL MODE').trim().toUpperCase();
             const hints = {
-                'SYNCED': 'Server verified. Your report is trusted by the system.',
-                'PENDING REVIEW': 'Under server review. Usually settles within a few hours.',
+                'SYNCED': 'Server verified. Review completed successfully.',
+                'PENDING REVIEW': 'Under server review. Usually 5 to 180 minutes, then it becomes SYNCED.',
                 'REJECTED': 'Server rejected this report. Try cleaner values next time.',
                 'LOCAL MODE': 'Saved locally only. Server validation is currently off.'
             };
