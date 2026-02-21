@@ -457,6 +457,36 @@ jobs:
             echo "::warning::Intel verify full triage reported CRITICAL state. Review Step Summary recommendations."
           fi
 
+      - name: Check points projector health (full lane)
+        id: points_projector_health
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        continue-on-error: true
+        run: |
+          npm run ops:points:projector:health -- --soft-fail 1 --write-github-output 1 --max-lag-seconds 60 --max-lag-rows 500 --sample-size 500 | tee points-projector-health.json
+
+      - name: Publish points projector summary (full lane)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          echo "Points projector health (full): ok=${{ steps.points_projector_health.outputs.points_projector_health_ok }} lag_rows=${{ steps.points_projector_health.outputs.points_projector_lag_rows }} lag_seconds=${{ steps.points_projector_health.outputs.points_projector_lag_seconds }} cursor=${{ steps.points_projector_health.outputs.points_projector_cursor }} latest_stream=${{ steps.points_projector_health.outputs.points_projector_latest_stream_id }}"
+          if [ "${{ steps.points_projector_health.outputs.points_projector_health_ok }}" != "true" ]; then
+            echo "::notice::Points projector health not ready or degraded. Review points-projector-health.json and migration rollout status."
+          fi
+          if [ -f points-projector-health.json ]; then
+            echo "## Points Projector Health (full lane)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "- ok: ${{ steps.points_projector_health.outputs.points_projector_health_ok }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- lag rows: ${{ steps.points_projector_health.outputs.points_projector_lag_rows }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- lag seconds: ${{ steps.points_projector_health.outputs.points_projector_lag_seconds }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- cursor: ${{ steps.points_projector_health.outputs.points_projector_cursor }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- latest stream id: ${{ steps.points_projector_health.outputs.points_projector_latest_stream_id }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- duplicate event/rule sample: ${{ steps.points_projector_health.outputs.points_projector_duplicate_event_rule_sample }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "- duplicate fingerprint/status sample: ${{ steps.points_projector_health.outputs.points_projector_duplicate_fingerprint_sample }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`json" >> "$GITHUB_STEP_SUMMARY"
+            cat points-projector-health.json >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Guard triage dry-run horizon (full lane)
         id: triage_dry_run_guard
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}

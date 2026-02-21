@@ -34,6 +34,8 @@
     "ops:intel:verify:strict": "node --env-file=.env scripts/verify-intel-ingest.cjs --profile strict",
     "ops:intel:verify:strict:rejection": "node --env-file=.env scripts/verify-intel-ingest.cjs --profile strict_rejection",
     "ops:intel:ci": "npm run ops:intel:verify:strict && npm run ops:intel:verify:strict:rejection && npm run ops:intel:health:strict",
+    "ops:points:projector:run": "node --env-file=.env scripts/run-points-projector.cjs",
+    "ops:points:projector:health": "node --env-file=.env scripts/check-points-projector-health.cjs",
     "audit:app-contract": "node scripts/refactor/audit-app-contract.mjs app.js",
     "build": "tailwindcss -i ./style-input.css -o ./output.css --minify",
     "watch": "tailwindcss -i ./style-input.css -o ./output.css --watch"

@@ -6,6 +6,21 @@
     if (!windowObj) return;
 
     const priceUtils = windowObj.ALIDADE_PRICE_UTILS || (windowObj.ALIDADE_PRICE_UTILS = {});
+    const CROWD_SYNC_BADGE_STORAGE_KEY = 'alidade_crowd_sync_badge';
+    const DEFAULT_SYNC_BADGE_LABEL = 'LOCAL MODE';
+
+    function coerceBoolean(value, fallback) {
+        if (typeof value === 'boolean') return value;
+        const normalized = String(value || '').trim().toLowerCase();
+        if (!normalized) return fallback;
+        if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+        if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+        return fallback;
+    }
+
+    function normalizeRewardsFlagName(flagName) {
+        return String(flagName || '').trim().toUpperCase();
+    }
 
     if (typeof priceUtils.buildCrowdPriceSubmission !== 'function') {
         priceUtils.buildCrowdPriceSubmission = function buildCrowdPriceSubmission(data) {
@@ -36,8 +51,334 @@
                 contributions: parseInt(storageObj.getItem('alidade_contributions') || '0', 10),
                 points: parseInt(storageObj.getItem('alidade_crowd_points') || '0', 10),
                 rank: storageObj.getItem('alidade_crowd_rank') || 'Scout',
+                syncBadge: storageObj.getItem(CROWD_SYNC_BADGE_STORAGE_KEY) || DEFAULT_SYNC_BADGE_LABEL,
                 pendingQueue
             };
+        };
+    }
+
+    if (typeof priceUtils.resolveRewardsFlags !== 'function') {
+        priceUtils.resolveRewardsFlags = function resolveRewardsFlags(storageObjParam) {
+            const storageObj = storageObjParam || windowObj.localStorage;
+            const runtimeFlags = windowObj.ALIDADE_RUNTIME_CONFIG?.rewardsFlags || {};
+            const defaults = {
+                ENABLE_REWARDS_UI: true,
+                ENABLE_SERVER_VALIDATION: false,
+                ENABLE_LEDGER_WRITE: false,
+                ENABLE_ADVANCED_SCORING: false
+            };
+
+            return Object.keys(defaults).reduce((acc, key) => {
+                const normalized = normalizeRewardsFlagName(key);
+                const storageValue = storageObj && typeof storageObj.getItem === 'function'
+                    ? storageObj.getItem(`ALIDADE_FLAG_${normalized}`)
+                    : '';
+                const runtimeValue = runtimeFlags[normalized];
+                const fallback = defaults[normalized];
+                const resolved = storageValue != null && String(storageValue).trim() !== ''
+                    ? coerceBoolean(storageValue, fallback)
+                    : coerceBoolean(runtimeValue, fallback);
+                acc[normalized] = resolved;
+                return acc;
+            }, {});
+        };
+    }
+
+    if (typeof priceUtils.getRewardsFlag !== 'function') {
+        priceUtils.getRewardsFlag = function getRewardsFlag(flagName, fallback = false, storageObj) {
+            const flags = typeof priceUtils.resolveRewardsFlags === 'function'
+                ? priceUtils.resolveRewardsFlags(storageObj)
+                : {};
+            const normalized = normalizeRewardsFlagName(flagName);
+            if (Object.prototype.hasOwnProperty.call(flags, normalized)) {
+                return Boolean(flags[normalized]);
+            }
+            return coerceBoolean(windowObj.ALIDADE_RUNTIME_CONFIG?.rewardsFlags?.[normalized], fallback);
+        };
+    }
+
+    if (typeof priceUtils.resolveCrowdSyncBadgeLabel !== 'function') {
+        priceUtils.resolveCrowdSyncBadgeLabel = function resolveCrowdSyncBadgeLabel(rawStatus) {
+            const normalized = String(rawStatus || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[\s-]+/g, '_');
+            if (normalized === 'synced' || normalized === 'verified') return 'SYNCED';
+            if (normalized === 'pending' || normalized === 'pending_review') return 'PENDING REVIEW';
+            if (normalized === 'rejected') return 'REJECTED';
+            return DEFAULT_SYNC_BADGE_LABEL;
+        };
+    }
+
+    if (typeof priceUtils.resolveCrowdSyncStatusFromLabel !== 'function') {
+        priceUtils.resolveCrowdSyncStatusFromLabel = function resolveCrowdSyncStatusFromLabel(labelRaw) {
+            const label = String(labelRaw || '').trim().toUpperCase();
+            if (label === 'SYNCED') return 'synced';
+            if (label === 'PENDING REVIEW') return 'pending_review';
+            if (label === 'REJECTED') return 'rejected';
+            return 'local_mode';
+        };
+    }
+
+    if (typeof priceUtils.storeCrowdSyncBadgeLabel !== 'function') {
+        priceUtils.storeCrowdSyncBadgeLabel = function storeCrowdSyncBadgeLabel(storageObjParam, badgeLabel) {
+            const storageObj = storageObjParam || windowObj.localStorage;
+            if (!storageObj || typeof storageObj.setItem !== 'function') return;
+            const next = typeof priceUtils.resolveCrowdSyncBadgeLabel === 'function'
+                ? priceUtils.resolveCrowdSyncBadgeLabel(badgeLabel)
+                : DEFAULT_SYNC_BADGE_LABEL;
+            storageObj.setItem(CROWD_SYNC_BADGE_STORAGE_KEY, next);
+        };
+    }
+
+    if (typeof priceUtils.readCrowdSyncBadgeLabel !== 'function') {
+        priceUtils.readCrowdSyncBadgeLabel = function readCrowdSyncBadgeLabel(storageObjParam) {
+            const storageObj = storageObjParam || windowObj.localStorage;
+            if (!storageObj || typeof storageObj.getItem !== 'function') {
+                return DEFAULT_SYNC_BADGE_LABEL;
+            }
+            const raw = storageObj.getItem(CROWD_SYNC_BADGE_STORAGE_KEY) || DEFAULT_SYNC_BADGE_LABEL;
+            return typeof priceUtils.resolveCrowdSyncBadgeLabel === 'function'
+                ? priceUtils.resolveCrowdSyncBadgeLabel(raw)
+                : DEFAULT_SYNC_BADGE_LABEL;
+        };
+    }
+
+    if (typeof priceUtils.resolveCrowdSessionId !== 'function') {
+        priceUtils.resolveCrowdSessionId = function resolveCrowdSessionId() {
+            const intelUtils = windowObj.ALIDADE_INTEL_EVENT_UTILS;
+            if (intelUtils && typeof intelUtils.getSessionId === 'function') {
+                return String(intelUtils.getSessionId() || '').trim();
+            }
+            return '';
+        };
+    }
+
+    if (typeof priceUtils.resolveCrowdAuthUser !== 'function') {
+        priceUtils.resolveCrowdAuthUser = function resolveCrowdAuthUser() {
+            const manager = windowObj.licenseManager;
+            if (manager && typeof manager.getAuthUser === 'function') {
+                return manager.getAuthUser() || null;
+            }
+            return null;
+        };
+    }
+
+    if (typeof priceUtils.resolveCrowdAuthBearerToken !== 'function') {
+        priceUtils.resolveCrowdAuthBearerToken = async function resolveCrowdAuthBearerToken() {
+            const explicit = String(windowObj.ALIDADE_RUNTIME_CONFIG?.intelAuthBearerToken || '').trim();
+            if (explicit) return explicit;
+
+            const manager = windowObj.licenseManager;
+            if (!manager?.supabase?.auth?.getSession) return '';
+
+            try {
+                const { data, error } = await manager.supabase.auth.getSession();
+                if (error) return '';
+                return String(data?.session?.access_token || '').trim();
+            } catch {
+                return '';
+            }
+        };
+    }
+
+    if (typeof priceUtils.buildCrowdIntelSubmissionPayload !== 'function') {
+        priceUtils.buildCrowdIntelSubmissionPayload = function buildCrowdIntelSubmissionPayload(submission) {
+            return {
+                item_type: String(submission?.item_type || '').trim() || 'generic_item',
+                area: String(submission?.area || 'unknown').trim() || 'unknown',
+                price_paid: Number(submission?.price_paid),
+                currency: 'MAD',
+                asking_price: submission?.asking_price == null ? null : Number(submission.asking_price),
+                quality_estimate: submission?.quality_estimate == null ? null : Number(submission.quality_estimate),
+                lat_fuzzy: submission?.lat_fuzzy == null ? null : Number(submission.lat_fuzzy),
+                lng_fuzzy: submission?.lng_fuzzy == null ? null : Number(submission.lng_fuzzy),
+                app_version: String(submission?.app_version || '2.0')
+            };
+        };
+    }
+
+    if (typeof priceUtils.emitCrowdSubmittedIntelEvent !== 'function') {
+        priceUtils.emitCrowdSubmittedIntelEvent = async function emitCrowdSubmittedIntelEvent(submission, consoleObj) {
+            const logger = consoleObj || console;
+            const intelUtils = windowObj.ALIDADE_INTEL_EVENT_UTILS;
+            if (!intelUtils || typeof intelUtils.emitIntelEvent !== 'function') {
+                return { ok: false, skipped: true, reason: 'intel_runtime_unavailable' };
+            }
+
+            const payload = typeof priceUtils.buildCrowdIntelSubmissionPayload === 'function'
+                ? priceUtils.buildCrowdIntelSubmissionPayload(submission)
+                : null;
+            if (!payload) {
+                return { ok: false, skipped: true, reason: 'intel_payload_unavailable' };
+            }
+
+            const authUser = typeof priceUtils.resolveCrowdAuthUser === 'function'
+                ? priceUtils.resolveCrowdAuthUser()
+                : null;
+            const meta = {
+                sessionId: typeof priceUtils.resolveCrowdSessionId === 'function'
+                    ? priceUtils.resolveCrowdSessionId()
+                    : undefined,
+                source: 'crowd_price_submit',
+                app_version: String(submission?.app_version || '2.0')
+            };
+            if (authUser?.id) {
+                meta.auth_user_id = String(authUser.id);
+            }
+
+            if (typeof priceUtils.resolveCrowdAuthBearerToken === 'function') {
+                const bearer = await priceUtils.resolveCrowdAuthBearerToken();
+                if (bearer && typeof intelUtils.setIngestAuthBearerToken === 'function') {
+                    intelUtils.setIngestAuthBearerToken(bearer, { persist: false });
+                }
+            }
+
+            const result = await intelUtils.emitIntelEvent('price.crowd_submitted', payload, meta);
+            if (result && result.ok === true && typeof intelUtils.flushQueue === 'function') {
+                intelUtils.flushQueue(false).catch(() => { });
+            } else if (result && result.ok !== true) {
+                logger.warn('[CROWD] Intel event rejected:', result.reason || 'unknown_reason');
+            }
+            return result;
+        };
+    }
+
+    if (typeof priceUtils.resolveCrowdSupabaseBaseUrl !== 'function') {
+        priceUtils.resolveCrowdSupabaseBaseUrl = function resolveCrowdSupabaseBaseUrl(client) {
+            const configUrl = String(windowObj.ALIDADE_PRICE_CHECK_CONFIG?.SUPABASE_URL || '').trim();
+            if (configUrl) return configUrl.replace(/\/+$/, '');
+
+            const endpoint = String(client?.endpoint || '').trim();
+            if (!endpoint) return '';
+            try {
+                const parsed = new URL(endpoint);
+                return String(parsed.origin || '').replace(/\/+$/, '');
+            } catch {
+                return '';
+            }
+        };
+    }
+
+    if (typeof priceUtils.fetchCrowdServerSyncStatus !== 'function') {
+        priceUtils.fetchCrowdServerSyncStatus = async function fetchCrowdServerSyncStatus(client, fetchFn, consoleObj) {
+            const logger = consoleObj || console;
+            const fetchImpl = fetchFn || fetch;
+            const serverValidationEnabled = typeof priceUtils.getRewardsFlag === 'function'
+                ? priceUtils.getRewardsFlag('ENABLE_SERVER_VALIDATION', false, windowObj.localStorage)
+                : false;
+            const ledgerWriteEnabled = typeof priceUtils.getRewardsFlag === 'function'
+                ? priceUtils.getRewardsFlag('ENABLE_LEDGER_WRITE', false, windowObj.localStorage)
+                : false;
+            if (!serverValidationEnabled) {
+                return {
+                    ok: true,
+                    status: 'local_mode',
+                    label: 'LOCAL MODE'
+                };
+            }
+            if (!ledgerWriteEnabled) {
+                const fallbackLabel = typeof priceUtils.readCrowdSyncBadgeLabel === 'function'
+                    ? priceUtils.readCrowdSyncBadgeLabel(windowObj.localStorage)
+                    : DEFAULT_SYNC_BADGE_LABEL;
+                const fallbackStatus = typeof priceUtils.resolveCrowdSyncStatusFromLabel === 'function'
+                    ? priceUtils.resolveCrowdSyncStatusFromLabel(fallbackLabel)
+                    : 'local_mode';
+                return {
+                    ok: true,
+                    status: fallbackStatus,
+                    label: fallbackLabel
+                };
+            }
+            const baseUrl = typeof priceUtils.resolveCrowdSupabaseBaseUrl === 'function'
+                ? priceUtils.resolveCrowdSupabaseBaseUrl(client)
+                : '';
+            if (!baseUrl) {
+                return {
+                    ok: false,
+                    status: 'local_mode',
+                    label: typeof priceUtils.readCrowdSyncBadgeLabel === 'function'
+                        ? priceUtils.readCrowdSyncBadgeLabel(windowObj.localStorage)
+                        : DEFAULT_SYNC_BADGE_LABEL
+                };
+            }
+
+            const sessionId = typeof priceUtils.resolveCrowdSessionId === 'function'
+                ? priceUtils.resolveCrowdSessionId()
+                : '';
+            const authUser = typeof priceUtils.resolveCrowdAuthUser === 'function'
+                ? priceUtils.resolveCrowdAuthUser()
+                : null;
+            const userId = authUser?.id ? String(authUser.id) : null;
+
+            const headers = {
+                'Content-Type': 'application/json',
+                apikey: String(client?.apiKey || ''),
+                Authorization: `Bearer ${String(client?.apiKey || '')}`
+            };
+
+            if (typeof priceUtils.resolveCrowdAuthBearerToken === 'function') {
+                const bearer = await priceUtils.resolveCrowdAuthBearerToken();
+                if (bearer) {
+                    headers.Authorization = `Bearer ${bearer}`;
+                }
+            }
+
+            try {
+                const response = await fetchImpl(`${baseUrl}/rest/v1/rpc/get_points_sync_status_v1`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        session_id: sessionId || null,
+                        user_id: userId
+                    })
+                });
+
+                if (!response.ok) {
+                    logger.warn('[CROWD] Sync status RPC failed:', response.status);
+                    return {
+                        ok: false,
+                        status: 'local_mode',
+                        label: typeof priceUtils.readCrowdSyncBadgeLabel === 'function'
+                            ? priceUtils.readCrowdSyncBadgeLabel(windowObj.localStorage)
+                            : DEFAULT_SYNC_BADGE_LABEL
+                    };
+                }
+
+                const raw = await response.json();
+                const row = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+                const status = String(
+                    row.sync_status ||
+                    row.syncStatus ||
+                    row.status ||
+                    row.badge_label ||
+                    row.badge ||
+                    'local_mode'
+                ).trim().toLowerCase();
+
+                const label = typeof priceUtils.resolveCrowdSyncBadgeLabel === 'function'
+                    ? priceUtils.resolveCrowdSyncBadgeLabel(status)
+                    : DEFAULT_SYNC_BADGE_LABEL;
+                if (typeof priceUtils.storeCrowdSyncBadgeLabel === 'function') {
+                    priceUtils.storeCrowdSyncBadgeLabel(windowObj.localStorage, label);
+                }
+
+                return {
+                    ok: true,
+                    status,
+                    label,
+                    details: row
+                };
+            } catch (error) {
+                logger.warn('[CROWD] Sync status fetch failed:', error?.message || String(error));
+                return {
+                    ok: false,
+                    status: 'local_mode',
+                    label: typeof priceUtils.readCrowdSyncBadgeLabel === 'function'
+                        ? priceUtils.readCrowdSyncBadgeLabel(windowObj.localStorage)
+                        : DEFAULT_SYNC_BADGE_LABEL
+                };
+            }
         };
     }
 
@@ -225,8 +566,29 @@
 
                 if (response.ok) {
                     logger.log('[CROWD] Price submitted:', submission.item_type, submission.price_paid, 'DH');
-                    if (client && typeof client._rewardUser === 'function') {
+                    const rewardsEnabled = typeof priceUtils.getRewardsFlag === 'function'
+                        ? priceUtils.getRewardsFlag('ENABLE_REWARDS_UI', true, windowObj.localStorage)
+                        : true;
+                    const serverValidationEnabled = typeof priceUtils.getRewardsFlag === 'function'
+                        ? priceUtils.getRewardsFlag('ENABLE_SERVER_VALIDATION', false, windowObj.localStorage)
+                        : false;
+
+                    if (rewardsEnabled && client && typeof client._rewardUser === 'function') {
                         client._rewardUser();
+                    }
+
+                    if (serverValidationEnabled) {
+                        if (typeof priceUtils.storeCrowdSyncBadgeLabel === 'function') {
+                            priceUtils.storeCrowdSyncBadgeLabel(windowObj.localStorage, 'PENDING REVIEW');
+                        }
+                        if (typeof priceUtils.emitCrowdSubmittedIntelEvent === 'function') {
+                            const intelResult = await priceUtils.emitCrowdSubmittedIntelEvent(submission, logger);
+                            if (intelResult && intelResult.ok === false && intelResult.skipped !== true) {
+                                logger.warn('[CROWD] Server validation lane rejected contribution');
+                            }
+                        }
+                    } else if (typeof priceUtils.storeCrowdSyncBadgeLabel === 'function') {
+                        priceUtils.storeCrowdSyncBadgeLabel(windowObj.localStorage, 'LOCAL MODE');
                     }
                     return true;
                 }

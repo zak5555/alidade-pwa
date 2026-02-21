@@ -144,6 +144,12 @@
                     </div>
                 </div>
 
+                <div id="contribution-sync-badge"
+                     class="flex items-center justify-center gap-2 bg-void-800/70 rounded-lg p-2.5 mb-5 border border-void-700 text-[10px] font-mono uppercase tracking-wide text-zinc-400">
+                    <span class="inline-block w-2 h-2 rounded-full bg-zinc-500"></span>
+                    <span>${userStats.syncBadge || 'LOCAL MODE'}</span>
+                </div>
+
                 <!-- Actions -->
                 <div class="flex gap-3">
                     <button id="btn-contribute-price"
@@ -169,6 +175,40 @@
             buttonEl.textContent = '✅ SUBMITTED!';
             buttonEl.classList.remove('bg-signal-emerald');
             buttonEl.classList.add('bg-emerald-700');
+        };
+    }
+
+    if (typeof priceUtils.updateContributionSyncBadge !== 'function') {
+        priceUtils.updateContributionSyncBadge = function updateContributionSyncBadge(documentObj, badgeLabel) {
+            const badgeEl = documentObj.getElementById('contribution-sync-badge');
+            if (!badgeEl) return;
+
+            const label = String(badgeLabel || 'LOCAL MODE').trim().toUpperCase();
+            const dotClassesByLabel = {
+                'SYNCED': 'bg-emerald-500',
+                'PENDING REVIEW': 'bg-amber-400',
+                'REJECTED': 'bg-red-500',
+                'LOCAL MODE': 'bg-zinc-500'
+            };
+            const textClassesByLabel = {
+                'SYNCED': 'text-emerald-300',
+                'PENDING REVIEW': 'text-amber-300',
+                'REJECTED': 'text-red-300',
+                'LOCAL MODE': 'text-zinc-400'
+            };
+            const nextDotClass = dotClassesByLabel[label] || dotClassesByLabel['LOCAL MODE'];
+            const nextTextClass = textClassesByLabel[label] || textClassesByLabel['LOCAL MODE'];
+
+            const dotEl = badgeEl.querySelector('span:first-child');
+            const textEl = badgeEl.querySelector('span:last-child');
+            if (dotEl) {
+                dotEl.className = `inline-block w-2 h-2 rounded-full ${nextDotClass}`;
+            }
+            if (textEl) {
+                textEl.textContent = label;
+            }
+            badgeEl.classList.remove('text-zinc-400', 'text-emerald-300', 'text-amber-300', 'text-red-300');
+            badgeEl.classList.add(nextTextClass);
         };
     }
 

@@ -550,7 +550,13 @@
 
         window.ALIDADE_RUNTIME_CONFIG = {
             ...(window.ALIDADE_RUNTIME_CONFIG || {}),
-            intelIngestEndpoint: `${SUPABASE_URL}/functions/v1/intel-ingest`
+            intelIngestEndpoint: `${SUPABASE_URL}/functions/v1/intel-ingest`,
+            rewardsFlags: {
+                ENABLE_REWARDS_UI: true,
+                ENABLE_SERVER_VALIDATION: true,
+                ENABLE_LEDGER_WRITE: true,
+                ENABLE_ADVANCED_SCORING: false
+            }
         };
 
         // Initialize and expose globally (idempotent)
@@ -645,7 +651,7 @@
     <script src="js/app/data/ultimate-data-pack-utils.js"></script>
     <script src="js/app/price/session-ui-utils.js"></script>
     <script src="js/app/price/context-runtime-utils.js"></script>
-    <script src="js/app/price/crowd-price-utils.js"></script>
+    <script src="js/app/price/crowd-price-utils.js?v=20260221c"></script>
     <script src="js/app/price/hybrid-price-utils.js"></script>
     <script src="js/app/price/hybrid-price-runtime-utils.js"></script>
     <script src="js/app/price/deep-analysis-utils.js"></script>
@@ -796,9 +802,6 @@
 </body>
 
 </html>
-
-
-
 
 
 

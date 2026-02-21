@@ -122,7 +122,20 @@ class CrowdPriceDB {
             contributions: 0,
             points: 0,
             rank: 'Scout',
+            syncBadge: 'LOCAL MODE',
             pendingQueue: this._retryQueue.length
+        };
+    }
+
+    async getServerSyncStatus() {
+        const priceUtils = window.ALIDADE_PRICE_UTILS;
+        if (priceUtils && typeof priceUtils.fetchCrowdServerSyncStatus === 'function') {
+            return await priceUtils.fetchCrowdServerSyncStatus(this, fetch, console);
+        }
+        return {
+            ok: false,
+            status: 'local_mode',
+            label: 'LOCAL MODE'
         };
     }
 }
@@ -397,7 +410,12 @@ function showContributionPrompt(haggledPrice, classification, fairPrice) {
     const savings = fairPrice - haggledPrice;
     const savingsText = savings > 0 ? `${savings} DH saved` : 'No savings';
     const savingsIcon = savings > 0 ? '[+]' : '[=]';
-    const userStats = window.crowdPriceDB?.getUserStats() || { contributions: 0, points: 0, rank: 'Scout' };
+    const userStats = window.crowdPriceDB?.getUserStats() || {
+        contributions: 0,
+        points: 0,
+        rank: 'Scout',
+        syncBadge: 'LOCAL MODE'
+    };
     const priceUtils = window.ALIDADE_PRICE_UTILS;
 
     const modalHTML = priceUtils && typeof priceUtils.buildContributionModalHtml === 'function'
@@ -406,6 +424,17 @@ function showContributionPrompt(haggledPrice, classification, fairPrice) {
     if (!modalHTML) return;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    const refreshContributionSyncBadge = async () => {
+        const syncStatus = await window.crowdPriceDB?.getServerSyncStatus?.();
+        if (priceUtils && typeof priceUtils.updateContributionSyncBadge === 'function') {
+            priceUtils.updateContributionSyncBadge(
+                document,
+                syncStatus?.label || userStats.syncBadge || 'LOCAL MODE'
+            );
+        }
+    };
+    refreshContributionSyncBadge().catch(() => { });
 
     // Contribute button
     document.getElementById('btn-contribute-price')?.addEventListener('click', async () => {
@@ -423,6 +452,7 @@ function showContributionPrompt(haggledPrice, classification, fairPrice) {
         if (!contributionPayload) return;
 
         await window.crowdPriceDB.submitPrice(contributionPayload);
+        await refreshContributionSyncBadge().catch(() => { });
 
         if (typeof priceUtils.markContributionSubmitted !== 'function') return;
         priceUtils.markContributionSubmitted(btn);

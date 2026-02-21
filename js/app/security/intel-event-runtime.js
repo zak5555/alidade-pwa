@@ -22,6 +22,7 @@
     const SESSION_STORAGE_KEY = 'alidade_intel_session_id_v1';
     const SIGNING_SECRET_KEY = 'alidade_intel_signing_secret_v1';
     const INGEST_API_KEY_STORAGE_KEY = 'alidade_intel_ingest_api_key_v1';
+    const INGEST_AUTH_BEARER_STORAGE_KEY = 'alidade_intel_ingest_auth_bearer_v1';
     const INGEST_ENDPOINT_STORAGE_KEY = 'alidade_intel_ingest_endpoint_v1';
     const REJECTION_LOG_MAX = 80;
     const NONCE_TTL_MS = 10 * 60 * 1000;
@@ -130,7 +131,23 @@
         'price.anomaly_detected': (payload) =>
             payload &&
             Number.isFinite(Number(payload.askPrice)) &&
-            Number.isFinite(Number(payload.expectedPrice))
+            Number.isFinite(Number(payload.expectedPrice)),
+        'price.crowd_submitted': (payload) => {
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return false;
+            const itemType = String(payload.item_type || '').trim();
+            const area = String(payload.area || '').trim();
+            const currency = String(payload.currency || '').trim().toUpperCase();
+            const pricePaid = Number(payload.price_paid);
+            const askingPrice = payload.asking_price == null ? null : Number(payload.asking_price);
+            const qualityEstimate = payload.quality_estimate == null ? null : Number(payload.quality_estimate);
+            if (!itemType || !area || !currency) return false;
+            if (!Number.isFinite(pricePaid) || pricePaid < 5 || pricePaid > 50000) return false;
+            if (askingPrice !== null && (!Number.isFinite(askingPrice) || askingPrice < pricePaid)) return false;
+            if (qualityEstimate !== null && (!Number.isFinite(qualityEstimate) || qualityEstimate < 0 || qualityEstimate > 1)) {
+                return false;
+            }
+            return true;
+        }
     };
 
     function safeParseJSON(value, fallback) {
@@ -294,6 +311,61 @@
         return {
             ok: true,
             configured: Boolean(resolveIngestApiKey())
+        };
+    }
+
+    function resolveConfiguredIngestAuthBearerToken() {
+        const explicit = String(windowObj.__ALIDADE_INTEL_INGEST_AUTH_BEARER_TOKEN__ || '').trim();
+        if (explicit) return explicit;
+        const runtimeConfigToken = String(windowObj.ALIDADE_RUNTIME_CONFIG?.intelAuthBearerToken || '').trim();
+        if (runtimeConfigToken) return runtimeConfigToken;
+        const persisted = String(storage.getItem(INGEST_AUTH_BEARER_STORAGE_KEY) || '').trim();
+        if (persisted) return persisted;
+        return '';
+    }
+
+    async function resolveIngestAuthBearerToken() {
+        const configured = resolveConfiguredIngestAuthBearerToken();
+        if (configured) return configured;
+
+        const licenseManager = windowObj.licenseManager;
+        if (!licenseManager?.supabase?.auth?.getSession) return '';
+        try {
+            const { data, error } = await licenseManager.supabase.auth.getSession();
+            if (error) return '';
+            return String(data?.session?.access_token || '').trim();
+        } catch {
+            return '';
+        }
+    }
+
+    function setIngestAuthBearerToken(nextToken, options = {}) {
+        const normalized = String(nextToken || '').trim();
+        const persist = options.persist === true;
+        if (persist) {
+            if (normalized) {
+                storage.setItem(INGEST_AUTH_BEARER_STORAGE_KEY, normalized);
+            } else {
+                storage.removeItem(INGEST_AUTH_BEARER_STORAGE_KEY);
+            }
+        }
+
+        if (normalized) {
+            windowObj.__ALIDADE_INTEL_INGEST_AUTH_BEARER_TOKEN__ = normalized;
+        } else {
+            try {
+                delete windowObj.__ALIDADE_INTEL_INGEST_AUTH_BEARER_TOKEN__;
+            } catch (_error) {
+                windowObj.__ALIDADE_INTEL_INGEST_AUTH_BEARER_TOKEN__ = '';
+            }
+            if (!persist) {
+                storage.removeItem(INGEST_AUTH_BEARER_STORAGE_KEY);
+            }
+        }
+
+        return {
+            ok: true,
+            configured: Boolean(resolveConfiguredIngestAuthBearerToken())
         };
     }
 
@@ -656,6 +728,10 @@
                 if (ingestApiKey) {
                     headers['x-intel-ingest-key'] = ingestApiKey;
                 }
+                const ingestAuthBearer = await resolveIngestAuthBearerToken();
+                if (ingestAuthBearer) {
+                    headers.Authorization = `Bearer ${ingestAuthBearer}`;
+                }
                 const response = await this.fetcher(runtimePolicy.endpoint, {
                     method: 'POST',
                     headers,
@@ -910,6 +986,7 @@
         getPowerMode: () => runtimePowerMode,
         getSessionId: getOrCreateSessionId,
         setIngestApiKey,
+        setIngestAuthBearerToken,
         setSigningSecret,
         getIngestApiKeyConfigured: () => Boolean(resolveIngestApiKey()),
         setIngestEndpoint,

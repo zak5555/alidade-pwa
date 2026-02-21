@@ -78,6 +78,14 @@ const MAX_NONCE_LENGTH = 160;
 const MAX_META_BYTES = 8 * 1024;
 const MAX_PAYLOAD_BYTES = 32 * 1024;
 const MAX_EVENT_BYTES = 48 * 1024;
+const CROWD_SUBMITTED_EVENT_NAME = "price.crowd_submitted";
+const CROWD_PRICE_MIN = 5;
+const CROWD_PRICE_MAX = 50000;
+const CROWD_AUTH_MAX_PER_HOUR = 30;
+const CROWD_AUTH_MAX_PER_DAY = 120;
+const CROWD_ANON_MAX_PER_HOUR = 12;
+const CROWD_ANON_MAX_PER_DAY = 40;
+const CROWD_DEDUPE_WINDOW_HOURS = 6;
 
 const recentNonceMemory = new Map<string, number>();
 const sessionRateMemory = new Map<string, number[]>();
@@ -181,6 +189,20 @@ function validatePayloadSchema(eventName: string, payload: Record<string, JsonVa
         case "price.anomaly_detected":
             return Number.isFinite(Number(payload.askPrice)) &&
                 Number.isFinite(Number(payload.expectedPrice));
+        case CROWD_SUBMITTED_EVENT_NAME: {
+            const itemType = normalizeString(payload.item_type).trim();
+            const area = normalizeString(payload.area).trim();
+            const currency = normalizeString(payload.currency).trim().toUpperCase();
+            const pricePaid = toFiniteNumber(payload.price_paid);
+            const askingPrice = payload.asking_price == null ? null : toFiniteNumber(payload.asking_price);
+            const qualityEstimate = payload.quality_estimate == null ? null : toFiniteNumber(payload.quality_estimate);
+            if (!itemType || !area) return false;
+            if (!currency) return false;
+            if (pricePaid === null || pricePaid < CROWD_PRICE_MIN || pricePaid > CROWD_PRICE_MAX) return false;
+            if (askingPrice !== null && askingPrice < pricePaid) return false;
+            if (qualityEstimate !== null && (qualityEstimate < 0 || qualityEstimate > 1)) return false;
+            return true;
+        }
         default:
             return true;
     }
@@ -489,6 +511,188 @@ function resolveSupabaseClient(): SupabaseClient | null {
     return createClient(supabaseUrl, serviceRoleKey);
 }
 
+type CrowdAuthContext = {
+    authUserId: string | null;
+    authTrust: "supabase_jwt" | "anonymous";
+};
+
+function normalizeUuid(value: string): string | null {
+    const raw = normalizeString(value).trim();
+    if (!raw) return null;
+    const normalized = raw.toLowerCase();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(normalized)) {
+        return null;
+    }
+    return normalized;
+}
+
+function validateCrowdPayloadWithReason(payload: Record<string, JsonValue> | undefined): { ok: true } | { ok: false; reason: string } {
+    if (!isRecordObject(payload)) return { ok: false, reason: "crowd_payload_not_object" };
+    const itemType = normalizeString(payload.item_type).trim();
+    const area = normalizeString(payload.area).trim();
+    const currency = normalizeString(payload.currency).trim().toUpperCase();
+    const pricePaid = toFiniteNumber(payload.price_paid);
+    const askingPrice = payload.asking_price == null ? null : toFiniteNumber(payload.asking_price);
+    const qualityEstimate = payload.quality_estimate == null ? null : toFiniteNumber(payload.quality_estimate);
+
+    if (!itemType) return { ok: false, reason: "crowd_missing_item_type" };
+    if (!area) return { ok: false, reason: "crowd_missing_area" };
+    if (!currency) return { ok: false, reason: "crowd_missing_currency" };
+    if (pricePaid === null || pricePaid < CROWD_PRICE_MIN || pricePaid > CROWD_PRICE_MAX) {
+        return { ok: false, reason: "crowd_invalid_price_paid" };
+    }
+    if (askingPrice !== null && askingPrice < pricePaid) {
+        return { ok: false, reason: "crowd_asking_below_paid" };
+    }
+    if (qualityEstimate !== null && (qualityEstimate < 0 || qualityEstimate > 1)) {
+        return { ok: false, reason: "crowd_invalid_quality_estimate" };
+    }
+    return { ok: true };
+}
+
+async function resolveCrowdAuthContext(client: SupabaseClient | null, bearerToken: string): Promise<CrowdAuthContext> {
+    const normalizedBearer = normalizeString(bearerToken).trim();
+    if (!client || !normalizedBearer) {
+        return { authUserId: null, authTrust: "anonymous" };
+    }
+
+    try {
+        const { data, error } = await client.auth.getUser(normalizedBearer);
+        if (error) return { authUserId: null, authTrust: "anonymous" };
+        const authUserId = normalizeUuid(String(data?.user?.id || ""));
+        if (!authUserId) return { authUserId: null, authTrust: "anonymous" };
+        return { authUserId, authTrust: "supabase_jwt" };
+    } catch (_error) {
+        return { authUserId: null, authTrust: "anonymous" };
+    }
+}
+
+function buildCrowdMetaContext(
+    meta: Record<string, JsonValue> | undefined,
+    authContext: CrowdAuthContext,
+    fingerprint: string,
+    verdict: string
+): Record<string, JsonValue> {
+    const next = isRecordObject(meta) ? { ...meta } : {};
+    next.auth_trust = authContext.authTrust;
+    if (authContext.authUserId) {
+        next.auth_user_id = authContext.authUserId;
+    } else {
+        delete next.auth_user_id;
+    }
+    next.contribution_fingerprint = fingerprint;
+    next.contribution_verdict = verdict;
+    return next;
+}
+
+async function buildCrowdContributionFingerprint(
+    payload: Record<string, JsonValue> | undefined,
+    identityKey: string
+): Promise<string> {
+    const itemType = normalizeString(payload?.item_type).trim().toLowerCase();
+    const area = normalizeString(payload?.area).trim().toLowerCase();
+    const currency = normalizeString(payload?.currency).trim().toUpperCase();
+    const pricePaid = Number(toFiniteNumber(payload?.price_paid) ?? 0).toFixed(2);
+    const askingPrice = payload?.asking_price == null ? "" : Number(toFiniteNumber(payload?.asking_price) ?? 0).toFixed(2);
+    const qualityEstimate = payload?.quality_estimate == null ? "" : Number(toFiniteNumber(payload?.quality_estimate) ?? 0).toFixed(4);
+    const canonical = [
+        itemType,
+        area,
+        currency,
+        pricePaid,
+        askingPrice,
+        qualityEstimate,
+        normalizeString(identityKey).trim().toLowerCase()
+    ].join("|");
+    return sha256Hex(canonical);
+}
+
+async function countCrowdEventsSince(
+    client: SupabaseClient,
+    sinceIso: string,
+    authUserId: string | null,
+    sessionId: string
+): Promise<number | null> {
+    let query = client
+        .from("intel_event_stream")
+        .select("id", { head: true, count: "exact" })
+        .eq("event_name", CROWD_SUBMITTED_EVENT_NAME)
+        .gte("ingested_at", sinceIso);
+
+    if (authUserId) {
+        query = query.contains("context", { auth_user_id: authUserId });
+    } else {
+        query = query.eq("session_id", sessionId);
+    }
+
+    const { count, error } = await query;
+    if (error) return null;
+    return Number.isFinite(Number(count)) ? Number(count) : 0;
+}
+
+async function hasCrowdFingerprintWithinWindow(
+    client: SupabaseClient,
+    sinceIso: string,
+    fingerprint: string
+): Promise<boolean | null> {
+    const { count, error } = await client
+        .from("intel_event_stream")
+        .select("id", { head: true, count: "exact" })
+        .eq("event_name", CROWD_SUBMITTED_EVENT_NAME)
+        .gte("ingested_at", sinceIso)
+        .contains("context", { contribution_fingerprint: fingerprint });
+
+    if (error) return null;
+    const total = Number.isFinite(Number(count)) ? Number(count) : 0;
+    return total > 0;
+}
+
+async function validateCrowdSubmissionRules(params: {
+    client: SupabaseClient | null;
+    nowMs: number;
+    authContext: CrowdAuthContext;
+    sessionId: string;
+    fingerprint: string;
+}): Promise<{ ok: true } | { ok: false; reason: string }> {
+    const { client, nowMs, authContext, sessionId, fingerprint } = params;
+    if (!client) {
+        return { ok: false, reason: "crowd_validation_backend_unavailable" };
+    }
+
+    const sinceHourIso = new Date(nowMs - (60 * 60 * 1000)).toISOString();
+    const sinceDayIso = new Date(nowMs - (24 * 60 * 60 * 1000)).toISOString();
+    const dedupeSinceIso = new Date(nowMs - (CROWD_DEDUPE_WINDOW_HOURS * 60 * 60 * 1000)).toISOString();
+
+    const hourCount = await countCrowdEventsSince(client, sinceHourIso, authContext.authUserId, sessionId);
+    if (hourCount === null) {
+        return { ok: false, reason: "crowd_validation_backend_unavailable" };
+    }
+    const dayCount = await countCrowdEventsSince(client, sinceDayIso, authContext.authUserId, sessionId);
+    if (dayCount === null) {
+        return { ok: false, reason: "crowd_validation_backend_unavailable" };
+    }
+
+    const isAuth = authContext.authTrust === "supabase_jwt" && Boolean(authContext.authUserId);
+    const hourlyCap = isAuth ? CROWD_AUTH_MAX_PER_HOUR : CROWD_ANON_MAX_PER_HOUR;
+    const dailyCap = isAuth ? CROWD_AUTH_MAX_PER_DAY : CROWD_ANON_MAX_PER_DAY;
+    if (hourCount >= hourlyCap) {
+        return { ok: false, reason: "crowd_rate_limit_hour_exceeded" };
+    }
+    if (dayCount >= dailyCap) {
+        return { ok: false, reason: "crowd_rate_limit_day_exceeded" };
+    }
+
+    const hasDuplicate = await hasCrowdFingerprintWithinWindow(client, dedupeSinceIso, fingerprint);
+    if (hasDuplicate === null) {
+        return { ok: false, reason: "crowd_validation_backend_unavailable" };
+    }
+    if (hasDuplicate) {
+        return { ok: false, reason: "crowd_duplicate_within_window" };
+    }
+
+    return { ok: true };
+}
+
 async function readRequestBodyBytes(req: Request, maxBytes: number): Promise<{
     ok: true;
     bytes: Uint8Array;
@@ -786,6 +990,9 @@ serve(async (req: Request) => {
 
     const acceptedEvents: IntelEventEnvelope[] = [];
     const rejectedEvents: Rejection[] = [];
+    const supabase = resolveSupabaseClient();
+    const requestBearerToken = normalizeString(req.headers.get("authorization")).replace(/^Bearer\s+/i, "").trim();
+    let cachedCrowdAuthContext: CrowdAuthContext | null = null;
 
     for (const event of incomingEvents) {
         const envelopeShape = validateEnvelopeShape(event);
@@ -795,7 +1002,6 @@ serve(async (req: Request) => {
         }
 
         const eventName = normalizeString(event?.event_name).trim();
-        const eventId = normalizeString(event?.id).trim() || null;
         const occurredAt = normalizeString(event?.occurred_at).trim();
         const nonce = normalizeString(event?.nonce).trim();
         const eventMeta = isRecordObject(event?.meta) ? event.meta : undefined;
@@ -817,7 +1023,13 @@ serve(async (req: Request) => {
             rejectedEvents.push(buildRejection(event, "stale_or_future_event"));
             continue;
         }
-        if (!validatePayloadSchema(eventName, event.payload)) {
+        if (eventName === CROWD_SUBMITTED_EVENT_NAME) {
+            const crowdPayloadValidation = validateCrowdPayloadWithReason(event.payload);
+            if (!crowdPayloadValidation.ok) {
+                rejectedEvents.push(buildRejection(event, crowdPayloadValidation.reason));
+                continue;
+            }
+        } else if (!validatePayloadSchema(eventName, event.payload)) {
             rejectedEvents.push(buildRejection(event, "schema_validation_failed"));
             continue;
         }
@@ -839,10 +1051,46 @@ serve(async (req: Request) => {
             continue;
         }
 
-        acceptedEvents.push(event);
+        let acceptedEvent: IntelEventEnvelope = event;
+        if (eventName === CROWD_SUBMITTED_EVENT_NAME) {
+            if (!cachedCrowdAuthContext) {
+                cachedCrowdAuthContext = await resolveCrowdAuthContext(supabase, requestBearerToken);
+            }
+            const identityKey = cachedCrowdAuthContext.authUserId || sessionId;
+            const fingerprint = await buildCrowdContributionFingerprint(event.payload, identityKey);
+            const crowdRule = await validateCrowdSubmissionRules({
+                client: supabase,
+                nowMs,
+                authContext: cachedCrowdAuthContext,
+                sessionId,
+                fingerprint
+            });
+            if (!crowdRule.ok) {
+                const rejectedMeta = buildCrowdMetaContext(
+                    eventMeta,
+                    cachedCrowdAuthContext,
+                    fingerprint,
+                    `rejected:${crowdRule.reason}`
+                );
+                rejectedEvents.push(buildRejection({ ...event, meta: rejectedMeta }, crowdRule.reason));
+                continue;
+            }
+
+            const acceptedMeta = buildCrowdMetaContext(
+                eventMeta,
+                cachedCrowdAuthContext,
+                fingerprint,
+                "accepted"
+            );
+            acceptedEvent = {
+                ...event,
+                meta: acceptedMeta
+            };
+        }
+
+        acceptedEvents.push(acceptedEvent);
     }
 
-    const supabase = resolveSupabaseClient();
     const persistence = await persistAcceptedEvents(supabase, acceptedEvents);
     const rejectionPersistence = await persistRejectedEvents(supabase, rejectedEvents);
     const status = rejectedEvents.length > 0 ? 202 : 200;
