@@ -10,6 +10,7 @@ const CORS_HEADERS: HeadersInit = {
 
 const DEFAULT_LIMIT = 500;
 const MAX_LIMIT = 5000;
+const DEFAULT_SETTLEMENT_LIMIT = 500;
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -26,6 +27,15 @@ function toProjectionLimit(value: unknown): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return DEFAULT_LIMIT;
   return Math.min(MAX_LIMIT, Math.max(1, Math.round(parsed)));
+}
+
+function toBoolean(value: unknown, fallback: boolean): boolean {
+  if (typeof value === "boolean") return value;
+  const normalized = normalizeString(value).toLowerCase();
+  if (!normalized) return fallback;
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
 }
 
 async function sha256Hex(value: string): Promise<string> {
@@ -115,6 +125,13 @@ serve(async (req: Request) => {
 
   const envLimit = toProjectionLimit(Deno.env.get("POINTS_PROJECTOR_DEFAULT_LIMIT"));
   const requestedLimit = toProjectionLimit(body.p_limit ?? body.limit ?? envLimit);
+  const settlementLimit = toProjectionLimit(
+    body.settlement_limit ?? Deno.env.get("POINTS_PROJECTOR_SETTLEMENT_LIMIT") ?? DEFAULT_SETTLEMENT_LIMIT,
+  );
+  const runSettlement = toBoolean(
+    body.run_settlement ?? Deno.env.get("POINTS_PROJECTOR_RUN_SETTLEMENT"),
+    true,
+  );
   const startedAt = Date.now();
 
   const { data, error } = await client.rpc("project_points_from_intel_stream", {
@@ -135,10 +152,31 @@ serve(async (req: Request) => {
     );
   }
 
+  let settlement: unknown = null;
+  let settlementWarning: string | null = null;
+  if (runSettlement) {
+    const settlementStartedAt = Date.now();
+    const settlementResult = await client.rpc("settle_pending_points_v2", {
+      p_limit: settlementLimit,
+    });
+    if (settlementResult.error) {
+      settlementWarning = settlementResult.error.message;
+    } else {
+      settlement = {
+        durationMs: Date.now() - settlementStartedAt,
+        result: settlementResult.data,
+      };
+    }
+  }
+
   return jsonResponse({
     ok: true,
     requestedLimit,
+    settlementLimit,
+    runSettlement,
     durationMs,
     result: data,
+    settlement,
+    settlementWarning,
   });
 });

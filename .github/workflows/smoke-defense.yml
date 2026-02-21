@@ -487,6 +487,22 @@ jobs:
             echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Points phase3 status (full lane)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        continue-on-error: true
+        run: npm run ops:points:phase3:status | tee points-phase3-status.json
+
+      - name: Publish points phase3 summary (full lane)
+        if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}
+        run: |
+          if [ -f points-phase3-status.json ]; then
+            echo "## Points Phase 3 Status (full lane)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`json" >> "$GITHUB_STEP_SUMMARY"
+            cat points-phase3-status.json >> "$GITHUB_STEP_SUMMARY"
+            echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Guard triage dry-run horizon (full lane)
         id: triage_dry_run_guard
         if: ${{ always() && steps.secrets_ready.outputs.ready == 'true' }}

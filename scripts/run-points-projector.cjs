@@ -43,6 +43,15 @@ function parseIntegerFlag(flagName, fallback, min, max) {
     return parsed;
 }
 
+function parseBooleanFlag(flagName, fallback) {
+    const raw = findLastFlagValue(flagName);
+    if (raw === undefined) return fallback;
+    const normalized = String(raw || '').trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+    throw new Error(`${flagName} must be a boolean value`);
+}
+
 function normalizeSupabaseUrl(rawUrl) {
     const normalized = String(rawUrl || '').trim();
     if (!normalized) return '';
@@ -89,6 +98,8 @@ async function main() {
     const supabaseUrl = normalizeSupabaseUrl(parseStringFlag('--supabase-url', getEnvValue('SUPABASE_URL')));
     const serviceRoleKey = parseStringFlag('--service-role-key', getEnvValue('SUPABASE_SERVICE_ROLE_KEY'));
     const limit = parseIntegerFlag('--limit', 500, 1, 5000);
+    const runSettlement = parseBooleanFlag('--run-settlement', true);
+    const settlementLimit = parseIntegerFlag('--settlement-limit', 500, 1, 5000);
     const softFail = parseIntegerFlag('--soft-fail', 0, 0, 1) === 1;
 
     const missing = [];
@@ -128,11 +139,32 @@ async function main() {
         return;
     }
 
+    let settlement = null;
+    let settlementWarning = null;
+    if (runSettlement) {
+        const settleStartedAt = Date.now();
+        const settleResult = await client.rpc('settle_pending_points_v2', {
+            p_limit: settlementLimit
+        });
+        if (settleResult.error) {
+            settlementWarning = settleResult.error.message;
+        } else {
+            settlement = {
+                durationMs: Date.now() - settleStartedAt,
+                result: settleResult.data
+            };
+        }
+    }
+
     console.log(JSON.stringify({
         ok: true,
         limit,
+        runSettlement,
+        settlementLimit,
         durationMs,
-        projection: data
+        projection: data,
+        settlement,
+        settlementWarning
     }, null, 2));
 }
 
@@ -141,4 +173,3 @@ main().catch((error) => {
     console.error(error && error.stack ? error.stack : String(error));
     process.exit(1);
 });
-

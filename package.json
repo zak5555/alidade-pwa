@@ -36,6 +36,10 @@
     "ops:intel:ci": "npm run ops:intel:verify:strict && npm run ops:intel:verify:strict:rejection && npm run ops:intel:health:strict",
     "ops:points:projector:run": "node --env-file=.env scripts/run-points-projector.cjs",
     "ops:points:projector:health": "node --env-file=.env scripts/check-points-projector-health.cjs",
+    "ops:points:phase3:status": "node --env-file=.env scripts/configure-points-phase3.cjs --mode status",
+    "ops:points:phase3:enable": "node --env-file=.env scripts/configure-points-phase3.cjs --mode update --enable-advanced-scoring true",
+    "ops:points:phase3:disable": "node --env-file=.env scripts/configure-points-phase3.cjs --mode update --enable-advanced-scoring false",
+    "ops:points:phase3:settle": "node --env-file=.env scripts/configure-points-phase3.cjs --mode settle --limit 500",
     "audit:app-contract": "node scripts/refactor/audit-app-contract.mjs app.js",
     "build": "tailwindcss -i ./style-input.css -o ./output.css --minify",
     "watch": "tailwindcss -i ./style-input.css -o ./output.css --watch"

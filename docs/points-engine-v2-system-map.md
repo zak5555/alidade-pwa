@@ -1,4 +1,4 @@
-# Points Engine v2 - System Map (Phase 0)
+# Points Engine v2 - System Map (Phase 0/1/2/3)
 
 ## Entry
 - User submits a crowd contribution from price flow (`showContributionPrompt` -> `CrowdPriceDB.submitPrice`).
@@ -16,6 +16,10 @@
 - Ledger lane (Phase 2):
 - Projector RPC consumes accepted `price.crowd_submitted` events.
 - Writes append-only `points_ledger` rows (`verified` for trusted auth, `pending` for session mode).
+- Advanced scoring lane (Phase 3, flag-gated):
+- `points_engine_config.enable_advanced_scoring=true` switches projector to scoring `v2`.
+- Score signals: completeness + novelty + consistency.
+- Pending settlement RPC (`settle_pending_points_v2`) promotes mature pending rows to `verified`.
 
 ## Storage
 - Local keys:
@@ -29,6 +33,7 @@
 - `public.points_ledger`
 - `public.points_projection_state`
 - `public.points_balance_v1` (derived view)
+- `public.points_engine_config`
 
 ## Output
 - Current UX remains local-first for points/rank.
@@ -43,3 +48,10 @@
 - `ENABLE_SERVER_VALIDATION`
 - `ENABLE_LEDGER_WRITE`
 - `ENABLE_ADVANCED_SCORING`
+
+## Phase 3 Runtime Controls (Server)
+- `points_engine_config.enable_advanced_scoring`
+- `points_engine_config.pending_auto_verify_minutes`
+- `points_engine_config.novelty_window_hours`
+- `points_engine_config.consistency_soft_deviation`
+- `points_engine_config.consistency_hard_deviation`

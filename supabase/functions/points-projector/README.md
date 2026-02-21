@@ -3,6 +3,7 @@
 Edge function that advances the server-side points ledger by calling:
 
 - `public.project_points_from_intel_stream(p_limit integer default 500)`
+- `public.settle_pending_points_v2(p_limit integer default 500)` (Phase 3)
 
 It is intended to run on a schedule (every 1 minute).
 
@@ -15,6 +16,8 @@ Optional:
 
 - `POINTS_PROJECTOR_API_KEY` (recommended for manual invoke hardening)
 - `POINTS_PROJECTOR_DEFAULT_LIMIT` (default: `500`, max: `5000`)
+- `POINTS_PROJECTOR_RUN_SETTLEMENT` (default: `true`)
+- `POINTS_PROJECTOR_SETTLEMENT_LIMIT` (default: `500`)
 
 ## Deploy
 
@@ -33,7 +36,7 @@ supabase functions deploy points-projector --no-verify-jwt
 curl -X POST "https://<project-ref>.supabase.co/functions/v1/points-projector" \
   -H "Content-Type: application/json" \
   -H "x-projector-key: <POINTS_PROJECTOR_API_KEY>" \
-  -d '{"p_limit":500}'
+  -d '{"p_limit":500,"run_settlement":true,"settlement_limit":500}'
 ```
 
 If `POINTS_PROJECTOR_API_KEY` is not configured, `x-projector-key` is not required.
@@ -45,4 +48,4 @@ If `POINTS_PROJECTOR_API_KEY` is not configured, `x-projector-key` is not requir
 - Monitor:
   - `public.points_projection_state.last_stream_id`
   - projector lag via `npm run ops:points:projector:health`
-
+  - Phase 3 status via `npm run ops:points:phase3:status`
